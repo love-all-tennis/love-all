@@ -1,0 +1,32 @@
+{
+  "name": "@love-all/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vpx --watch src/main.ts",
+    "start": "node dist/migrate.mjs && node dist/main.mjs",
+    "build": "vp pack",
+    "test": "vp test run",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "vpx src/migrate.ts",
+    "auth:generate": "npx auth@1.7.25 generate --config src/auth.cli.ts --output src/db/auth-schema.ts"
+  },
+  "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.25",
+    "@better-auth/expo": "1.7.25",
+    "@effect/platform-node": "4.1.4",
+    "@effect/sql-pg": "4.1.4",
+    "@love-all/domain": "workspace:*",
+    "better-auth": "1.7.25",
+    "drizzle-orm": "1.0.0-rc.5",
+    "effect": "4.1.4",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/pg": "^8",
+    "drizzle-kit": "1.0.0-rc.5"
+  }
+}

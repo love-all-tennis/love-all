@@ -1,3 +1,60 @@
 # Love All
 
-A tennis app for finding players, setting up matches and hitting sessions, and an open forum.
+A tennis app for finding players at your level, setting up matches and hitting sessions, and talking in an open forum. v1 launches in the Detroit metro area.
+
+The v1 spec lives in the project's spec doc. This repo holds everything: the Expo app, the API, and the shared API definitions.
+
+## Layout
+
+```
+apps/
+  mobile/      Expo app (Expo Router, Better Auth client, typed API client)
+  api/         Effect v4 HTTP API, Better Auth, Drizzle + Postgres/PostGIS
+packages/
+  domain/      Schemas + HttpApi definitions shared by app and API
+```
+
+The API is defined once in `packages/domain`. The server implements it (`apps/api/src/Handlers.ts`) and the app gets a typed client from the same definition (`apps/mobile/src/lib/api.ts`), so a change to an endpoint is checked on both sides at compile time.
+
+## Stack
+
+| Piece    | Choice                                                                    |
+| -------- | ------------------------------------------------------------------------- |
+| App      | Expo SDK 58, Expo Router, TypeScript                                      |
+| API      | Effect 4 (`effect/http-api`) on Node 22                                   |
+| Database | Postgres 17 + PostGIS, Drizzle ORM (Effect driver, 1.0 release candidate) |
+| Auth     | Better Auth, self-hosted inside the API, with the Expo plugin             |
+| Tooling  | pnpm workspaces + Vite+ (`vp check`, `vp test`, `vp run`, `vp pack`)      |
+| Deploy   | API Docker image on our VPS via Openship                                  |
+
+## Getting started
+
+Needs Node 22+, pnpm 10, Docker, and [Vite+](https://viteplus.dev) (`vp`).
+
+```sh
+pnpm install
+cp .env.example .env                      # set BETTER_AUTH_SECRET (openssl rand -base64 32)
+pnpm db:up                                # Postgres + PostGIS in Docker
+pnpm db:migrate                           # apply migrations
+pnpm dev:api                              # API on http://localhost:3000 (docs at /docs)
+pnpm dev:mobile                           # Expo dev server
+```
+
+The API reads `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_ORIGINS` and `PORT` from the environment. For local dev, export them or use a tool like direnv. On a phone, set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` to your machine's LAN address.
+
+## Everyday commands
+
+| Command                                     | What it does                                               |
+| ------------------------------------------- | ---------------------------------------------------------- |
+| `vp check`                                  | Format check, lint, and type-aware lint across the repo    |
+| `pnpm typecheck`                            | `tsc` in every package                                     |
+| `vp test run`                               | Unit and in-memory API tests                               |
+| `pnpm --filter @love-all/api db:generate`   | New migration from schema changes                          |
+| `pnpm --filter @love-all/api auth:generate` | Regenerate Better Auth's tables after changing auth config |
+| `docker compose up --build`                 | Run the whole API stack locally                            |
+
+## Notes
+
+- Better Auth's Drizzle adapter awaits promise-based queries, so it uses its own small `node-postgres` pool. App code uses Drizzle's Effect driver through the `Db` service. Both share one schema in `apps/api/src/db`.
+- The API image bundles all dependencies (`vp pack`), runs migrations on start, then serves.
+- The Expo app builds with Metro. Vite+ is used for the API and shared packages, and for linting and formatting everywhere.
