@@ -1,11 +1,16 @@
 import { Context, Schema } from "effect";
 import { HttpApiMiddleware } from "effect/http-api";
 
+/** What a user can do: every user is a player; admins can also moderate. */
+export const Role = Schema.Literals(["player", "admin"]);
+export type Role = typeof Role.Type;
+
 /** The signed-in player, as resolved from the Better Auth session. */
 export class SessionUser extends Schema.Class<SessionUser>("SessionUser")({
   id: Schema.String,
   name: Schema.String,
   email: Schema.String,
+  role: Role,
 }) {}
 
 /** Provided to every handler behind the `Authentication` middleware. */

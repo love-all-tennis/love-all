@@ -5,7 +5,12 @@ import { HttpApiTest } from "effect/http-api";
 import { describe, expect, it } from "vite-plus/test";
 import { MeHandlers } from "./Handlers";
 
-const sam = new SessionUser({ id: "u_sam", name: "Sam", email: "sam@example.com" });
+const sam = new SessionUser({
+  id: "u_sam",
+  name: "Sam",
+  email: "sam@example.com",
+  role: "player",
+});
 
 const signedIn = Layer.succeed(
   Authentication,
