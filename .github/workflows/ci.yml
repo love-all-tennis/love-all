@@ -13,6 +13,23 @@ jobs:
   check:
     name: Check, type-check, test
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: love_all
+          POSTGRES_PASSWORD: love_all
+          POSTGRES_DB: love_all
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U love_all"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Database tests (*.db.test.ts) run against this migrated database.
+      DATABASE_URL: postgres://love_all:love_all@localhost:5432/love_all
     steps:
       - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1.22.0
@@ -21,6 +38,7 @@ jobs:
           cache: true
       - run: vp check
       - run: vp run -r typecheck
+      - run: vp run db:migrate
       - run: vp test run
 
   api-image:
