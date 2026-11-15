@@ -1,0 +1,37 @@
+# Local stack (and a starting point for the VPS): Postgres with PostGIS + the API.
+#   docker compose up --build
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: love_all
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-love_all}
+      POSTGRES_DB: love_all
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U love_all"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://love_all:${POSTGRES_PASSWORD:-love_all}@db:5432/love_all
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-loveall://,http://localhost:8081}
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:

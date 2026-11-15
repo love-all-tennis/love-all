@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check, type-check, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: voidzero-dev/setup-vp@v1.22.0
+        with:
+          node-version-file: .node-version
+          cache: true
+      - run: vp check
+      - run: vp run -r typecheck
+      - run: vp test run
+
+  api-image:
+    name: API Docker image
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: love_all
+          POSTGRES_PASSWORD: love_all
+          POSTGRES_DB: love_all
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U love_all"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t love-all-api .
+      - name: Start the API against Postgres and check health
+        run: |
+          docker run -d --name api --network host \
+            -e DATABASE_URL=postgres://love_all:love_all@localhost:5432/love_all \
+            -e BETTER_AUTH_SECRET=ci-only-secret-ci-only-secret-0000 \
+            -e BETTER_AUTH_URL=http://localhost:3000 \
+            love-all-api
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:3000/health && exit 0
+            sleep 2
+          done
+          docker logs api
+          exit 1

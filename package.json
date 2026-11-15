@@ -1,0 +1,21 @@
+{
+  "name": "love-all",
+  "private": true,
+  "scripts": {
+    "check": "vp check",
+    "typecheck": "vp run -r typecheck",
+    "test": "vp test run",
+    "dev:api": "vp run --filter @love-all/api dev",
+    "dev:mobile": "vp run --filter @love-all/mobile start",
+    "db:up": "docker compose up -d db",
+    "db:migrate": "vp run --filter @love-all/api db:migrate"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vite-plus": "1.6.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.28.0"
+}
