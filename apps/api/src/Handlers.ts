@@ -4,6 +4,7 @@ import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { Accounts } from "./Accounts";
 import { Db } from "./Db";
+import { Follows } from "./Follows";
 import { Profiles } from "./Profiles";
 
 export const SystemHandlers = HttpApiBuilder.group(
@@ -38,4 +39,20 @@ export const MeHandlers = HttpApiBuilder.group(
   }),
 );
 
-export const ApiHandlers = Layer.mergeAll(SystemHandlers, MeHandlers);
+export const FollowsHandlers = HttpApiBuilder.group(
+  Api,
+  "follows",
+  Effect.fn(function* (handlers) {
+    const follows = yield* Follows;
+    return handlers
+      .handle("list", () => Effect.flatMap(CurrentUser, follows.list))
+      .handle("follow", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => follows.follow(user, params.id)),
+      )
+      .handle("unfollow", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => follows.unfollow(user, params.id)),
+      );
+  }),
+);
+
+export const ApiHandlers = Layer.mergeAll(SystemHandlers, MeHandlers, FollowsHandlers);
