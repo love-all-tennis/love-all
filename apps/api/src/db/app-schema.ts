@@ -7,6 +7,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   smallint,
   text,
   time,
@@ -109,5 +110,28 @@ export const availability = pgTable(
     unique("availability_block_unique").on(t.profileId, t.weekday, t.startTime),
     check("availability_weekday_iso", sql`${t.weekday} between 1 and 7`),
     check("availability_ends_after_start", sql`${t.endTime} > ${t.startTime}`),
+  ],
+);
+
+/**
+ * A player I follow for later. Private to the follower: the followed player
+ * is never told. Both sides are account ids, so deleting either account
+ * removes the row.
+ */
+export const follow = pgTable(
+  "follow",
+  {
+    followerId: text("follower_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    followedId: text("followed_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.followerId, t.followedId] }),
+    index("follow_followed_id_idx").on(t.followedId),
+    check("follow_not_self", sql`${t.followerId} <> ${t.followedId}`),
   ],
 );

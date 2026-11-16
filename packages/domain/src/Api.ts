@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/http-api";
 import { Authentication } from "./Auth";
+import { CannotFollowSelf, FollowLimitReached, FollowedPlayers } from "./Follow";
 import {
   HomePointRequired,
   InvalidCursor,
@@ -58,9 +59,32 @@ export class PlayersApi extends HttpApiGroup.make("players")
   )
   .middleware(Authentication) {}
 
+/**
+ * Players I follow for later, so I can find them again without searching.
+ * Following is private: the followed player isn't told, and nobody else sees
+ * who I follow.
+ */
+export class FollowsApi extends HttpApiGroup.make("follows")
+  .add(HttpApiEndpoint.get("list", "/me/follows", { success: FollowedPlayers }))
+  /** Idempotent: following someone I already follow does nothing. */
+  .add(
+    HttpApiEndpoint.put("follow", "/players/:id/follow", {
+      params: { id: PlayerId },
+      error: [PlayerNotFound, CannotFollowSelf, FollowLimitReached],
+    }),
+  )
+  /** Idempotent: unfollowing someone I don't follow does nothing. */
+  .add(
+    HttpApiEndpoint.delete("unfollow", "/players/:id/follow", {
+      params: { id: PlayerId },
+    }),
+  )
+  .middleware(Authentication) {}
+
 /** The whole Love All API. Shared by the server and the mobile client. */
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
   .add(MeApi)
   .add(PlayersApi)
+  .add(FollowsApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}
