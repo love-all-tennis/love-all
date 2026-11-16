@@ -1,73 +1,56 @@
 import type { FollowedPlayers, Me } from "@love-all/domain";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { BottomTabInset, MaxContentWidth, Spacing } from "@/constants/theme";
-import { PlayerRow } from "@/features/players/components";
 import {
-  defaultFilters,
-  filtersSummary,
-  PLAY_KINDS,
-  RADIUS_OPTIONS_KM,
-  setLevelBound,
-  togglePlay,
-  type PlayerFilters,
-} from "@/features/players/filters";
+  Button,
+  Chip,
+  EmptyState,
+  Icon,
+  Loading,
+  Screen,
+  size,
+  space,
+  Text,
+  useColors,
+} from "@/design";
+import { PlayerRow } from "@/features/players/components";
+import { setPlayerFilters, usePlayerFilters } from "@/features/players/filter-store";
+import { defaultFilters, filtersSummary } from "@/features/players/filters";
 import { fetchFollows } from "@/features/players/players-api";
 import { usePlayerSearch } from "@/features/players/use-player-search";
-import { Chip, FieldLabel, PrimaryButton } from "@/features/profile/components";
-import { NTRP_LEVELS, ntrpLabel } from "@/features/profile/draft";
 import { fetchMe } from "@/features/profile/profile-api";
+import { radiusLabel } from "@/lib/distance";
 
-type Tab = "nearby" | "following";
+type Showing = "nearby" | "following";
 
 const openPlayer = (id: string) => router.push({ pathname: "/players/[id]", params: { id } });
+const openFilters = () => router.push("/players/filters");
 
 /** Find players nearby with filters, or the ones I follow for later. */
 export default function PlayersScreen() {
-  const [view, setView] = useState<Tab>("nearby");
+  const [view, setView] = useState<Showing>("nearby");
 
   return (
-    <ThemedView style={styles.fill}>
-      <SafeAreaView style={styles.fill} edges={["top", "left", "right"]}>
-        <View style={styles.header}>
-          <ThemedText type="subtitle">Players</ThemedText>
-          <View style={styles.row} accessibilityRole="tablist">
-            <Chip
-              compact
-              label="Nearby"
-              selected={view === "nearby"}
-              onPress={() => setView("nearby")}
-            />
-            <Chip
-              compact
-              label="Following"
-              selected={view === "following"}
-              onPress={() => setView("following")}
-            />
-          </View>
-        </View>
-        {view === "nearby" ? <NearbyPlayers /> : <FollowedList />}
-      </SafeAreaView>
-    </ThemedView>
+    <Screen title="Players" scroll={false} edges={["top", "left", "right"]}>
+      <View style={styles.switcher}>
+        <Chip label="Nearby" selected={view === "nearby"} onPress={() => setView("nearby")} />
+        <Chip
+          label="Following"
+          selected={view === "following"}
+          onPress={() => setView("following")}
+        />
+      </View>
+      <View style={styles.fill}>{view === "nearby" ? <NearbyPlayers /> : <FollowedList />}</View>
+    </Screen>
   );
 }
 
 function NearbyPlayers() {
+  const palette = useColors();
   const [me, setMe] = useState<Me | null>(null);
-  const [filters, setFilters] = useState<PlayerFilters | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const filters = usePlayerFilters();
   const search = usePlayerSearch(filters);
 
   useEffect(() => {
@@ -76,42 +59,43 @@ function NearbyPlayers() {
       .then((loaded) => {
         if (!live) return;
         setMe(loaded);
-        setFilters(defaultFilters(loaded.profile));
+        // Start from my own radius and level, unless I've already changed the filters.
+        if (!filters) setPlayerFilters(defaultFilters(loaded.profile));
       })
       // Without my profile the list still works, from the widest defaults.
-      .catch(() => live && setFilters(defaultFilters(null)));
+      .catch(() => live && !filters && setPlayerFilters(defaultFilters(null)));
     return () => {
       live = false;
     };
+    // Runs once, to load my profile and the starting filters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!filters) return <Centered busy />;
+  if (!filters) return <Loading label="Loading players" />;
 
   const header = (
-    <View style={styles.filters}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ expanded: showFilters }}
-        accessibilityHint="Shows the distance, level and play filters"
-        onPress={() => setShowFilters((open) => !open)}
-        style={({ pressed }) => pressed && styles.pressed}
-      >
-        <ThemedText type="small" themeColor="textSecondary">
-          {filtersSummary(filters)}
-        </ThemedText>
-        <ThemedText type="linkPrimary">{showFilters ? "Done" : "Change filters"}</ThemedText>
-      </Pressable>
-      {showFilters ? <FilterPanel filters={filters} onChange={setFilters} /> : null}
+    <View style={styles.filterBar}>
+      <Text variant="caption" color="textMuted" style={styles.fill} tabular>
+        {filtersSummary(filters)}
+      </Text>
+      <Button
+        variant="quiet"
+        size="small"
+        label="Filters"
+        icon={<Icon ios="line.3.horizontal.decrease" md="filter_list" size="sm" color="accent" />}
+        accessibilityHint="Change the distance, level and kind of play"
+        onPress={openFilters}
+      />
     </View>
   );
 
   if (search.status === "needsHomePoint") {
     return (
-      <View style={styles.list}>
+      <View>
         {header}
-        <Message
+        <EmptyState
           title="Set where you play"
-          body="We need a home area to find players near you."
+          body="Love All needs your home area to find players near you."
           action={{ label: "Set home area", onPress: () => router.push("/profile-setup/home") }}
         />
       </View>
@@ -127,96 +111,44 @@ function NearbyPlayers() {
       ListHeaderComponent={header}
       ListEmptyComponent={
         search.status === "loading" ? (
-          <Centered busy />
+          <Loading label="Loading players" />
         ) : search.status === "error" ? (
-          <Message
+          <EmptyState
             title="Couldn't load players"
             body="Check your connection and try again."
             action={{ label: "Try again", onPress: search.refresh }}
           />
         ) : (
-          <Message
-            title="No players match yet"
+          <EmptyState
+            title={`No players ${radiusLabel(filters.radiusMi).toLowerCase()} yet`}
             body={
               me?.profile?.metro
-                ? `Try a wider distance or level range. ${me.profile.metro.name} is just getting started.`
-                : "Try a wider distance or level range."
+                ? `Try a wider distance or a different level. ${me.profile.metro.name} is just getting started.`
+                : "Try a wider distance or a different level."
             }
+            action={{ label: "Widen the search", onPress: openFilters }}
           />
         )
       }
-      ListFooterComponent={search.loadingMore ? <ActivityIndicator /> : undefined}
+      ListFooterComponent={
+        search.loadingMore ? <Loading label="Loading more players" /> : undefined
+      }
       onEndReached={search.loadMore}
       onEndReachedThreshold={0.5}
-      refreshControl={<RefreshControl refreshing={false} onRefresh={search.refresh} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={false}
+          onRefresh={search.refresh}
+          tintColor={palette.textMuted}
+          colors={[palette.accent]}
+        />
+      }
     />
   );
 }
 
-function FilterPanel({
-  filters,
-  onChange,
-}: {
-  filters: PlayerFilters;
-  onChange: (next: PlayerFilters) => void;
-}) {
-  return (
-    <View style={styles.panel}>
-      <FieldLabel>Distance</FieldLabel>
-      <View style={styles.wrap}>
-        {RADIUS_OPTIONS_KM.map((km) => (
-          <Chip
-            key={km}
-            label={`${km} km`}
-            selected={filters.radiusKm === km}
-            onPress={() => onChange({ ...filters, radiusKm: km })}
-          />
-        ))}
-      </View>
-
-      <FieldLabel>Lowest level</FieldLabel>
-      <View style={styles.wrap}>
-        {NTRP_LEVELS.map((level) => (
-          <Chip
-            key={level}
-            label={ntrpLabel(level)}
-            accessibilityLabel={`Lowest level ${ntrpLabel(level)}`}
-            selected={filters.levelMin === level}
-            onPress={() => onChange(setLevelBound(filters, "min", level))}
-          />
-        ))}
-      </View>
-
-      <FieldLabel>Highest level</FieldLabel>
-      <View style={styles.wrap}>
-        {NTRP_LEVELS.map((level) => (
-          <Chip
-            key={level}
-            label={ntrpLabel(level)}
-            accessibilityLabel={`Highest level ${ntrpLabel(level)}`}
-            selected={filters.levelMax === level}
-            onPress={() => onChange(setLevelBound(filters, "max", level))}
-          />
-        ))}
-      </View>
-
-      <FieldLabel>Open to</FieldLabel>
-      <View style={styles.row}>
-        {PLAY_KINDS.map(({ kind, label }) => (
-          <Chip
-            key={kind}
-            compact
-            label={label}
-            selected={filters.plays === kind}
-            onPress={() => onChange(togglePlay(filters, kind))}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
 function FollowedList() {
+  const palette = useColors();
   const [follows, setFollows] = useState<FollowedPlayers | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -242,96 +174,40 @@ function FollowedList() {
       renderItem={({ item }) => <PlayerRow player={item} onPress={() => openPlayer(item.id)} />}
       ListEmptyComponent={
         failed ? (
-          <Message
+          <EmptyState
             title="Couldn't load who you follow"
             body="Check your connection and try again."
             action={{ label: "Try again", onPress: () => void load() }}
           />
         ) : follows ? (
-          <Message
-            title="Nobody saved yet"
+          <EmptyState
+            title="Nobody followed yet"
             body="Follow players from their profile to find them here later."
           />
         ) : (
-          <Centered busy />
+          <Loading label="Loading who you follow" />
         )
       }
-      refreshControl={<RefreshControl refreshing={false} onRefresh={() => void load()} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={false}
+          onRefresh={() => void load()}
+          tintColor={palette.textMuted}
+          colors={[palette.accent]}
+        />
+      }
     />
   );
 }
 
-function Centered({ busy }: { busy: boolean }) {
-  return <View style={styles.centered}>{busy ? <ActivityIndicator /> : null}</View>;
-}
-
-function Message({
-  title,
-  body,
-  action,
-}: {
-  title: string;
-  body: string;
-  action?: { label: string; onPress: () => void };
-}) {
-  return (
-    <View style={styles.message}>
-      <ThemedText type="smallBold">{title}</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        {body}
-      </ThemedText>
-      {action ? <PrimaryButton label={action.label} onPress={action.onPress} /> : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-  },
-  header: {
-    width: "100%",
-    maxWidth: MaxContentWidth,
-    alignSelf: "center",
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-    gap: Spacing.three,
-  },
-  row: {
+  fill: { flex: 1 },
+  switcher: { flexDirection: "row", gap: space[2] },
+  filterBar: {
     flexDirection: "row",
-    gap: Spacing.two,
-  },
-  wrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.two,
-  },
-  list: {
-    width: "100%",
-    maxWidth: MaxContentWidth,
-    alignSelf: "center",
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.four,
-    gap: Spacing.two,
-  },
-  filters: {
-    gap: Spacing.two,
-    paddingBottom: Spacing.two,
-  },
-  panel: {
-    gap: Spacing.two,
-    paddingTop: Spacing.two,
-  },
-  centered: {
-    paddingVertical: Spacing.five,
     alignItems: "center",
+    gap: space[2],
+    paddingBottom: space[1],
   },
-  message: {
-    gap: Spacing.two,
-    paddingVertical: Spacing.four,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
+  list: { gap: space[2], paddingBottom: size.tabBarClearance },
 });

@@ -1,15 +1,22 @@
 import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { ThemedText } from "@/components/themed-text";
-import { MaxContentWidth, Spacing } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import {
+  Button,
+  ErrorBanner,
+  Icon,
+  motion,
+  radius,
+  Screen,
+  size,
+  space,
+  Text,
+  useColors,
+} from "@/design";
 
-/** The accent for picked chips and the main button. */
-export const Accent = "#208AEF";
+export const SETUP_STEPS = 4;
 
-/** One step of setup: a title, a line on why we ask, the fields, and a button. */
+/** One step of setup: where you are, a title, a line on why we ask, the fields, and a button. */
 export function StepScreen({
   step,
   title,
@@ -30,195 +37,84 @@ export function StepScreen({
   onAction: () => void;
   busy?: boolean;
 }) {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
   return (
-    <ScrollView
-      style={{ backgroundColor: theme.background }}
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.four }]}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.inner}>
-        <ThemedText type="small" themeColor="textSecondary">
-          Step {step} of 4
-        </ThemedText>
-        <ThemedText type="subtitle">{title}</ThemedText>
-        <ThemedText themeColor="textSecondary">{subtitle}</ThemedText>
-        <View style={styles.fields}>{children}</View>
-        {error ? (
-          <ThemedText type="small" style={styles.error} accessibilityRole="alert">
-            {error}
-          </ThemedText>
-        ) : null}
-        <PrimaryButton label={actionLabel} onPress={onAction} busy={busy} />
+    // The stack's native header sits above, so only pad the other edges.
+    <Screen edges={["left", "right", "bottom"]}>
+      <View style={styles.header}>
+        <Text variant="label" color="textMuted">
+          Step {step} of {SETUP_STEPS}
+        </Text>
+        <Text variant="title">{title}</Text>
+        <Text color="textMuted">{subtitle}</Text>
       </View>
-    </ScrollView>
+      <View style={styles.fields}>{children}</View>
+      <View style={styles.footer}>
+        <ErrorBanner>{error}</ErrorBanner>
+        <Button label={actionLabel} onPress={onAction} loading={busy} />
+      </View>
+    </Screen>
   );
 }
 
-export function PrimaryButton({
-  label,
-  onPress,
-  busy = false,
-  disabled = false,
-}: {
-  label: string;
-  onPress: () => void;
-  busy?: boolean;
-  /** Greyed out and not pressable, for an action that isn't available yet. */
-  disabled?: boolean;
-}) {
+/** A labelled group of fields inside a step, such as "Open to". */
+export function FieldGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled, busy }}
-      disabled={busy || disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.primary,
-        (pressed || busy) && styles.pressed,
-        disabled && styles.disabled,
-      ]}
-    >
-      {busy ? (
-        <ActivityIndicator color="#fff" />
-      ) : (
-        <ThemedText style={styles.primaryLabel}>{label}</ThemedText>
-      )}
-    </Pressable>
+    <View style={styles.group}>
+      <Text variant="label">{label}</Text>
+      {children}
+    </View>
   );
 }
 
-export function SecondaryButton({
-  label,
-  onPress,
-  busy = false,
-}: {
-  label: string;
-  onPress: () => void;
-  busy?: boolean;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      disabled={busy}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.secondary,
-        { backgroundColor: theme.backgroundElement },
-        (pressed || busy) && styles.pressed,
-      ]}
-    >
-      {busy ? <ActivityIndicator /> : <ThemedText>{label}</ThemedText>}
-    </Pressable>
-  );
+/** Chips that wrap onto as many lines as they need. */
+export function ChipRow({ children }: { children: ReactNode }) {
+  return <View style={styles.wrap}>{children}</View>;
 }
 
-/** A toggle pill, used for levels, hands, ways to play and time blocks. */
-export function Chip({
+/** One cell of the availability grid: a time block on a day. */
+export function SlotToggle({
   label,
-  hint,
   selected,
   onPress,
-  compact = false,
-  accessibilityLabel,
 }: {
+  /** What a screen reader says: "Tue evening". */
   label: string;
-  hint?: string;
-  /** What a screen reader says, when the visible label is only a mark. */
-  accessibilityLabel?: string;
   selected: boolean;
   onPress: () => void;
-  compact?: boolean;
 }) {
-  const theme = useTheme();
+  const palette = useColors();
   return (
     <Pressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
-      accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityHint={compact ? undefined : hint}
+      accessibilityLabel={label}
       onPress={onPress}
       style={({ pressed }) => [
-        compact ? styles.chipCompact : styles.chip,
-        { backgroundColor: selected ? Accent : theme.backgroundElement },
-        pressed && styles.pressed,
+        styles.slot,
+        selected
+          ? { backgroundColor: palette.accentSoft, borderColor: palette.accent }
+          : { backgroundColor: palette.surface, borderColor: palette.borderStrong },
+        pressed && { opacity: motion.pressOpacity },
       ]}
     >
-      <ThemedText type="smallBold" style={selected ? styles.onAccent : undefined}>
-        {label}
-      </ThemedText>
-      {hint && !compact ? (
-        <ThemedText
-          type="small"
-          themeColor="textSecondary"
-          style={selected ? styles.onAccent : undefined}
-        >
-          {hint}
-        </ThemedText>
-      ) : null}
+      {selected ? <Icon ios="checkmark" md="check" color="onAccentSoft" /> : null}
     </Pressable>
   );
 }
 
-export function FieldLabel({ children }: { children: ReactNode }) {
-  return <ThemedText type="smallBold">{children}</ThemedText>;
-}
-
 const styles = StyleSheet.create({
-  content: {
-    flexGrow: 1,
-    alignItems: "center",
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
-  },
-  inner: {
-    width: "100%",
-    maxWidth: MaxContentWidth,
-    gap: Spacing.three,
-  },
-  fields: {
-    gap: Spacing.three,
-    paddingVertical: Spacing.three,
-  },
-  error: {
-    color: "#D93F3F",
-  },
-  primary: {
-    backgroundColor: Accent,
-    borderRadius: Spacing.five,
-    paddingVertical: Spacing.three,
-    alignItems: "center",
-  },
-  primaryLabel: {
-    color: "#fff",
-    fontWeight: 600,
-  },
-  secondary: {
-    borderRadius: Spacing.five,
-    paddingVertical: Spacing.three - Spacing.one,
-    alignItems: "center",
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  disabled: {
-    opacity: 0.4,
-  },
-  chip: {
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    gap: Spacing.half,
-  },
-  chipCompact: {
+  header: { gap: space[2] },
+  fields: { gap: space[6] },
+  footer: { gap: space[3] },
+  group: { gap: space[3] },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
+  slot: {
     flex: 1,
-    borderRadius: Spacing.two,
-    paddingVertical: Spacing.two,
+    minHeight: size.minTap,
     alignItems: "center",
-  },
-  onAccent: {
-    color: "#fff",
+    justifyContent: "center",
+    borderRadius: radius.md,
+    borderCurve: "continuous",
+    borderWidth: size.hairline,
   },
 });

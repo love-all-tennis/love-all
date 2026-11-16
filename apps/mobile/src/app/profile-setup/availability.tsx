@@ -2,9 +2,9 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { ThemedText } from "@/components/themed-text";
-import { Spacing } from "@/constants/theme";
-import { Chip, StepScreen } from "@/features/profile/components";
+import { space, Text } from "@/design";
+import { clockLabel } from "@/features/players/filters";
+import { SlotToggle, StepScreen } from "@/features/profile/components";
 import { DAY_PARTS, slotKey, toggleSlot, WEEKDAYS } from "@/features/profile/draft";
 import { useProfileDraft } from "@/features/profile/draft-context";
 
@@ -21,7 +21,7 @@ export default function AvailabilityScreen() {
       await save();
       router.replace("/");
     } catch {
-      setProblem("We couldn't save your profile. Check your connection and try again.");
+      setProblem("Couldn't save your profile. Check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -30,51 +30,51 @@ export default function AvailabilityScreen() {
   return (
     <StepScreen
       step={4}
-      title="When can you play?"
-      subtitle="Tap the times you're usually free. You can skip this and add it later."
+      title="When you're free"
+      subtitle="Tap the times you can usually play. You can skip this and add it later."
       error={problem}
-      actionLabel={draft.slots.length ? "Finish" : "Skip for now"}
+      actionLabel={draft.slots.length ? "Save profile" : "Skip and save"}
       busy={saving}
       onAction={() => void finish()}
     >
-      <View style={styles.row}>
-        <View style={styles.day} />
-        {DAY_PARTS.map(({ part, label, start, end }) => (
-          <View key={part} style={styles.head}>
-            <ThemedText type="smallBold">{label}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {start}–{end}
-            </ThemedText>
+      <View style={styles.grid}>
+        <View style={styles.row} importantForAccessibility="no-hide-descendants">
+          <View style={styles.day} />
+          {DAY_PARTS.map(({ part, label, start, end }) => (
+            <View key={part} style={styles.head} accessibilityElementsHidden>
+              <Text variant="label">{label}</Text>
+              <Text variant="caption" color="textMuted" tabular>
+                {clockLabel(start)}–{clockLabel(end)}
+              </Text>
+            </View>
+          ))}
+        </View>
+        {WEEKDAYS.map(({ weekday, short }) => (
+          <View key={weekday} style={styles.row}>
+            <Text variant="label" style={styles.day} accessibilityElementsHidden>
+              {short}
+            </Text>
+            {DAY_PARTS.map(({ part, label }) => {
+              const key = slotKey(weekday, part);
+              return (
+                <SlotToggle
+                  key={key}
+                  label={`${short} ${label.toLowerCase()}`}
+                  selected={draft.slots.includes(key)}
+                  onPress={() => replace(toggleSlot(draft, key))}
+                />
+              );
+            })}
           </View>
         ))}
       </View>
-      {WEEKDAYS.map(({ weekday, short }) => (
-        <View key={weekday} style={styles.row}>
-          <ThemedText type="smallBold" style={styles.day}>
-            {short}
-          </ThemedText>
-          {DAY_PARTS.map(({ part, label }) => {
-            const key = slotKey(weekday, part);
-            const on = draft.slots.includes(key);
-            return (
-              <Chip
-                key={key}
-                compact
-                label={on ? "✓" : " "}
-                accessibilityLabel={`${short} ${label}`}
-                selected={on}
-                onPress={() => replace(toggleSlot(draft, key))}
-              />
-            );
-          })}
-        </View>
-      ))}
     </StepScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: Spacing.two },
-  day: { width: 40 },
+  grid: { gap: space[2] },
+  row: { flexDirection: "row", alignItems: "center", gap: space[2] },
+  day: { width: space[10] },
   head: { flex: 1, alignItems: "center" },
 });

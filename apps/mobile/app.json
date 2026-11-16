@@ -36,7 +36,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Love All uses your location once, rounded to about 1 km, to find players near you."
+          "locationWhenInUsePermission": "Love All uses your location once, rounded to about half a mile, to find players near you."
         }
       ],
       [

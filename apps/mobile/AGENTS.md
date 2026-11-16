@@ -4,10 +4,10 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 Every screen follows `docs/design.md` (at the repo root) and is built from `src/design`, imported as `@/design`:
 
-- `Screen`, `Text`, `Button`, `Card`, `Chip`, `Tag` and `TextField`, plus `useColors()` for the light or dark palette.
+- `Screen`, `Text`, `Button`, `Card`, `Chip`, `Tag`, `TextField`, `ChoiceRow`, `Avatar`, `Icon`, `Divider`, and the `Loading`, `EmptyState` and `ErrorBanner` states, plus `useColors()` for the light or dark palette.
 - Tokens for colour roles, the type scale (Geist Sans and Geist Serif), spacing, radii, sizes and motion in `src/design/tokens.ts`.
 - No raw hex values, font names or spacing numbers in screen code. Missing a value? Add a token, and add its contrast pair to `src/design/tokens.test.ts`.
-- `src/constants/theme.ts`, `ThemedText`, `ThemedView` and `components/auth-ui.tsx` are the older styling. Don't use them in new code, and don't migrate old screens unless the task asks for it.
+- Distances are shown in miles. Convert the API's km with `src/lib/distance.ts` (`distanceLabel`, `radiusLabel`, `milesToKm`), never by hand.
 
 ## Expo has changed — do not trust your training data
 

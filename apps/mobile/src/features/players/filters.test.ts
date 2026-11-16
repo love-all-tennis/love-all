@@ -2,8 +2,8 @@ import { Profile } from "@love-all/domain";
 import { describe, expect, it } from "vite-plus/test";
 import {
   availabilityLines,
+  clockLabel,
   defaultFilters,
-  distanceLabel,
   filtersSummary,
   playsLabel,
   setLevelBound,
@@ -28,12 +28,12 @@ const profile = (fields: Partial<ConstructorParameters<typeof Profile>[0]> = {})
     ...fields,
   });
 
-const base: PlayerFilters = { radiusKm: 15, levelMin: "3.0", levelMax: "4.0", plays: null };
+const base: PlayerFilters = { radiusMi: 10, levelMin: "3.0", levelMax: "4.0", plays: null };
 
 describe("defaultFilters", () => {
-  it("starts at my radius and half a level either side of my NTRP", () => {
+  it("starts at my radius, in miles, and half a level either side of my NTRP", () => {
     expect(defaultFilters(profile())).toEqual({
-      radiusKm: 25,
+      radiusMi: 15,
       levelMin: "3.0",
       levelMax: "4.0",
       plays: null,
@@ -57,7 +57,7 @@ describe("defaultFilters", () => {
       levelMax: "5.5",
     });
     expect(defaultFilters(null)).toEqual({
-      radiusKm: 15,
+      radiusMi: 10,
       levelMin: "2.5",
       levelMax: "5.5",
       plays: null,
@@ -87,9 +87,9 @@ describe("togglePlay", () => {
 });
 
 describe("toPlayersQuery", () => {
-  it("sends the radius, a narrowed level range, the play kind and the cursor", () => {
+  it("sends the radius in km, a narrowed level range, the play kind and the cursor", () => {
     expect(toPlayersQuery({ ...base, plays: "doubles" }, "c1")).toEqual({
-      radiusKm: 15,
+      radiusKm: 16,
       levelMin: "3.0",
       levelMax: "4.0",
       plays: "doubles",
@@ -99,23 +99,17 @@ describe("toPlayersQuery", () => {
 
   it("leaves out the level bounds for the whole range, so unrated players still show", () => {
     expect(toPlayersQuery({ ...base, levelMin: "2.5", levelMax: "5.5" })).toEqual({
-      radiusKm: 15,
+      radiusKm: 16,
     });
   });
 });
 
 describe("labels", () => {
   it("summarizes the filters in one line", () => {
-    expect(filtersSummary(base)).toBe("Within 15 km · 3.0 to 4.0 · Any play");
+    expect(filtersSummary(base)).toBe("Within 10 mi · 3.0 to 4.0 · Any play");
     expect(filtersSummary({ ...base, levelMin: "5.5", levelMax: "5.5", plays: "hitting" })).toBe(
-      "Within 15 km · 5.5+ · Hitting",
+      "Within 10 mi · 5.5+ · Hitting",
     );
-  });
-
-  it("describes distance, with no false precision under the 1 km rounding", () => {
-    expect(distanceLabel(1)).toBe("About 1 km away");
-    expect(distanceLabel(12)).toBe("12 km away");
-    expect(distanceLabel(null)).toBeNull();
   });
 
   it("lists what a player is open to", () => {
@@ -127,6 +121,13 @@ describe("labels", () => {
     );
   });
 
+  it("writes times the way players say them", () => {
+    expect(clockLabel("00:00")).toBe("12 AM");
+    expect(clockLabel("06:30")).toBe("6:30 AM");
+    expect(clockLabel("12:00")).toBe("12 PM");
+    expect(clockLabel("17:00")).toBe("5 PM");
+  });
+
   it("groups availability by day", () => {
     expect(
       availabilityLines([
@@ -134,6 +135,6 @@ describe("labels", () => {
         { weekday: 2, startTime: "17:00", endTime: "22:00" },
         { weekday: 6, startTime: "06:00", endTime: "12:00" },
       ]),
-    ).toEqual(["Tue: 06:00 to 12:00, 17:00 to 22:00", "Sat: 06:00 to 12:00"]);
+    ).toEqual(["Tue: 6 AM–12 PM, 5 PM–10 PM", "Sat: 6 AM–12 PM"]);
   });
 });

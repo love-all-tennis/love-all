@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { View, StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { Button, ErrorText } from "@/components/auth-ui";
-import { Spacing } from "@/constants/theme";
+import { Button, ErrorBanner, space } from "@/design";
 import { authClient, type SocialProvider } from "@/lib/auth-client";
 
-const providers: ReadonlyArray<{ id: SocialProvider; title: string }> = [
-  { id: "apple", title: "Continue with Apple" },
-  { id: "google", title: "Continue with Google" },
+const providers: ReadonlyArray<{ id: SocialProvider; label: string }> = [
+  { id: "apple", label: "Continue with Apple" },
+  { id: "google", label: "Continue with Google" },
 ];
 
 /**
@@ -20,21 +19,24 @@ export function SocialSignIn({
   onBeforeSignIn,
 }: {
   disabled?: boolean;
-  /** Runs right before the browser opens, for example to remember the 18+ answer. */
-  onBeforeSignIn?: () => void;
+  /**
+   * Runs right before the browser opens, for example to remember the 18+
+   * answer. Return false to stop, such as when the 18+ box isn't ticked.
+   */
+  onBeforeSignIn?: () => boolean | void;
 }) {
   const [busy, setBusy] = useState<SocialProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const signIn = async (provider: SocialProvider) => {
+    if (onBeforeSignIn?.() === false) return;
     setBusy(provider);
     setError(null);
-    onBeforeSignIn?.();
     try {
       // A relative callback is turned into a loveall:// deep link by the Expo plugin.
       const result = await authClient.signIn.social({ provider, callbackURL: "/" });
       if (result.error) {
-        setError(result.error.message ?? "That sign-in didn't work. Please try again.");
+        setError(result.error.message ?? "That sign-in didn't work. Try again.");
       }
     } catch {
       setError("Couldn't reach Love All. Check your connection and try again.");
@@ -45,21 +47,21 @@ export function SocialSignIn({
 
   return (
     <View style={styles.list}>
-      {providers.map(({ id, title }) => (
+      {providers.map(({ id, label }) => (
         <Button
           key={id}
           variant="secondary"
-          title={title}
+          label={label}
           disabled={disabled || (busy != null && busy !== id)}
           loading={busy === id}
           onPress={() => void signIn(id)}
         />
       ))}
-      <ErrorText>{error}</ErrorText>
+      <ErrorBanner>{error}</ErrorBanner>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { gap: Spacing.two },
+  list: { gap: space[2] },
 });

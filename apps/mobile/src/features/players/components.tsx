@@ -1,41 +1,9 @@
-import { Image } from "expo-image";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { ThemedText } from "@/components/themed-text";
-import { Spacing } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import { Avatar, Card, space, Text } from "@/design";
+import { distanceLabel } from "@/lib/distance";
 import { ntrpLabel, type Ntrp } from "../profile/draft";
-import { distanceLabel, playsLabel } from "./filters";
-
-/** A round photo, or the player's initials when they have none. */
-export function PlayerAvatar({
-  name,
-  photoUrl,
-  size = 48,
-}: {
-  name: string;
-  photoUrl: string | null;
-  size?: number;
-}) {
-  const theme = useTheme();
-  const shape = { width: size, height: size, borderRadius: size / 2 };
-  if (photoUrl) {
-    return <Image source={{ uri: photoUrl }} style={shape} accessibilityIgnoresInvertColors />;
-  }
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join("");
-  return (
-    <View style={[shape, styles.initials, { backgroundColor: theme.backgroundSelected }]}>
-      <ThemedText type="smallBold" style={{ fontSize: size * 0.36, lineHeight: size * 0.5 }}>
-        {initials || "?"}
-      </ThemedText>
-    </View>
-  );
-}
+import { playsLabel } from "./filters";
 
 type RowPlayer = {
   readonly id: string;
@@ -48,55 +16,39 @@ type RowPlayer = {
   readonly distanceKm: number | null;
 };
 
+export const levelLabel = (ntrp: Ntrp | null): string =>
+  ntrp ? `NTRP ${ntrpLabel(ntrp)}` : "No rating yet";
+
 /** One player in a list: photo, name, level, distance and what they play. */
 export function PlayerRow({ player, onPress }: { player: RowPlayer; onPress: () => void }) {
-  const theme = useTheme();
-  const level = player.ntrp ? `NTRP ${ntrpLabel(player.ntrp)}` : "No rating yet";
+  const level = levelLabel(player.ntrp);
   const distance = distanceLabel(player.distanceKm);
+  const meta = distance ? `${level} · ${distance}` : level;
+  const plays = playsLabel(player);
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityHint="Opens their profile"
+    <Card
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.row,
-        { backgroundColor: theme.backgroundElement },
-        pressed && styles.pressed,
-      ]}
+      accessibilityLabel={`${player.displayName}, ${meta}, plays ${plays}`}
+      accessibilityHint="Opens their profile"
+      style={styles.row}
     >
-      <PlayerAvatar name={player.displayName} photoUrl={player.photoUrl} />
-      <View style={styles.rowText}>
-        <ThemedText type="smallBold" numberOfLines={1}>
+      <Avatar name={player.displayName} photoUrl={player.photoUrl} />
+      <View style={styles.text}>
+        <Text variant="subheading" numberOfLines={1}>
           {player.displayName}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-          {distance ? `${level} · ${distance}` : level}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-          {playsLabel(player)}
-        </ThemedText>
+        </Text>
+        <Text variant="caption" color="textMuted" numberOfLines={1} tabular>
+          {meta}
+        </Text>
+        <Text variant="caption" color="textMuted" numberOfLines={1}>
+          {plays}
+        </Text>
       </View>
-    </Pressable>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  initials: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-  },
-  rowText: {
-    flex: 1,
-    gap: Spacing.half,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
+  row: { flexDirection: "row", alignItems: "center", gap: space[3] },
+  text: { flex: 1 },
 });
