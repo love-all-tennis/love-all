@@ -11,11 +11,12 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Context, Effect, Layer } from "effect";
 import { Db } from "./Db";
+import { notBlocked } from "./db/blocks";
 import { follow, profile } from "./db/schema";
 
 /**
  * The players someone follows for later. Following needs the other player to
- * have a profile, the same rule as viewing one.
+ * have a profile and not be blocked either way, the same rules as viewing one.
  *
  * Database failures are defects (a 500).
  */
@@ -55,7 +56,7 @@ export class Follows extends Context.Service<
           .from(follow)
           .innerJoin(profile, eq(profile.userId, follow.followedId))
           .leftJoin(mine, eq(mine.userId, follow.followerId))
-          .where(eq(follow.followerId, user.id))
+          .where(and(eq(follow.followerId, user.id), notBlocked(user.id, follow.followedId)))
           .orderBy(desc(follow.createdAt), profile.userId)
           .pipe(
             Effect.map(
@@ -73,8 +74,9 @@ export class Follows extends Context.Service<
           const [target] = yield* db
             .select({ id: profile.userId })
             .from(profile)
-            .where(eq(profile.userId, playerId))
+            .where(and(eq(profile.userId, playerId), notBlocked(user.id, profile.userId)))
             .pipe(Effect.orDie);
+          // A blocked player is hidden, so following them looks the same as a missing one.
           if (!target) return yield* new PlayerNotFound({ id: playerId });
 
           const [already] = yield* db

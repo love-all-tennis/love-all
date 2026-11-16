@@ -7,6 +7,7 @@ import { Db } from "./Db";
 import { Follows } from "./Follows";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
+import { Safety } from "./Safety";
 
 export const SystemHandlers = HttpApiBuilder.group(
   Api,
@@ -71,9 +72,29 @@ export const PlayersHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const SafetyHandlers = HttpApiBuilder.group(
+  Api,
+  "safety",
+  Effect.fn(function* (handlers) {
+    const safety = yield* Safety;
+    return handlers
+      .handle("block", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => safety.block(user, params.id)),
+      )
+      .handle("unblock", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => safety.unblock(user, params.id)),
+      )
+      .handle("listBlocks", () => Effect.flatMap(CurrentUser, safety.listBlocks))
+      .handle("report", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => safety.report(user, payload)),
+      );
+  }),
+);
+
 export const ApiHandlers = Layer.mergeAll(
   SystemHandlers,
   MeHandlers,
   PlayersHandlers,
   FollowsHandlers,
+  SafetyHandlers,
 );

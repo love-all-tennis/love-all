@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { HttpApi, HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/http-api";
+import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/http-api";
 import { Authentication } from "./Auth";
 import { CannotFollowSelf, FollowLimitReached, FollowedPlayers } from "./Follow";
 import {
@@ -12,6 +12,13 @@ import {
   PlayersQuery,
 } from "./Player";
 import { Availability, Me, ProfilePatch } from "./Profile";
+import {
+  BlockedPlayer,
+  CannotTargetSelf,
+  NewReport,
+  ReportCreated,
+  TargetNotFound,
+} from "./Safety";
 
 export const Health = Schema.Struct({
   status: Schema.Literal("ok"),
@@ -81,10 +88,39 @@ export class FollowsApi extends HttpApiGroup.make("follows")
   )
   .middleware(Authentication) {}
 
+const PlayerIdParam = { id: PlayerId };
+
+/**
+ * Blocking and reporting. Blocked players are hidden from each other
+ * everywhere, whoever did the blocking.
+ */
+export class SafetyApi extends HttpApiGroup.make("safety")
+  /** Blocks a player. Blocking someone already blocked is a no-op. */
+  .add(
+    HttpApiEndpoint.post("block", "/players/:id/block", {
+      params: PlayerIdParam,
+      error: [TargetNotFound, CannotTargetSelf],
+    }),
+  )
+  /** Unblocks a player. Unblocking someone not blocked is a no-op. */
+  .add(HttpApiEndpoint.delete("unblock", "/players/:id/block", { params: PlayerIdParam }))
+  /** Players I blocked, most recent first. */
+  .add(HttpApiEndpoint.get("listBlocks", "/me/blocks", { success: Schema.Array(BlockedPlayer) }))
+  /** Reports a player to the moderators. It doesn't block them; the app offers that next. */
+  .add(
+    HttpApiEndpoint.post("report", "/reports", {
+      payload: NewReport,
+      success: ReportCreated.pipe(HttpApiSchema.status(201)),
+      error: [TargetNotFound, CannotTargetSelf],
+    }),
+  )
+  .middleware(Authentication) {}
+
 /** The whole Love All API. Shared by the server and the mobile client. */
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
   .add(MeApi)
   .add(PlayersApi)
   .add(FollowsApi)
+  .add(SafetyApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}

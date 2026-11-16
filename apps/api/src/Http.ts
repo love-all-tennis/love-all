@@ -12,6 +12,7 @@ import { Follows } from "./Follows";
 import { ApiHandlers } from "./Handlers";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
+import { Safety } from "./Safety";
 
 /** Better Auth's own routes (sign-up, sign-in, OAuth callbacks, sessions). */
 const AuthRoutes = Layer.effectDiscard(
@@ -24,7 +25,14 @@ const AuthRoutes = Layer.effectDiscard(
 
 const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide(ApiHandlers),
-  Layer.provide([AuthenticationLive, Accounts.layer, Follows.layer, Players.layer, Profiles.layer]),
+  Layer.provide([
+    AuthenticationLive,
+    Accounts.layer,
+    Follows.layer,
+    Players.layer,
+    Profiles.layer,
+    Safety.layer,
+  ]),
 );
 
 const DocsRoute = HttpApiScalar.layer(Api, { path: "/docs" });

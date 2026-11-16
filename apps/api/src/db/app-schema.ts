@@ -135,3 +135,67 @@ export const follow = pgTable(
     check("follow_not_self", sql`${t.followerId} <> ${t.followedId}`),
   ],
 );
+
+/**
+ * One row per player who blocked another. Blocking is one-way to record but
+ * two-way in effect: neither player sees the other anywhere. Filter queries
+ * that return other players with `notBlocked` from `./blocks`.
+ */
+export const block = pgTable(
+  "block",
+  {
+    blockerId: text("blocker_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    blockedId: text("blocked_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.blockerId, t.blockedId] }),
+    index("block_blocked_id_idx").on(t.blockedId),
+    check("block_not_self", sql`${t.blockerId} <> ${t.blockedId}`),
+  ],
+);
+
+/** What a report is about. Forum posts and direct messages join when those features land. */
+export const reportTargetType = pgEnum("report_target_type", ["player"]);
+
+export const reportReason = pgEnum("report_reason", [
+  "spam",
+  "harassment",
+  "inappropriate",
+  "fake_profile",
+  "underage",
+  "other",
+]);
+
+export const reportStatus = pgEnum("report_status", ["open", "resolved"]);
+
+/**
+ * A report for moderators. `target_id` is the reported thing's id (a user id
+ * for a player), with no foreign key, so one table covers every target type.
+ * The report outlives the reporter's account, so moderation history stays.
+ */
+export const report = pgTable(
+  "report",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reporterId: text("reporter_id").references(() => user.id, { onDelete: "set null" }),
+    targetType: reportTargetType("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    reason: reportReason("reason").notNull(),
+    details: text("details"),
+    status: reportStatus("status").notNull().default("open"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("report_target_idx").on(t.targetType, t.targetId),
+    index("report_open_idx")
+      .on(t.createdAt)
+      .where(sql`${t.status} = 'open'`),
+    check("report_details_length", sql`char_length(${t.details}) <= 1000`),
+  ],
+);

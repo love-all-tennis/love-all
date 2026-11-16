@@ -12,6 +12,7 @@ import {
 import { type SQL, and, asc, eq, gte, isNotNull, lte, ne, sql } from "drizzle-orm";
 import { Context, Effect, Layer, Option } from "effect";
 import { Db } from "./Db";
+import { notBlocked } from "./db/blocks";
 import { loadAvailability } from "./db/availability";
 import type { LngLat } from "./db/geo";
 import { metro, profile } from "./db/schema";
@@ -49,7 +50,9 @@ export class Players extends Context.Service<
        * Who the viewer may see. Every query about other players goes through
        * this list, so visibility rules (such as blocks) are added here once.
        */
-      const visibleTo = (_viewer: SessionUser): Array<SQL> => [];
+      const visibleTo = (viewer: SessionUser): Array<SQL> => [
+        notBlocked(viewer.id, profile.userId),
+      ];
 
       const viewerHome = (viewer: SessionUser) =>
         db
