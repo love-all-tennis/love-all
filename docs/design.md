@@ -118,6 +118,21 @@ Geist Sans for the interface, Geist Serif for the top of the hierarchy. Both are
 ## Icons and images
 
 - Icons: SF Symbols through `expo-symbols` on iOS, with a matching Material symbol on Android and web. Outline style, 20 or 24pt, in `text` or `textMuted`, or `accent` when it's the selected state. Every icon-only button gets an `accessibilityLabel`.
+
+### Tab bar
+
+The tab bar uses `NativeTabs` from `expo-router/native-tabs`, so iOS and Android draw their own bars. Every tab has an icon and a one-word label. Give each `NativeTabs.Trigger.Icon` an `sf` symbol for iOS (outline by default, filled when selected) and an `md` Material symbol for Android. Don't use PNG tab icons. The bar's ground is `surface`, the selected icon and label are `accent`, and unselected ones are `textMuted`.
+
+| Tab                            | Label    | iOS (`sf`: default / selected)                                       | Android (`md`)   |
+| ------------------------------ | -------- | -------------------------------------------------------------------- | ---------------- |
+| Home                           | Home     | `house` / `house.fill`                                               | `home`           |
+| Players                        | Players  | `person.2` / `person.2.fill`                                         | `group`          |
+| Sessions (matches and hitting) | Sessions | `calendar` / `calendar`                                              | `calendar_month` |
+| Forum                          | Forum    | `bubble.left.and.bubble.right` / `bubble.left.and.bubble.right.fill` | `forum`          |
+| Messages                       | Messages | `envelope` / `envelope.fill`                                         | `mail`           |
+
+Five tabs at most. Today's app has only Home and Players, with the Expo starter PNGs. Switch them to these symbols when the tab bar is next touched, and add the others as their features land.
+
 - Player photos are round (`size.avatar`: 32 in dense lists, 48 in rows, 72 to 112 on a profile). Without a photo, show initials on `surfaceSunken`, as `PlayerAvatar` does.
 - No stock photos, illustrations of tennis players, or mascots. Empty states use type, not pictures.
 - The app icon and splash still need a design pass (they're the Expo defaults). Use `background` for the splash ground when they're made.
