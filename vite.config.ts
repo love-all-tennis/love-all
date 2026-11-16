@@ -23,6 +23,6 @@ export default defineConfig({
     ignorePatterns: ["apps/api/drizzle/**", "pnpm-lock.yaml"],
   },
   test: {
-    projects: ["packages/*", "apps/api"],
+    projects: ["packages/*", "apps/api", "apps/mobile"],
   },
 });

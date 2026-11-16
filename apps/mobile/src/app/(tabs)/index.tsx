@@ -1,4 +1,5 @@
 import * as Device from "expo-device";
+import { Link } from "expo-router";
 import { useEffect, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -62,6 +63,12 @@ export default function HomeScreen() {
           <HintRow title="Signed in as" hint={session?.user.name ?? "nobody yet"} />
           <HintRow title="Dev tools" hint={getDevMenuHint()} />
         </ThemedView>
+
+        {session ? (
+          <Link href="/profile-setup">
+            <ThemedText type="linkPrimary">Edit your profile</ThemedText>
+          </Link>
+        ) : null}
 
         {Platform.OS === "web" && <WebBadge />}
       </SafeAreaView>
