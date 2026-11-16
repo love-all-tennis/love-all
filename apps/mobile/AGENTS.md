@@ -1,5 +1,14 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## Design system: read this first
+
+Every screen follows `docs/design.md` (at the repo root) and is built from `src/design`, imported as `@/design`:
+
+- `Screen`, `Text`, `Button`, `Card`, `Chip`, `Tag` and `TextField`, plus `useColors()` for the light or dark palette.
+- Tokens for colour roles, the type scale (Geist Sans and Geist Serif), spacing, radii, sizes and motion in `src/design/tokens.ts`.
+- No raw hex values, font names or spacing numbers in screen code. Missing a value? Add a token, and add its contrast pair to `src/design/tokens.test.ts`.
+- `src/constants/theme.ts`, `ThemedText`, `ThemedView` and `components/auth-ui.tsx` are the older styling. Don't use them in new code, and don't migrate old screens unless the task asks for it.
+
 ## Expo has changed — do not trust your training data
 
 Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
