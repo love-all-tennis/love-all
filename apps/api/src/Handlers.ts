@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { Db } from "./Db";
+import { Profiles } from "./Profiles";
 
 export const SystemHandlers = HttpApiBuilder.group(
   Api,
@@ -16,14 +17,20 @@ export const SystemHandlers = HttpApiBuilder.group(
   }),
 );
 
-export const MeHandlers = HttpApiBuilder.group(Api, "me", (handlers) =>
-  Effect.succeed(
-    handlers.handle("get", () =>
-      Effect.gen(function* () {
-        return yield* CurrentUser;
-      }),
-    ),
-  ),
+export const MeHandlers = HttpApiBuilder.group(
+  Api,
+  "me",
+  Effect.fn(function* (handlers) {
+    const profiles = yield* Profiles;
+    return handlers
+      .handle("get", () => Effect.flatMap(CurrentUser, profiles.get))
+      .handle("update", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => profiles.update(user, payload)),
+      )
+      .handle("replaceAvailability", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => profiles.replaceAvailability(user, payload)),
+      );
+  }),
 );
 
 export const ApiHandlers = Layer.mergeAll(SystemHandlers, MeHandlers);
