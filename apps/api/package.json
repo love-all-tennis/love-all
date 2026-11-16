@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vpx --watch src/main.ts",
+    "dev": "vpx --watch --env-file-if-exists=../../.env src/main.ts",
     "start": "node dist/migrate.mjs && node dist/main.mjs",
     "build": "vp pack",
     "test": "vp test run",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "vpx src/migrate.ts",
+    "db:migrate": "vpx --env-file-if-exists=../../.env src/migrate.ts",
     "auth:generate": "npx auth@1.7.25 generate --config src/auth.cli.ts --output src/db/auth-schema.ts"
   },
   "dependencies": {
