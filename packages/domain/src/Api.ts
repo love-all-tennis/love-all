@@ -1,6 +1,15 @@
 import { Schema } from "effect";
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/http-api";
 import { Authentication } from "./Auth";
+import {
+  HomePointRequired,
+  InvalidCursor,
+  PlayerId,
+  PlayerNotFound,
+  PlayerProfile,
+  PlayersPage,
+  PlayersQuery,
+} from "./Player";
 import { Availability, Me, ProfilePatch } from "./Profile";
 
 export const Health = Schema.Struct({
@@ -30,8 +39,28 @@ export class MeApi extends HttpApiGroup.make("me")
   .add(HttpApiEndpoint.post("confirmAdult", "/me/adult-confirmation"))
   .middleware(Authentication) {}
 
+/** Finding other players near me and viewing their profiles. */
+export class PlayersApi extends HttpApiGroup.make("players")
+  /** Players within the radius of my home point, nearest first, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("search", "/players", {
+      query: PlayersQuery,
+      success: PlayersPage,
+      error: [HomePointRequired, InvalidCursor],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("get", "/players/:id", {
+      params: { id: PlayerId },
+      success: PlayerProfile,
+      error: PlayerNotFound,
+    }),
+  )
+  .middleware(Authentication) {}
+
 /** The whole Love All API. Shared by the server and the mobile client. */
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
   .add(MeApi)
+  .add(PlayersApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}
