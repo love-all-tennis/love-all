@@ -4,6 +4,7 @@ import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { Accounts } from "./Accounts";
 import { Db } from "./Db";
+import { Profiles } from "./Profiles";
 
 export const SystemHandlers = HttpApiBuilder.group(
   Api,
@@ -22,17 +23,17 @@ export const MeHandlers = HttpApiBuilder.group(
   "me",
   Effect.fn(function* (handlers) {
     const accounts = yield* Accounts;
+    const profiles = yield* Profiles;
     return handlers
-      .handle("get", () =>
-        Effect.gen(function* () {
-          return yield* CurrentUser;
-        }),
+      .handle("get", () => Effect.flatMap(CurrentUser, profiles.get))
+      .handle("update", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => profiles.update(user, payload)),
+      )
+      .handle("replaceAvailability", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => profiles.replaceAvailability(user, payload)),
       )
       .handle("confirmAdult", () =>
-        Effect.gen(function* () {
-          const { id } = yield* CurrentUser;
-          yield* accounts.confirmAdult(id);
-        }),
+        Effect.flatMap(CurrentUser, (user) => accounts.confirmAdult(user.id)),
       );
   }),
 );

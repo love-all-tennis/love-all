@@ -1,5 +1,10 @@
-import AppTabs from "@/components/app-tabs";
+import { Redirect } from "expo-router";
 
-export default function AppLayout() {
+import AppTabs from "@/components/app-tabs";
+import { useNeedsProfileSetup } from "@/features/profile/use-needs-profile-setup";
+
+export default function TabLayout() {
+  // A signed-in player without a finished profile goes through setup first.
+  if (useNeedsProfileSetup()) return <Redirect href="/profile-setup" />;
   return <AppTabs />;
 }

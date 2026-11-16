@@ -11,7 +11,8 @@ void SplashScreen.preventAutoHideAsync();
  * Which screens exist depends on the session:
  * - signed out: sign-in and sign-up
  * - signed in but not yet confirmed 18+: the confirm-age screen
- * - signed in and confirmed: the app
+ * - signed in and confirmed: the app, plus profile setup (the tabs redirect
+ *   there until the profile is finished)
  *
  * Expo Router redirects to the first screen that is allowed whenever the
  * session changes, so signing in, confirming and signing out need no manual
@@ -32,6 +33,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={signedIn && confirmedAdult}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="profile-setup" options={{ gestureEnabled: false }} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && !confirmedAdult}>
           <Stack.Screen name="confirm-age" />
