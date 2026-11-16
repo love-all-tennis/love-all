@@ -8,7 +8,9 @@ import { Accounts } from "./Accounts";
 import { AuthenticationLive } from "./Authentication";
 import { BetterAuth, TrustedOrigins } from "./BetterAuth";
 import { Db } from "./Db";
+import { Follows } from "./Follows";
 import { ApiHandlers } from "./Handlers";
+import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
 
@@ -23,7 +25,14 @@ const AuthRoutes = Layer.effectDiscard(
 
 const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide(ApiHandlers),
-  Layer.provide([AuthenticationLive, Accounts.layer, Profiles.layer, Safety.layer]),
+  Layer.provide([
+    AuthenticationLive,
+    Accounts.layer,
+    Follows.layer,
+    Players.layer,
+    Profiles.layer,
+    Safety.layer,
+  ]),
 );
 
 const DocsRoute = HttpApiScalar.layer(Api, { path: "/docs" });

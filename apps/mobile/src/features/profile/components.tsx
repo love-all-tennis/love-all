@@ -60,17 +60,25 @@ export function PrimaryButton({
   label,
   onPress,
   busy = false,
+  disabled = false,
 }: {
   label: string;
   onPress: () => void;
   busy?: boolean;
+  /** Greyed out and not pressable, for an action that isn't available yet. */
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={busy}
+      accessibilityState={{ disabled, busy }}
+      disabled={busy || disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.primary, (pressed || busy) && styles.pressed]}
+      style={({ pressed }) => [
+        styles.primary,
+        (pressed || busy) && styles.pressed,
+        disabled && styles.disabled,
+      ]}
     >
       {busy ? (
         <ActivityIndicator color="#fff" />
@@ -194,6 +202,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  disabled: {
+    opacity: 0.4,
   },
   chip: {
     borderRadius: Spacing.three,

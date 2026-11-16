@@ -5,10 +5,15 @@ import { describe, expect, it } from "vite-plus/test";
 import { Db } from "./Db";
 import { notBlocked } from "./db/blocks";
 import { profile, report, user } from "./db/schema";
+import { Follows } from "./Follows";
+import { Players } from "./Players";
+import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
-const TestLayer = Safety.layer.pipe(Layer.provideMerge(Db.layer));
+const TestLayer = Layer.mergeAll(Safety.layer, Players.layer, Profiles.layer, Follows.layer).pipe(
+  Layer.provideMerge(Db.layer),
+);
 
 /** Creates `count` throwaway accounts, runs `f` with them, then deletes them. */
 const withPlayers = <A, E>(
@@ -17,7 +22,7 @@ const withPlayers = <A, E>(
     players: ReadonlyArray<SessionUser>,
     safety: Safety["Service"],
     db: Db["Service"],
-  ) => Effect.Effect<A, E, never>,
+  ) => Effect.Effect<A, E, Players | Profiles | Follows>,
 ) =>
   Effect.gen(function* () {
     const db = yield* Db;
@@ -139,5 +144,38 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
       ]),
     );
     expect(errors.map((e) => e._tag)).toEqual(["CannotTargetSelf", "TargetNotFound"]);
+  });
+
+  it("hides blocked players from search, profiles and follows, and ends follows both ways", async () => {
+    const result = await withPlayers(3, ([sam, alex, jo], safety) =>
+      Effect.gen(function* () {
+        const players = yield* Players;
+        const profiles = yield* Profiles;
+        const follows = yield* Follows;
+        // Reykjavik, far from the points other test files search around.
+        for (const [i, p] of [sam!, alex!, jo!].entries()) {
+          yield* profiles.update(p, { homePoint: { lat: 64.14 + i / 100, lng: -21.94 } });
+        }
+        yield* follows.follow(sam!, alex!.id);
+        yield* follows.follow(alex!, sam!.id);
+        yield* follows.follow(sam!, jo!.id);
+        yield* safety.block(alex!, sam!.id);
+        return {
+          samSees: (yield* players.search(sam!, { radiusKm: 5 })).items.map((p) => p.id),
+          alexSees: (yield* players.search(alex!, { radiusKm: 5 })).items.map((p) => p.id),
+          samGetsAlex: yield* Effect.flip(players.get(sam!, alex!.id)),
+          samFollows: (yield* follows.list(sam!)).items.map((p) => p.id),
+          alexFollows: (yield* follows.list(alex!)).items,
+          refollow: yield* Effect.flip(follows.follow(sam!, alex!.id)),
+          ids: { alex: alex!.id, jo: jo!.id },
+        };
+      }),
+    );
+    expect(result.samSees).toEqual([result.ids.jo]);
+    expect(result.alexSees).toEqual([result.ids.jo]);
+    expect(result.samGetsAlex._tag).toBe("PlayerNotFound");
+    expect(result.samFollows).toEqual([result.ids.jo]);
+    expect(result.alexFollows).toEqual([]);
+    expect(result.refollow._tag).toBe("PlayerNotFound");
   });
 });

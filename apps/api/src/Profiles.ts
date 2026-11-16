@@ -6,9 +6,10 @@ import {
   type ProfilePatch,
   type SessionUser,
 } from "@love-all/domain";
-import { asc, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
 import { Db } from "./Db";
+import { loadAvailability as loadAvailabilityFor } from "./db/availability";
 import { type LngLat, roundHomePoint } from "./db/geo";
 import { availability, metro, profile } from "./db/schema";
 
@@ -49,26 +50,7 @@ export class Profiles extends Context.Service<
           .limit(1)
           .pipe(Effect.map(([row]) => row?.id ?? null));
 
-      const loadAvailability = (profileId: string) =>
-        db
-          .select({
-            weekday: availability.weekday,
-            startTime: availability.startTime,
-            endTime: availability.endTime,
-          })
-          .from(availability)
-          .where(eq(availability.profileId, profileId))
-          .orderBy(asc(availability.weekday), asc(availability.startTime))
-          .pipe(
-            Effect.map((rows): Availability =>
-              rows.map((row) => ({
-                weekday: row.weekday,
-                // Postgres `time` reads back as "HH:MM:SS"; the API speaks "HH:MM".
-                startTime: row.startTime.slice(0, 5),
-                endTime: row.endTime.slice(0, 5),
-              })),
-            ),
-          );
+      const loadAvailability = (profileId: string) => loadAvailabilityFor(db, profileId);
 
       const get = (user: SessionUser) =>
         Effect.gen(function* () {

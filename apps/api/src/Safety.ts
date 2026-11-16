@@ -6,10 +6,10 @@ import {
   type SessionUser,
   TargetNotFound,
 } from "@love-all/domain";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
 import { Db } from "./Db";
-import { block, profile, report, user } from "./db/schema";
+import { block, follow, profile, report, user } from "./db/schema";
 
 /**
  * Blocks and reports. Hiding blocked players from other queries is done in
@@ -57,10 +57,24 @@ export class Safety extends Context.Service<
         block: (viewer, playerId) =>
           requireOtherPlayer(viewer, playerId, "block").pipe(
             Effect.andThen(
+              // Blocking also ends any follow between the two, in both directions.
               db
-                .insert(block)
-                .values({ blockerId: viewer.id, blockedId: playerId })
-                .onConflictDoNothing()
+                .transaction((tx) =>
+                  Effect.gen(function* () {
+                    yield* tx
+                      .insert(block)
+                      .values({ blockerId: viewer.id, blockedId: playerId })
+                      .onConflictDoNothing();
+                    yield* tx
+                      .delete(follow)
+                      .where(
+                        or(
+                          and(eq(follow.followerId, viewer.id), eq(follow.followedId, playerId)),
+                          and(eq(follow.followerId, playerId), eq(follow.followedId, viewer.id)),
+                        ),
+                      );
+                  }),
+                )
                 .pipe(Effect.orDie),
             ),
             Effect.asVoid,

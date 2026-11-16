@@ -1,6 +1,16 @@
 import { Schema } from "effect";
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/http-api";
 import { Authentication } from "./Auth";
+import { CannotFollowSelf, FollowLimitReached, FollowedPlayers } from "./Follow";
+import {
+  HomePointRequired,
+  InvalidCursor,
+  PlayerId,
+  PlayerNotFound,
+  PlayerProfile,
+  PlayersPage,
+  PlayersQuery,
+} from "./Player";
 import { Availability, Me, ProfilePatch } from "./Profile";
 import {
   BlockedPlayer,
@@ -37,7 +47,48 @@ export class MeApi extends HttpApiGroup.make("me")
   .add(HttpApiEndpoint.post("confirmAdult", "/me/adult-confirmation"))
   .middleware(Authentication) {}
 
-const PlayerIdParam = { id: Schema.String.check(Schema.isMinLength(1)) };
+/** Finding other players near me and viewing their profiles. */
+export class PlayersApi extends HttpApiGroup.make("players")
+  /** Players within the radius of my home point, nearest first, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("search", "/players", {
+      query: PlayersQuery,
+      success: PlayersPage,
+      error: [HomePointRequired, InvalidCursor],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("get", "/players/:id", {
+      params: { id: PlayerId },
+      success: PlayerProfile,
+      error: PlayerNotFound,
+    }),
+  )
+  .middleware(Authentication) {}
+
+/**
+ * Players I follow for later, so I can find them again without searching.
+ * Following is private: the followed player isn't told, and nobody else sees
+ * who I follow.
+ */
+export class FollowsApi extends HttpApiGroup.make("follows")
+  .add(HttpApiEndpoint.get("list", "/me/follows", { success: FollowedPlayers }))
+  /** Idempotent: following someone I already follow does nothing. */
+  .add(
+    HttpApiEndpoint.put("follow", "/players/:id/follow", {
+      params: { id: PlayerId },
+      error: [PlayerNotFound, CannotFollowSelf, FollowLimitReached],
+    }),
+  )
+  /** Idempotent: unfollowing someone I don't follow does nothing. */
+  .add(
+    HttpApiEndpoint.delete("unfollow", "/players/:id/follow", {
+      params: { id: PlayerId },
+    }),
+  )
+  .middleware(Authentication) {}
+
+const PlayerIdParam = { id: PlayerId };
 
 /**
  * Blocking and reporting. Blocked players are hidden from each other
@@ -69,5 +120,7 @@ export class SafetyApi extends HttpApiGroup.make("safety")
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
   .add(MeApi)
+  .add(PlayersApi)
+  .add(FollowsApi)
   .add(SafetyApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}
