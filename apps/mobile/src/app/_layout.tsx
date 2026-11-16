@@ -34,6 +34,10 @@ export default function RootLayout() {
         <Stack.Protected guard={signedIn && confirmedAdult}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="profile-setup" options={{ gestureEnabled: false }} />
+          <Stack.Screen
+            name="players/[id]"
+            options={{ headerShown: true, title: "", headerBackTitle: "Players" }}
+          />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && !confirmedAdult}>
           <Stack.Screen name="confirm-age" />

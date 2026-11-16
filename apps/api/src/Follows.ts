@@ -59,8 +59,7 @@ export class Follows extends Context.Service<
           .orderBy(desc(follow.createdAt), profile.userId)
           .pipe(
             Effect.map(
-              (rows) =>
-                new FollowedPlayers({ items: rows.map((row) => new FollowedPlayer(row)) }),
+              (rows) => new FollowedPlayers({ items: rows.map((row) => new FollowedPlayer(row)) }),
             ),
             Effect.orDie,
             Effect.withSpan("Follows.list"),

@@ -145,7 +145,7 @@ function NearbyPlayers() {
           />
         )
       }
-      ListFooterComponent={search.loadingMore ? <ActivityIndicator /> : null}
+      ListFooterComponent={search.loadingMore ? <ActivityIndicator /> : undefined}
       onEndReached={search.loadMore}
       onEndReachedThreshold={0.5}
       refreshControl={<RefreshControl refreshing={false} onRefresh={search.refresh} />}
@@ -245,7 +245,7 @@ function FollowedList() {
           <Message
             title="Couldn't load who you follow"
             body="Check your connection and try again."
-            action={{ label: "Try again", onPress: load }}
+            action={{ label: "Try again", onPress: () => void load() }}
           />
         ) : follows ? (
           <Message
@@ -256,7 +256,7 @@ function FollowedList() {
           <Centered busy />
         )
       }
-      refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
+      refreshControl={<RefreshControl refreshing={false} onRefresh={() => void load()} />}
     />
   );
 }
