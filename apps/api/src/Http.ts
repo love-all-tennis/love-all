@@ -10,6 +10,7 @@ import { BetterAuth, TrustedOrigins } from "./BetterAuth";
 import { Db } from "./Db";
 import { ApiHandlers } from "./Handlers";
 import { Profiles } from "./Profiles";
+import { Safety } from "./Safety";
 
 /** Better Auth's own routes (sign-up, sign-in, OAuth callbacks, sessions). */
 const AuthRoutes = Layer.effectDiscard(
@@ -22,7 +23,7 @@ const AuthRoutes = Layer.effectDiscard(
 
 const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide(ApiHandlers),
-  Layer.provide([AuthenticationLive, Accounts.layer, Profiles.layer]),
+  Layer.provide([AuthenticationLive, Accounts.layer, Profiles.layer, Safety.layer]),
 );
 
 const DocsRoute = HttpApiScalar.layer(Api, { path: "/docs" });

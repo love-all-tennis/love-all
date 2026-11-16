@@ -5,6 +5,7 @@ import { HttpApiBuilder } from "effect/http-api";
 import { Accounts } from "./Accounts";
 import { Db } from "./Db";
 import { Profiles } from "./Profiles";
+import { Safety } from "./Safety";
 
 export const SystemHandlers = HttpApiBuilder.group(
   Api,
@@ -38,4 +39,23 @@ export const MeHandlers = HttpApiBuilder.group(
   }),
 );
 
-export const ApiHandlers = Layer.mergeAll(SystemHandlers, MeHandlers);
+export const SafetyHandlers = HttpApiBuilder.group(
+  Api,
+  "safety",
+  Effect.fn(function* (handlers) {
+    const safety = yield* Safety;
+    return handlers
+      .handle("block", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => safety.block(user, params.id)),
+      )
+      .handle("unblock", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => safety.unblock(user, params.id)),
+      )
+      .handle("listBlocks", () => Effect.flatMap(CurrentUser, safety.listBlocks))
+      .handle("report", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => safety.report(user, payload)),
+      );
+  }),
+);
+
+export const ApiHandlers = Layer.mergeAll(SystemHandlers, MeHandlers, SafetyHandlers);
