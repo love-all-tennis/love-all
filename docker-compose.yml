@@ -2,7 +2,10 @@
 #   docker compose up --build
 services:
   db:
-    image: postgis/postgis:17-3.5
+    # Multi-arch build of the same PostGIS release, so it runs natively on Apple Silicon.
+    image: imresamu/postgis:17-3.5
+    # Official image (amd64 only). Use this one for prod on the VPS.
+    # image: postgis/postgis:17-3.5
     restart: unless-stopped
     environment:
       POSTGRES_USER: love_all
