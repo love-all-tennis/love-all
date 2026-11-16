@@ -44,17 +44,18 @@ The API reads `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_
 
 ## Everyday commands
 
-| Command                                     | What it does                                               |
-| ------------------------------------------- | ---------------------------------------------------------- |
-| `vp check`                                  | Format check, lint, and type-aware lint across the repo    |
-| `pnpm typecheck`                            | `tsc` in every package                                     |
-| `vp test run`                               | Unit and in-memory API tests                               |
-| `pnpm --filter @love-all/api db:generate`   | New migration from schema changes                          |
-| `pnpm --filter @love-all/api auth:generate` | Regenerate Better Auth's tables after changing auth config |
-| `docker compose up --build`                 | Run the whole API stack locally                            |
+| Command                                     | What it does                                                                                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `vp check`                                  | Format check, lint, and type-aware lint across the repo                                       |
+| `pnpm typecheck`                            | `tsc` in every package                                                                        |
+| `vp test run`                               | Unit and in-memory API tests; with `DATABASE_URL` set, also the `*.db.test.ts` database tests |
+| `pnpm --filter @love-all/api db:generate`   | New migration from schema changes                                                             |
+| `pnpm --filter @love-all/api auth:generate` | Regenerate Better Auth's tables after changing auth config                                    |
+| `docker compose up --build`                 | Run the whole API stack locally                                                               |
 
 ## Notes
 
 - Better Auth's Drizzle adapter awaits promise-based queries, so it uses its own small `node-postgres` pool. App code uses Drizzle's Effect driver through the `Db` service. Both share one schema in `apps/api/src/db`.
+- Player locations are stored rounded to two decimals (about 1 km) and a check constraint enforces it. Round with `roundHomePoint` in `apps/api/src/db/geo.ts` before writing `profile.home_point`.
 - The API image bundles all dependencies (`vp pack`), runs migrations on start, then serves.
 - The Expo app builds with Metro. Vite+ is used for the API and shared packages, and for linting and formatting everywhere.
