@@ -57,6 +57,7 @@ The API reads `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_
 
 - Better Auth's Drizzle adapter awaits promise-based queries, so it uses its own small `node-postgres` pool. App code uses Drizzle's Effect driver through the `Db` service. Both share one schema in `apps/api/src/db`.
 - Player locations are stored rounded to two decimals (about 1 km) and a check constraint enforces it. Round with `roundHomePoint` in `apps/api/src/db/geo.ts` before writing `profile.home_point`.
+- Players must confirm they're 18 or older. The sign-up screen asks with a checkbox, and anyone who signs in without having confirmed (a first Google or Apple sign-in, say) lands on the confirm-age screen. The answer is stored as `user.adult_confirmed_at` through `POST /me/adult-confirmation`, and the app only opens once it's set.
 - Auth lives at `/api/auth/*`. Endpoints behind the `Authentication` middleware get the signed-in user as `CurrentUser`, and a missing or expired session is a 401 `Unauthorized`. Every user has a `role` (`player` by default, or `admin`). It can't be set through Better Auth's sign-up or update routes, so promote an admin in the database: `update "user" set role = 'admin' where email = '...'`.
 - The API image bundles all dependencies (`vp pack`), runs migrations on start, then serves.
 - The Expo app builds with Metro. Vite+ is used for the API and shared packages, and for linting and formatting everywhere.

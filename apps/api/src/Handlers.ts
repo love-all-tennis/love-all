@@ -2,6 +2,7 @@ import { Api, CurrentUser } from "@love-all/domain";
 import { sql } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
+import { Accounts } from "./Accounts";
 import { Db } from "./Db";
 
 export const SystemHandlers = HttpApiBuilder.group(
@@ -16,14 +17,24 @@ export const SystemHandlers = HttpApiBuilder.group(
   }),
 );
 
-export const MeHandlers = HttpApiBuilder.group(Api, "me", (handlers) =>
-  Effect.succeed(
-    handlers.handle("get", () =>
-      Effect.gen(function* () {
-        return yield* CurrentUser;
-      }),
-    ),
-  ),
+export const MeHandlers = HttpApiBuilder.group(
+  Api,
+  "me",
+  Effect.fn(function* (handlers) {
+    const accounts = yield* Accounts;
+    return handlers
+      .handle("get", () =>
+        Effect.gen(function* () {
+          return yield* CurrentUser;
+        }),
+      )
+      .handle("confirmAdult", () =>
+        Effect.gen(function* () {
+          const { id } = yield* CurrentUser;
+          yield* accounts.confirmAdult(id);
+        }),
+      );
+  }),
 );
 
 export const ApiHandlers = Layer.mergeAll(SystemHandlers, MeHandlers);

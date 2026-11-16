@@ -1,9 +1,10 @@
 import * as Device from "expo-device";
 import { useEffect, useState } from "react";
-import { Platform, StyleSheet } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AnimatedIcon } from "@/components/animated-icon";
+import { Button } from "@/components/auth-ui";
 import { HintRow } from "@/components/hint-row";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -63,6 +64,10 @@ export default function HomeScreen() {
           <HintRow title="Dev tools" hint={getDevMenuHint()} />
         </ThemedView>
 
+        <View style={styles.signOut}>
+          <Button title="Sign out" variant="secondary" onPress={() => void authClient.signOut()} />
+        </View>
+
         {Platform.OS === "web" && <WebBadge />}
       </SafeAreaView>
     </ThemedView>
@@ -92,6 +97,9 @@ const styles = StyleSheet.create({
   },
   title: {
     textAlign: "center",
+  },
+  signOut: {
+    alignSelf: "stretch",
   },
   stepContainer: {
     gap: Spacing.three,

@@ -78,6 +78,12 @@ export const makeAuth = (options: AuthOptions) => {
           // Never settable from sign-up or update-user; admins are promoted in the database.
           input: false,
         },
+        adultConfirmedAt: {
+          type: "date",
+          required: false,
+          // Set by POST /me/adult-confirmation, never from sign-up or update-user.
+          input: false,
+        },
       },
     },
     trustedOrigins: apple ? [...options.trustedOrigins, appleOrigin] : [...options.trustedOrigins],

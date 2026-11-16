@@ -13,6 +13,12 @@ export class SystemApi extends HttpApiGroup.make("system").add(
 
 export class MeApi extends HttpApiGroup.make("me")
   .add(HttpApiEndpoint.get("get", "/me", { success: SessionUser }))
+  /**
+   * Records that the signed-in player confirmed they are 18 or older. The app
+   * asks once, right after sign-up (or the first social sign-in). Calling it
+   * again keeps the first confirmation time.
+   */
+  .add(HttpApiEndpoint.post("confirmAdult", "/me/adult-confirmation"))
   .middleware(Authentication) {}
 
 /** The whole Love All API. Shared by the server and the mobile client. */

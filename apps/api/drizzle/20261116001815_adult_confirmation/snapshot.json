@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "e04e3873-3ebd-42cf-a287-0112b2cfe587",
+  "prevIds": [
+    "77c3baae-04ab-4403-bb10-65d5f7196d6c"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "user",
+        "adult_confirmed_at"
+      ],
+      "writes": [
+        "s|col|public.user.adult_confirmed_at",
+        "n|col|public.user.adult_confirmed_at",
+        "e|col|public.user.adult_confirmed_at"
+      ],
+      "reads": [
+        "n|tbl|public.user",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "user",
+        "name": "adult_confirmed_at",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

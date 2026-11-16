@@ -1,4 +1,5 @@
 import { expoClient } from "@better-auth/expo/client";
+import { inferAdditionalFields } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 import * as SecureStore from "expo-secure-store";
 import { apiUrl } from "./config";
@@ -12,5 +13,14 @@ export const authClient = createAuthClient({
       storagePrefix: "loveall",
       storage: SecureStore,
     }),
+    // Mirrors `user.additionalFields` in apps/api/src/auth.ts.
+    inferAdditionalFields({
+      user: {
+        role: { type: "string", required: false, input: false },
+        adultConfirmedAt: { type: "date", required: false, input: false },
+      },
+    }),
   ],
 });
+
+export type SocialProvider = "google" | "apple";
