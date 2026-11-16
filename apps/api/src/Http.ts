@@ -4,6 +4,7 @@ import { Config, Effect, Layer } from "effect";
 import { HttpEffect, HttpMiddleware, HttpRouter } from "effect/http";
 import { HttpApiBuilder, HttpApiScalar } from "effect/http-api";
 import { createServer } from "node:http";
+import { Accounts } from "./Accounts";
 import { AuthenticationLive } from "./Authentication";
 import { BetterAuth, TrustedOrigins } from "./BetterAuth";
 import { Db } from "./Db";
@@ -21,7 +22,7 @@ const AuthRoutes = Layer.effectDiscard(
 
 const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide(ApiHandlers),
-  Layer.provide([AuthenticationLive, Profiles.layer]),
+  Layer.provide([AuthenticationLive, Accounts.layer, Profiles.layer]),
 );
 
 const DocsRoute = HttpApiScalar.layer(Api, { path: "/docs" });

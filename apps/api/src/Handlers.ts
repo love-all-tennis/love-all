@@ -2,6 +2,7 @@ import { Api, CurrentUser } from "@love-all/domain";
 import { sql } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
+import { Accounts } from "./Accounts";
 import { Db } from "./Db";
 import { Profiles } from "./Profiles";
 
@@ -21,6 +22,7 @@ export const MeHandlers = HttpApiBuilder.group(
   Api,
   "me",
   Effect.fn(function* (handlers) {
+    const accounts = yield* Accounts;
     const profiles = yield* Profiles;
     return handlers
       .handle("get", () => Effect.flatMap(CurrentUser, profiles.get))
@@ -29,6 +31,9 @@ export const MeHandlers = HttpApiBuilder.group(
       )
       .handle("replaceAvailability", ({ payload }) =>
         Effect.flatMap(CurrentUser, (user) => profiles.replaceAvailability(user, payload)),
+      )
+      .handle("confirmAdult", () =>
+        Effect.flatMap(CurrentUser, (user) => accounts.confirmAdult(user.id)),
       );
   }),
 );

@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "adult_confirmed_at" timestamp;

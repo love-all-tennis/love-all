@@ -2,15 +2,25 @@ import { Api } from "@love-all/domain";
 import { Effect } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { HttpApiClient } from "effect/http-api";
+import { Platform } from "react-native";
 import { authClient } from "./auth-client";
 import { apiUrl } from "./config";
+
+const isWeb = Platform.OS === "web";
+
+/**
+ * The session cookie to send. Native builds keep it in the secure store and
+ * attach it by hand. On the web the browser holds it (and the secure store
+ * doesn't exist), so requests go out with `credentials: "include"` instead.
+ */
+const sessionCookie = isWeb ? Effect.succeed("") : Effect.promise(() => authClient.getCookie());
 
 /** Typed client generated from the shared API definition. */
 const makeClient = HttpApiClient.make(Api, {
   transformClient: (client) =>
     client.pipe(
       HttpClient.mapRequestEffect((request) =>
-        Effect.promise(() => authClient.getCookie()).pipe(
+        sessionCookie.pipe(
           Effect.map((cookie) => {
             const withUrl = HttpClientRequest.prependUrl(request, apiUrl);
             return cookie ? HttpClientRequest.setHeader(withUrl, "cookie", cookie) : withUrl;
@@ -33,5 +43,6 @@ export const callApi = <A, E>(request: (api: ApiClient) => Effect.Effect<A, E>):
   makeClient.pipe(
     Effect.flatMap(request),
     Effect.provide(FetchHttpClient.layer),
+    Effect.provideService(FetchHttpClient.RequestInit, isWeb ? { credentials: "include" } : {}),
     Effect.runPromise,
   );

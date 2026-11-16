@@ -3,6 +3,7 @@ import { Effect, Exit, Layer } from "effect";
 import { HttpServer } from "effect/http";
 import { HttpApiTest } from "effect/http-api";
 import { describe, expect, it } from "vite-plus/test";
+import { Accounts } from "./Accounts";
 import type { Auth } from "./auth";
 import { AuthenticationLive } from "./Authentication";
 import { BetterAuth } from "./BetterAuth";
@@ -17,6 +18,12 @@ type GetSession = () => Promise<{
 const fakeAuth = (getSession: GetSession) =>
   Layer.succeed(BetterAuth, { api: { getSession } } as unknown as Auth);
 
+/** GET /me never writes to the account. */
+const noAccounts = Layer.succeed(
+  Accounts,
+  Accounts.of({ confirmAdult: () => Effect.die("unused") }),
+);
+
 const makeClient = HttpApiTest.groups(Api, ["me"]);
 
 /** GET /me through the real middleware, with Better Auth's answer stubbed. */
@@ -26,7 +33,7 @@ const getMe = (getSession: GetSession) =>
     Effect.provide(
       Layer.mergeAll(
         MeHandlers.pipe(
-          Layer.provide(ProfilesMemory),
+          Layer.provide([noAccounts, ProfilesMemory]),
           Layer.provideMerge(AuthenticationLive.pipe(Layer.provide(fakeAuth(getSession)))),
         ),
         HttpServer.layerServices,
