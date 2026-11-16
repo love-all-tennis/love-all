@@ -7,6 +7,7 @@ import type { Auth } from "./auth";
 import { AuthenticationLive } from "./Authentication";
 import { BetterAuth } from "./BetterAuth";
 import { MeHandlers } from "./Handlers";
+import { ProfilesMemory } from "./testing/ProfilesMemory";
 
 type GetSession = () => Promise<{
   user: { id: string; name: string; email: string; role?: unknown };
@@ -25,6 +26,7 @@ const getMe = (getSession: GetSession) =>
     Effect.provide(
       Layer.mergeAll(
         MeHandlers.pipe(
+          Layer.provide(ProfilesMemory),
           Layer.provideMerge(AuthenticationLive.pipe(Layer.provide(fakeAuth(getSession)))),
         ),
         HttpServer.layerServices,
@@ -39,12 +41,12 @@ const sam = { id: "u_sam", name: "Sam", email: "sam@example.com" };
 describe("Authentication middleware", () => {
   it("provides the session's user as CurrentUser", async () => {
     const exit = await getMe(async () => ({ user: { ...sam, role: "admin" } }));
-    expect(Exit.isSuccess(exit) && exit.value).toMatchObject({ ...sam, role: "admin" });
+    expect(Exit.isSuccess(exit) && exit.value.user).toMatchObject({ ...sam, role: "admin" });
   });
 
   it("treats an unknown role as a player", async () => {
     const exit = await getMe(async () => ({ user: { ...sam, role: "owner" } }));
-    expect(Exit.isSuccess(exit) && exit.value.role).toBe("player");
+    expect(Exit.isSuccess(exit) && exit.value.user.role).toBe("player");
   });
 
   it("fails with Unauthorized when there is no session (missing or expired)", async () => {
