@@ -4,6 +4,7 @@ import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { Accounts } from "./Accounts";
 import { Db } from "./Db";
+import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 
 export const SystemHandlers = HttpApiBuilder.group(
@@ -38,4 +39,19 @@ export const MeHandlers = HttpApiBuilder.group(
   }),
 );
 
-export const ApiHandlers = Layer.mergeAll(SystemHandlers, MeHandlers);
+export const PlayersHandlers = HttpApiBuilder.group(
+  Api,
+  "players",
+  Effect.fn(function* (handlers) {
+    const players = yield* Players;
+    return handlers
+      .handle("search", ({ query }) =>
+        Effect.flatMap(CurrentUser, (viewer) => players.search(viewer, query)),
+      )
+      .handle("get", ({ params }) =>
+        Effect.flatMap(CurrentUser, (viewer) => players.get(viewer, params.id)),
+      );
+  }),
+);
+
+export const ApiHandlers = Layer.mergeAll(SystemHandlers, MeHandlers, PlayersHandlers);
