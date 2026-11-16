@@ -141,7 +141,7 @@ Geist Sans for the interface, Geist Serif for the top of the hierarchy. Both are
 ## States every screen needs
 
 - **Loading.** Keep the layout steady. Show a centred `ActivityIndicator` in `textMuted` on first load, and never a blank screen. On refresh, keep the old content up.
-- **Empty.** Say what's missing and offer the next step: a `display` or `heading` line, one `body` line, and one button. "No players within 15 km yet" / "Try a wider distance or a different level." / "Widen the search".
+- **Empty.** Say what's missing and offer the next step: a `display` or `heading` line, one `body` line, and one button. "No players within 10 mi yet" / "Try a wider distance or a different level." / "Widen the search".
 - **Error.** Say what failed in plain words and offer a retry: "Couldn't load players. Check your connection and try again." / "Try again". Never show a raw error, status code or stack.
 - **Offline.** Keep what's already loaded and show a quiet banner. Queue nothing silently.
 - **Success.** Confirm in place (a toast or the button's label changing to "Invite sent") rather than with a dialog. Save big moments, like a confirmed match, for `display`.
@@ -155,7 +155,7 @@ Write like a friendly club member pinning a note on the board: plain, specific a
 - Buttons are a verb and an object. Never "OK", "Submit", "Learn more", "Click here" or "Continue" when something more specific fits.
 - Use the player's words: match, hitting session, singles, doubles, NTRP, court. Write levels as "NTRP 3.5", times as "Sat, Nov 22 · 9:00 AM", and durations as "90 min".
 - Errors name the field and the fix. Confirmations name what happened ("Invite sent to Sam"). Never blame the player.
-- Location copy is honest about precision: "About 5 km away", never an address or an exact pin for another player.
+- Location copy is honest about precision: "About 3 mi away", never an address or an exact pin for another player.
 - Don't write filler or hype: seamless, effortless, elevate, unlock, journey, community-powered, game-changing, "Ready to…?". Don't invent proof: no fake counts, ratings, reviews or "12 players viewing".
 - Use second person ("your profile") and plain contractions. Use "they" for other players unless they've said otherwise.
 
@@ -165,7 +165,7 @@ Write like a friendly club member pinning a note on the board: plain, specific a
 - **Formats.** Singles, doubles and hitting, shown as tags in that order.
 - **Scores.** Set by set with an en dash and tabular figures: "6–4, 3–6, 10–7". A tiebreak goes in brackets: "7–6 (5)".
 - **Courts.** Free text plus a map pin. Show the court's name, then the area ("Palmer Park, Detroit").
-- **Distance.** Today the app shows kilometres ("About 5 km away"). The launch market is the US, so miles may suit players better. That's an open product question, so don't change it without a decision.
+- **Distance.** Miles, since v1 is US only. Show whole miles with "mi": "About 1 mi away" for anything up to 1 mile (home points are rounded to about 1 km, so nothing finer is honest), then "3 mi away". Search radius choices are in miles too ("Within 10 mi"). The API and database stay metric (`radiusKm`, `distanceKm`): convert in the app at the edge, in one shared helper, and never show km to players.
 
 ## Accessibility
 
