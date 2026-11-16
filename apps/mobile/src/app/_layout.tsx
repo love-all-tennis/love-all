@@ -3,6 +3,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useColorScheme } from "react-native";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { useAppFonts } from "@/design";
 import { authClient } from "@/lib/auth-client";
 
 void SplashScreen.preventAutoHideAsync();
@@ -21,9 +22,10 @@ void SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const { data: session, isPending } = authClient.useSession();
+  const fontsReady = useAppFonts();
 
-  // Keep the native splash screen up until the stored session has been read.
-  if (isPending) return null;
+  // Keep the native splash screen up until the stored session and the fonts are ready.
+  if (isPending || !fontsReady) return null;
 
   const signedIn = session != null;
   const confirmedAdult = session?.user.adultConfirmedAt != null;
