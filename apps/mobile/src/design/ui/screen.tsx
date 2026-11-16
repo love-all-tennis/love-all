@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
 import { size, space } from "../tokens";
@@ -18,7 +18,10 @@ export type ScreenProps = {
   edges?: Edge[];
 };
 
-/** The frame for every screen: chalk ground, safe area, 16pt gutters, a title. */
+/**
+ * The frame for every screen: chalk ground, safe area, 16pt gutters, a title,
+ * and room for the keyboard on iOS.
+ */
 export function Screen({
   title,
   subtitle,
@@ -35,21 +38,26 @@ export function Screen({
   ) : null;
   return (
     <SafeAreaView edges={edges} style={[styles.fill, { backgroundColor: palette.background }]}>
-      {scroll ? (
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          contentInsetAdjustmentBehavior="automatic"
-        >
-          {header}
-          {children}
-        </ScrollView>
-      ) : (
-        <View style={[styles.fill, styles.content]}>
-          {header}
-          {children}
-        </View>
-      )}
+      <KeyboardAvoidingView
+        style={styles.fill}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        {scroll ? (
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            contentInsetAdjustmentBehavior="automatic"
+          >
+            {header}
+            {children}
+          </ScrollView>
+        ) : (
+          <View style={[styles.fill, styles.content]}>
+            {header}
+            {children}
+          </View>
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

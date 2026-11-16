@@ -1,19 +1,15 @@
-import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { ThemedText } from "@/components/themed-text";
-import { Spacing } from "@/constants/theme";
-import { FieldLabel, StepScreen } from "@/features/profile/components";
+import { Avatar, Button, Loading, Screen, space, TextField } from "@/design";
+import { StepScreen } from "@/features/profile/components";
 import { DISPLAY_NAME_MAX, stepError } from "@/features/profile/draft";
 import { useProfileDraft } from "@/features/profile/draft-context";
-import { useTheme } from "@/hooks/use-theme";
 
 /** Step 1: the name and photo other players see. */
 export default function BasicsScreen() {
-  const theme = useTheme();
   const { draft, update, loading } = useProfileDraft();
   const [tried, setTried] = useState(false);
   const error = stepError(draft, "basics");
@@ -31,75 +27,54 @@ export default function BasicsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.loading, { backgroundColor: theme.background }]}>
-        <ActivityIndicator />
-      </View>
+      <Screen edges={["left", "right", "bottom"]}>
+        <Loading label="Loading your profile" />
+      </Screen>
     );
   }
 
   return (
     <StepScreen
       step={1}
-      title="Who's playing?"
+      title="Your name and photo"
       subtitle="This is how other players will see you."
-      error={tried ? error : null}
+      error={null}
       actionLabel="Next"
       onAction={() => {
         setTried(true);
         if (!error) router.push("/profile-setup/home");
       }}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={draft.photoUri ? "Change photo" : "Add a photo"}
-        onPress={() => void pickPhoto()}
-        style={styles.photoRow}
-      >
-        <View style={[styles.photo, { backgroundColor: theme.backgroundElement }]}>
-          {draft.photoUri ? (
-            <Image source={{ uri: draft.photoUri }} style={styles.photo} contentFit="cover" />
-          ) : (
-            <ThemedText type="subtitle" themeColor="textSecondary">
-              {draft.displayName.trim().charAt(0).toUpperCase() || "+"}
-            </ThemedText>
-          )}
-        </View>
-        <ThemedText type="linkPrimary">
-          {draft.photoUri ? "Change photo" : "Add a photo"}
-        </ThemedText>
-      </Pressable>
+      <View style={styles.photoRow}>
+        <Avatar name={draft.displayName} photoUrl={draft.photoUri} size="lg" />
+        <Button
+          variant="secondary"
+          size="small"
+          label={draft.photoUri ? "Change photo" : "Add a photo"}
+          onPress={() => void pickPhoto()}
+        />
+      </View>
 
-      <FieldLabel>Display name</FieldLabel>
-      <TextInput
+      <TextField
+        label="Display name"
         value={draft.displayName}
         onChangeText={(displayName) => update({ displayName })}
-        placeholder="First name or nickname"
-        placeholderTextColor={theme.textSecondary}
+        error={tried ? (error ?? undefined) : undefined}
+        hint="Your first name or a nickname"
         maxLength={DISPLAY_NAME_MAX}
         autoCapitalize="words"
         autoComplete="name"
+        textContentType="nickname"
         returnKeyType="next"
-        style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+        onSubmitEditing={() => {
+          setTried(true);
+          if (!error) router.push("/profile-setup/home");
+        }}
       />
     </StepScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-  photoRow: { flexDirection: "row", alignItems: "center", gap: Spacing.three },
-  photo: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  input: {
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three - Spacing.one,
-    fontSize: 16,
-  },
+  photoRow: { flexDirection: "row", alignItems: "center", gap: space[4] },
 });

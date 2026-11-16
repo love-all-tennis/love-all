@@ -34,14 +34,19 @@ Everything lives in `apps/mobile/src/design`:
 | `ui/card.tsx`       | `Card`: the one card, optionally pressable                                                                |
 | `ui/chip.tsx`       | `Chip` (a toggle) and `Tag` (a read-only label)                                                           |
 | `ui/text-field.tsx` | `TextField`, with a visible label, hint and error                                                         |
-| `ui/screen.tsx`     | `Screen`: safe area, chalk ground, gutters and a serif title                                              |
+| `ui/screen.tsx`     | `Screen`: safe area, chalk ground, gutters, a serif title and room for the keyboard                       |
+| `ui/avatar.tsx`     | `Avatar`: a round photo, or initials on `surfaceSunken`                                                   |
+| `ui/icon.tsx`       | `Icon`: an SF Symbol on iOS and the matching Material symbol on Android and web                           |
+| `ui/choice-row.tsx` | `ChoiceRow`: a pick-one row with a title and a hint (an NTRP level, a report reason)                      |
+| `ui/divider.tsx`    | `Divider`: a hairline with a word in the middle ("or")                                                    |
+| `ui/states.tsx`     | `Loading`, `EmptyState` (also used for errors) and `ErrorBanner`                                          |
 
 Rules for using them:
 
 - Import from `@/design`. Don't reach for raw hex values, font names, or numbers for spacing and radius in screen code. If a value you need isn't a token, add the token (and its contrast row) rather than hard-coding it.
 - Use `Text` for all text. Don't set `fontFamily` or `fontWeight` on it: pick a `variant`. Android can't choose a weight from one font family, so each weight is its own family in `fontFamily`.
 - New shared components go in `src/design/ui/` when two or more features need them. A component only one feature uses lives in that feature's `components.tsx`.
-- The older `src/constants/theme.ts`, `ThemedText`, `ThemedView` and the `auth-ui.tsx` pieces predate this system. Existing screens still use them. New screens use `@/design`. When you touch an old screen for other reasons, don't migrate it in the same change unless asked; migration is its own piece of work.
+- Every screen is built from `@/design`. The Expo starter styling (`constants/theme.ts`, `ThemedText`, `ThemedView`, `auth-ui.tsx`) is gone: don't bring it back.
 
 ## Colour
 
@@ -131,7 +136,7 @@ The tab bar uses `NativeTabs` from `expo-router/native-tabs`, so iOS and Android
 | Forum                          | Forum    | `bubble.left.and.bubble.right` / `bubble.left.and.bubble.right.fill` | `forum`          |
 | Messages                       | Messages | `envelope` / `envelope.fill`                                         | `mail`           |
 
-Five tabs at most. Today's app has only Home and Players, with the Expo starter PNGs. Switch them to these symbols when the tab bar is next touched, and add the others as their features land.
+Five tabs at most. Today's app has Home and Players (`src/components/app-tabs.tsx`, with a matching bar for web in `app-tabs.web.tsx`). Add the others as their features land, rather than as empty tabs.
 
 - Player photos are round (`size.avatar`: 32 in dense lists, 48 in rows, 72 to 112 on a profile). Without a photo, show initials on `surfaceSunken`, as `PlayerAvatar` does.
 - No stock photos, illustrations of tennis players, or mascots. Empty states use type, not pictures.

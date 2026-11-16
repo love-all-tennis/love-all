@@ -191,6 +191,8 @@ export const size = {
   avatar: { sm: 32, md: 48, lg: 72, xl: 112 },
   icon: { sm: 16, md: 20, lg: 24 },
   hairline: 1,
+  /** Room under a tabs screen's scrolling content, so the last row clears the native tab bar. */
+  tabBarClearance: 80,
 } as const;
 
 /**

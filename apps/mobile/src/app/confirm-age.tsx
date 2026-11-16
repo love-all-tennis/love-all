@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { AuthScreen, Button, ErrorText } from "@/components/auth-ui";
-import { ThemedText } from "@/components/themed-text";
-import { Spacing } from "@/constants/theme";
+import { Button, ErrorBanner, Loading, Screen, space } from "@/design";
 import {
   confirmAdult,
   confirmedAdultOnSignUp,
@@ -44,51 +42,50 @@ export default function ConfirmAgeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const signOut = () => void authClient.signOut();
+
   if (autoConfirming && submitting && !error) {
     return (
-      <AuthScreen title="Setting up your account">
-        <View style={{ paddingVertical: Spacing.four }}>
-          <ActivityIndicator />
-        </View>
-      </AuthScreen>
+      <Screen title="Setting up your account">
+        <Loading label="Setting up your account" />
+      </Screen>
     );
   }
 
   if (underage) {
     return (
-      <AuthScreen
+      <Screen
         title="Love All is for players 18 and older"
-        subtitle="Sorry, you need to be 18 or older to use Love All."
+        subtitle="You need to be 18 or older to use Love All. Thanks for checking it out."
       >
-        <Button title="Sign out" variant="secondary" onPress={() => void authClient.signOut()} />
-      </AuthScreen>
+        <Button label="Sign out" variant="secondary" onPress={signOut} />
+      </Screen>
     );
   }
 
   return (
-    <AuthScreen
-      title="One more thing"
-      subtitle="Love All is for adult players only. Please confirm you're 18 or older."
+    <Screen
+      title="Confirm your age"
+      subtitle="Love All is for adult players only. Confirm you're 18 or older to carry on."
     >
-      <ErrorText>{error}</ErrorText>
-      <Button title="I'm 18 or older" onPress={() => void confirm()} loading={submitting} />
-      <Button
-        title="I'm under 18"
-        variant="secondary"
-        disabled={submitting}
-        onPress={() => setUnderage(true)}
-      />
-      <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: "center" }}>
-        Not you?{" "}
-        <ThemedText
-          type="smallBold"
-          themeColor="accent"
-          accessibilityRole="button"
-          onPress={() => void authClient.signOut()}
-        >
-          Sign out
-        </ThemedText>
-      </ThemedText>
-    </AuthScreen>
+      <View style={styles.group}>
+        <ErrorBanner>{error}</ErrorBanner>
+        <Button label="I'm 18 or older" onPress={() => void confirm()} loading={submitting} />
+        <Button
+          label="I'm under 18"
+          variant="secondary"
+          disabled={submitting}
+          onPress={() => setUnderage(true)}
+        />
+      </View>
+      <View style={styles.center}>
+        <Button variant="quiet" size="small" label="Sign out" onPress={signOut} />
+      </View>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  group: { gap: space[3] },
+  center: { flexDirection: "row", justifyContent: "center" },
+});
