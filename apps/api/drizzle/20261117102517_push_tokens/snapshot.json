@@ -1,0 +1,251 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a2613b0e-7e3d-4fc3-9ad9-bd617b340b75",
+  "prevIds": [
+    "7c0539a0-ac34-44fe-8926-c0aadcf3fbd4"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "device_platform"
+      ],
+      "writes": [
+        "s|enum|public.device_platform",
+        "n|enum|public.device_platform",
+        "e|enum|public.device_platform",
+        "n|type|public.device_platform"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "push_token"
+      ],
+      "writes": [
+        "s|tbl|public.push_token",
+        "n|tbl|public.push_token",
+        "e|tbl|public.push_token",
+        "n|rel|public.push_token",
+        "n|type|public.push_token",
+        "n|rel|public.push_token_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.device_platform"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "push_token",
+        "push_token_user_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.push_token_user_id_idx",
+        "n|idx|public.push_token_user_id_idx",
+        "e|idx|public.push_token_user_id_idx",
+        "n|rel|public.push_token_user_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.push_token",
+        "n|sch|public",
+        "n|col|public.push_token.user_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "push_token"
+      ],
+      "writes": [
+        "s|fk|public.push_token.push_token_user_id_user_id_fkey",
+        "n|fk|public.push_token.push_token_user_id_user_id_fkey",
+        "e|fk|public.push_token.push_token_user_id_user_id_fkey",
+        "n|con|public.push_token.push_token_user_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.push_token",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.push_token.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "push_token",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "device_platform",
+        "values": [
+          "ios",
+          "android"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "push_token",
+        "name": "token",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "push_token",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "push_token",
+        "name": "platform",
+        "type": "device_platform",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "push_token",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "push_token",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "push_token",
+        "name": "push_token_user_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "push_token",
+        "name": "push_token_user_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "push_token",
+        "name": "push_token_pkey",
+        "columns": [
+          "token"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}
