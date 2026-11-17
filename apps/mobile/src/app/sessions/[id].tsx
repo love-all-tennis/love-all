@@ -17,9 +17,15 @@ import {
 } from "@/features/sessions/format";
 import { SessionComments, SessionScore } from "@/features/session-activity/components";
 import { canUseComments } from "@/features/session-activity/score";
-import { PlayerActions } from "@/features/sessions/player-actions";
-import { useNow, useSessionDetail } from "@/features/sessions/use-sessions";
+import {
+  CancelSessionButton,
+  JoinRequests,
+  SessionJoinActions,
+  useJoinChanges,
+} from "@/features/sessions/joining-components";
+import { pendingRequests } from "@/features/sessions/joining";
 import { authClient } from "@/lib/auth-client";
+import { useNow, useSessionDetail } from "@/features/sessions/use-sessions";
 import { distanceLabel } from "@/lib/distance";
 
 const openPlayer = (id: string) => router.push({ pathname: "/players/[id]", params: { id } });
@@ -72,16 +78,26 @@ function SessionBody({
   const now = useNow();
   const { data: auth } = authClient.useSession();
   const meId = auth?.user.id ?? null;
+  const changes = useJoinChanges({
+    session,
+    myId: auth?.user.id,
+    replace: onReplaced,
+    reload: onChanged,
+  });
   const tags = sessionTags(session, now);
   const isHost = session.me?.role === "host";
   const editable = isEditable(session, now);
+  // While the host can still answer, requests get their own section with Approve and Decline.
+  const requestsShown = isHost && editable && pendingRequests(session).length > 0;
   const spotsLeft = session.spots - session.acceptedCount;
   const distance = distanceLabel(session.distanceKm);
-  const participants = [...session.participants].sort(
-    (a, b) =>
-      (a.role === "host" ? -1 : STATE_ORDER[a.state]) -
-      (b.role === "host" ? -1 : STATE_ORDER[b.state]),
-  );
+  const participants = [...session.participants]
+    .filter((p) => !(requestsShown && p.state === "requested"))
+    .sort(
+      (a, b) =>
+        (a.role === "host" ? -1 : STATE_ORDER[a.state]) -
+        (b.role === "host" ? -1 : STATE_ORDER[b.state]),
+    );
 
   return (
     <>
@@ -101,8 +117,7 @@ function SessionBody({
         </Text>
       </View>
 
-      {/* Join, accept, approve and leave (#40) go here. */}
-      <PlayerActions session={session} onChanged={onChanged} onReplaced={onReplaced} />
+      <SessionJoinActions session={session} now={now} changes={changes} />
 
       <Section label="Court">
         <View style={styles.line}>
@@ -135,6 +150,8 @@ function SessionBody({
         <Text>{visibilityLabel(session.visibility)}</Text>
         {session.notes ? <Text color="textMuted">{session.notes}</Text> : null}
       </Section>
+
+      <JoinRequests session={session} now={now} changes={changes} onOpenPlayer={openPlayer} />
 
       <Section label="Players">
         <View style={styles.list}>
@@ -179,6 +196,7 @@ function SessionBody({
             label="Edit session"
             onPress={() => router.push({ pathname: "/sessions/edit", params: { id: session.id } })}
           />
+          <CancelSessionButton session={session} changes={changes} />
         </View>
       ) : null}
     </>

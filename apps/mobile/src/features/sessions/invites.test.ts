@@ -45,6 +45,7 @@ const session = new Session({
   levelMax: null,
   spots: 4,
   acceptedCount: 1,
+  requestCount: 0,
   visibility: "invite_only",
   status: "open",
   notes: null,

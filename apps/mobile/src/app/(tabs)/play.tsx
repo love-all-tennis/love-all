@@ -1,12 +1,24 @@
-import type { SessionScope } from "@love-all/domain";
+import type { SessionScope, SessionSummary } from "@love-all/domain";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { RefreshControl, SectionList, StyleSheet, View } from "react-native";
 
-import { Button, Chip, EmptyState, Icon, Loading, Screen, size, space, useColors } from "@/design";
+import {
+  Button,
+  Chip,
+  EmptyState,
+  Icon,
+  Loading,
+  Screen,
+  size,
+  space,
+  Text,
+  useColors,
+} from "@/design";
 import { PastScore } from "@/features/session-activity/components";
 import { isPastSession } from "@/features/session-activity/score";
 import { SessionCard } from "@/features/sessions/components";
+import { groupMySessions } from "@/features/sessions/joining";
 import { useNow, useSessionList } from "@/features/sessions/use-sessions";
 import { authClient } from "@/lib/auth-client";
 
@@ -58,15 +70,11 @@ function SessionList({ segment }: { segment: Segment }) {
   const now = useNow();
   const { data: auth } = authClient.useSession();
   const meId = auth?.user.id ?? null;
-  // `mine` comes upcoming first, then past: each segment shows its half.
-  const sessions =
-    segment === "nearby"
-      ? list.sessions
-      : list.sessions.filter((s) => isPastSession(s, now) === (segment === "past"));
-  // Past sessions sit after every upcoming one, so page on until some show up.
+  const sections = listSections(segment, list.sessions, now);
+  // `mine` comes upcoming first, then past, so page on until past ones show up.
   const { status, hasMore, loadingMore, loadMore } = list;
   const needsMore =
-    segment === "past" && status === "ready" && sessions.length === 0 && hasMore && !loadingMore;
+    segment === "past" && status === "ready" && sections.length === 0 && hasMore && !loadingMore;
   useEffect(() => {
     if (needsMore) loadMore();
   }, [needsMore, loadMore]);
@@ -82,10 +90,18 @@ function SessionList({ segment }: { segment: Segment }) {
   }
 
   return (
-    <FlatList
+    <SectionList
       style={styles.fill}
       contentContainerStyle={styles.list}
-      data={sessions}
+      sections={sections}
+      stickySectionHeadersEnabled={false}
+      renderSectionHeader={({ section }) =>
+        section.title ? (
+          <Text variant="heading" accessibilityRole="header" style={styles.header}>
+            {section.title}
+          </Text>
+        ) : null
+      }
       keyExtractor={(session) => session.id}
       renderItem={({ item }) => (
         <SessionCard
@@ -139,7 +155,34 @@ function SessionList({ segment }: { segment: Segment }) {
   );
 }
 
+type ListSection = { readonly title: string | null; readonly data: ReadonlyArray<SessionSummary> };
+
+/**
+ * My sessions shows upcoming ones, with invites and requests waiting on me in
+ * a short group at the top. Past and Nearby are plain lists. Empty groups are
+ * left out, so an empty list shows its empty state.
+ */
+const listSections = (
+  segment: Segment,
+  sessions: ReadonlyArray<SessionSummary>,
+  now: Date,
+): ReadonlyArray<ListSection> => {
+  const plain = (data: ReadonlyArray<SessionSummary>) =>
+    data.length > 0 ? [{ title: null, data }] : [];
+  if (segment === "nearby") return plain(sessions);
+  if (segment === "past") return plain(sessions.filter((s) => isPastSession(s, now)));
+  const upcoming = sessions.filter((s) => !isPastSession(s, now));
+  const { needsAnswer, rest } = groupMySessions(upcoming, now);
+  const sections: Array<ListSection> = [];
+  if (needsAnswer.length > 0) sections.push({ title: "Needs your answer", data: needsAnswer });
+  if (rest.length > 0) {
+    sections.push({ title: needsAnswer.length > 0 ? "All sessions" : null, data: rest });
+  }
+  return sections;
+};
+
 const styles = StyleSheet.create({
+  header: { paddingTop: space[2] },
   fill: { flex: 1 },
   bar: { flexDirection: "row", alignItems: "center", gap: space[2] },
   switcher: { flex: 1, flexDirection: "row", gap: space[2] },

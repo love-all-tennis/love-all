@@ -87,8 +87,8 @@ export type SessionTag = {
 };
 
 /**
- * Up to two tags for a session row: my place in it first (an invite waiting
- * on me stands out), then its state. Past and cancelled sessions say so.
+ * Up to two tags for a session row: my place in it first (an invite, or
+ * requests to join my session, waiting on me stand out), then its state. Past and cancelled sessions say so.
  */
 export const sessionTags = (
   session: {
@@ -96,13 +96,19 @@ export const sessionTags = (
     readonly status: SessionStatus;
     readonly spots: number;
     readonly acceptedCount: number;
+    /** Requests waiting on me, when I host. */
+    readonly requestCount?: number;
     readonly me: MySessionPlace | null;
   },
   now: Date,
 ): ReadonlyArray<SessionTag> => {
   const tags: Array<SessionTag> = [];
   const me = session.me;
-  if (me?.role === "host") tags.push({ label: "Hosting", tone: "neutral" });
+  const upcoming = session.status !== "cancelled" && session.startsAt.getTime() > now.getTime();
+  const requests = upcoming ? (session.requestCount ?? 0) : 0;
+  if (me?.role === "host" && requests > 0)
+    tags.push({ label: requests === 1 ? "1 request" : `${requests} requests`, tone: "clay" });
+  else if (me?.role === "host") tags.push({ label: "Hosting", tone: "neutral" });
   else if (me?.state === "invited") tags.push({ label: "Invited", tone: "clay" });
   else if (me?.state === "requested") tags.push({ label: "Asked to join", tone: "clay" });
   else if (me?.state === "accepted") tags.push({ label: "Playing", tone: "neutral" });
