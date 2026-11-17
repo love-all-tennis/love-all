@@ -116,7 +116,7 @@ export const CommentBody = Schema.String.check(
 export const NewSessionComment = Schema.Struct({ body: CommentBody });
 export type NewSessionComment = typeof NewSessionComment.Type;
 
-export const SessionCommentId = Schema.String.check(Schema.isMinLength(1));
+export const SessionCommentId = Schema.String.check(Schema.isUUID());
 
 /** A logistics note on a session, such as "Court 4, I'll bring balls". */
 export class SessionComment extends Schema.Class<SessionComment>("SessionComment")({
@@ -142,9 +142,59 @@ export const SessionCommentsQuery = {
 };
 
 /** One page of comments, oldest first. `nextCursor` is null on the last page. */
-export class SessionCommentsPage extends Schema.Class<SessionCommentsPage>("SessionCommentsPage")(
-  {
-    items: Schema.Array(SessionComment),
-    nextCursor: Schema.NullOr(Schema.String),
-  },
+export class SessionCommentsPage extends Schema.Class<SessionCommentsPage>("SessionCommentsPage")({
+  items: Schema.Array(SessionComment),
+  nextCursor: Schema.NullOr(Schema.String),
+}) {}
+
+/** Only the host and accepted players can read or write a session's comments and score. */
+export class NotSessionPlayer extends Schema.TaggedError<NotSessionPlayer>()(
+  "NotSessionPlayer",
+  { message: Schema.String },
+  { httpApiStatus: 403 },
+) {}
+
+/** No comment with that id, or it was deleted. */
+export class CommentNotFound extends Schema.TaggedError<CommentNotFound>()(
+  "CommentNotFound",
+  { id: Schema.String },
+  { httpApiStatus: 404 },
+) {}
+
+/** Only the author can delete a comment. */
+export class NotCommentAuthor extends Schema.TaggedError<NotCommentAuthor>()(
+  "NotCommentAuthor",
+  { message: Schema.String },
+  { httpApiStatus: 403 },
+) {}
+
+/**
+ * A score the session can't take: a hitting session, one that hasn't
+ * started, or sides that aren't the session's accepted players.
+ */
+export class InvalidResult extends Schema.TaggedError<InvalidResult>()(
+  "InvalidResult",
+  { message: Schema.String },
+  { httpApiStatus: 400 },
+) {}
+
+/** The score is already recorded and not disputed, or has already been answered. */
+export class ResultConflict extends Schema.TaggedError<ResultConflict>()(
+  "ResultConflict",
+  { message: Schema.String },
+  { httpApiStatus: 409 },
+) {}
+
+/** No score has been recorded for the session yet. */
+export class ResultNotFound extends Schema.TaggedError<ResultNotFound>()(
+  "ResultNotFound",
+  { id: Schema.String },
+  { httpApiStatus: 404 },
+) {}
+
+/** Only a player on the side that didn't record the score can confirm or dispute it. */
+export class NotOnOtherSide extends Schema.TaggedError<NotOnOtherSide>()(
+  "NotOnOtherSide",
+  { message: Schema.String },
+  { httpApiStatus: 403 },
 ) {}
