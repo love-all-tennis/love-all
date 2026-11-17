@@ -10,6 +10,7 @@ import { and, desc, eq, or } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
 import { Db } from "./Db";
 import { block, follow, profile, report, user } from "./db/schema";
+import { reportableMessage } from "./Messages";
 import { removeFromEachOthersSessions } from "./SessionJoins";
 
 /**
@@ -52,6 +53,16 @@ export class Safety extends Context.Service<
           if (!row) {
             return yield* new TargetNotFound({ id });
           }
+        });
+
+      /** Fails unless `id` is a message the other player sent me. */
+      const requireReportableMessage = (viewer: SessionUser, id: string) =>
+        Effect.gen(function* () {
+          const result = yield* reportableMessage(db, viewer.id, id);
+          if (result === "own") {
+            return yield* new CannotTargetSelf({ message: "You can't report your own message" });
+          }
+          if (result === "not-found") return yield* new TargetNotFound({ id });
         });
 
       return Safety.of({
@@ -109,7 +120,10 @@ export class Safety extends Context.Service<
             ),
 
         report: (viewer, input) =>
-          requireOtherPlayer(viewer, input.targetId, "report").pipe(
+          (input.targetType === "direct_message"
+            ? requireReportableMessage(viewer, input.targetId)
+            : requireOtherPlayer(viewer, input.targetId, "report")
+          ).pipe(
             Effect.andThen(
               db
                 .insert(report)

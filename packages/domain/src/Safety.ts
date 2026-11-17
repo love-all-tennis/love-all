@@ -12,8 +12,11 @@ export class BlockedPlayer extends Schema.Class<BlockedPlayer>("BlockedPlayer")(
   blockedAt: Schema.DateFromString,
 }) {}
 
-/** What can be reported. Forum posts and direct messages join when those features ship. */
-export const ReportTargetType = Schema.Literals(["player"]);
+/**
+ * What can be reported: a player (`targetId` is their account id) or a
+ * direct message (`targetId` is the message id, in a conversation I'm in).
+ */
+export const ReportTargetType = Schema.Literals(["player", "direct_message"]);
 export type ReportTargetType = typeof ReportTargetType.Type;
 
 /** Same values as the `report_reason` enum. */
@@ -29,7 +32,7 @@ export type ReportReason = typeof ReportReason.Type;
 
 export const REPORT_DETAILS_MAX = 1000;
 
-/** `POST /reports` body. `targetId` is the account id when `targetType` is "player". */
+/** `POST /reports` body. */
 export const NewReport = Schema.Struct({
   targetType: ReportTargetType,
   targetId: AccountId,

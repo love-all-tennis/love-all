@@ -6,6 +6,7 @@ import { Accounts } from "./Accounts";
 import { Db } from "./Db";
 import { Follows } from "./Follows";
 import { Forum } from "./Forum";
+import { Messages } from "./Messages";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
@@ -202,6 +203,30 @@ export const ForumHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const MessagesHandlers = HttpApiBuilder.group(
+  Api,
+  "messages",
+  Effect.fn(function* (handlers) {
+    const messages = yield* Messages;
+    return handlers
+      .handle("listConversations", ({ query }) =>
+        Effect.flatMap(CurrentUser, (user) => messages.listConversations(user, query)),
+      )
+      .handle("openConversation", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => messages.openConversation(user, payload.playerId)),
+      )
+      .handle("listMessages", ({ params, query }) =>
+        Effect.flatMap(CurrentUser, (user) => messages.listMessages(user, params.id, query)),
+      )
+      .handle("send", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => messages.send(user, params.id, payload)),
+      )
+      .handle("markRead", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => messages.markRead(user, params.id)),
+      );
+  }),
+);
+
 export const ApiHandlers = Layer.mergeAll(
   SystemHandlers,
   MeHandlers,
@@ -211,4 +236,5 @@ export const ApiHandlers = Layer.mergeAll(
   SessionsHandlers,
   SessionActivityHandlers,
   ForumHandlers,
+  MessagesHandlers,
 );

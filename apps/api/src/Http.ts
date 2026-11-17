@@ -11,6 +11,7 @@ import { Db } from "./Db";
 import { Follows } from "./Follows";
 import { Forum } from "./Forum";
 import { ApiHandlers } from "./Handlers";
+import { Messages } from "./Messages";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
@@ -34,6 +35,7 @@ const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pi
     Accounts.layer,
     Follows.layer,
     Forum.layer,
+    Messages.layer,
     Players.layer,
     Profiles.layer,
     Safety.layer,

@@ -2,6 +2,7 @@ export * from "./Api";
 export * from "./Auth";
 export * from "./Follow";
 export * from "./Forum";
+export * from "./Message";
 export * from "./Player";
 export * from "./Profile";
 export * from "./Safety";
