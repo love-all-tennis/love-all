@@ -100,6 +100,10 @@ export default function RootLayout() {
           </Stack.Protected>
           <Stack.Screen name="messages/[id]" options={{ ...header, title: "" }} />
           <Stack.Screen name="messages/report" options={{ ...sheet, title: "Report" }} />
+          <Stack.Screen name="gear/index" options={{ ...header, title: "Gear reviews" }} />
+          <Stack.Screen name="gear/[id]" options={{ ...header, title: "" }} />
+          <Stack.Screen name="gear/new" options={{ ...header, title: "Add gear" }} />
+          <Stack.Screen name="gear/review" options={{ ...header, title: "Write a review" }} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && !confirmedAdult}>
           <Stack.Screen name="confirm-age" />
