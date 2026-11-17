@@ -8,6 +8,7 @@ import { Follows } from "./Follows";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
+import { Sessions } from "./Sessions";
 
 export const SystemHandlers = HttpApiBuilder.group(
   Api,
@@ -95,13 +96,23 @@ export const SessionsHandlers = HttpApiBuilder.group(
   Api,
   "sessions",
   Effect.fn(function* (handlers) {
-    const todo = () => Effect.die("Sessions handlers land with #37");
+    const sessions = yield* Sessions;
     return handlers
-      .handle("create", todo)
-      .handle("list", todo)
-      .handle("get", todo)
-      .handle("update", todo)
-      .handle("invite", todo);
+      .handle("create", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (viewer) => sessions.create(viewer, payload)),
+      )
+      .handle("list", ({ query }) =>
+        Effect.flatMap(CurrentUser, (viewer) => sessions.list(viewer, query)),
+      )
+      .handle("get", ({ params }) =>
+        Effect.flatMap(CurrentUser, (viewer) => sessions.get(viewer, params.id)),
+      )
+      .handle("update", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (viewer) => sessions.update(viewer, params.id, payload)),
+      )
+      .handle("invite", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (viewer) => sessions.invite(viewer, params.id, payload)),
+      );
   }),
 );
 

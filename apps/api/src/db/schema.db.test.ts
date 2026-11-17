@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { Db } from "../Db";
 import { roundHomePoint } from "./geo";
-import { availability, metro, profile, user } from "./schema";
+import { availability, metro, playSession, playSessionParticipant, profile, user } from "./schema";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const run = <A, E>(effect: Effect.Effect<A, E, Db>) =>
@@ -94,5 +94,81 @@ describe.skipIf(!process.env.DATABASE_URL)("core tables", () => {
       ),
     );
     expect(row?.inRange).toBe(true);
+  });
+
+  describe("play_session checks", () => {
+    const base = {
+      kind: "singles" as const,
+      startsAt: new Date(Date.now() + 86_400_000),
+      durationMinutes: 60,
+      courtName: "Court 1",
+      spots: 2,
+      visibility: "open" as const,
+    };
+
+    /** The constraint each bad row trips, or "ok" when the insert works. */
+    const tryInsert = (overrides: Partial<typeof playSession.$inferInsert>) =>
+      withPlayer((hostId) =>
+        withDb((db) =>
+          db
+            .insert(playSession)
+            .values({ ...base, hostId, ...overrides })
+            .pipe(
+              Effect.as("ok"),
+              Effect.catch((error) =>
+                Effect.succeed(
+                  /play_session_[a-z_]+/.exec(JSON.stringify(error.cause))?.[0] ?? "other",
+                ),
+              ),
+            ),
+        ),
+      );
+
+    it.each([
+      [{}, "ok"],
+      [{ kind: "doubles" as const, spots: 4 }, "ok"],
+      [{ kind: "hitting" as const, spots: 3 }, "ok"],
+      [{ spots: 3 }, "play_session_spots_match_kind"],
+      [{ kind: "doubles" as const, spots: 2 }, "play_session_spots_match_kind"],
+      [{ kind: "hitting" as const, spots: 5 }, "play_session_spots_match_kind"],
+      [{ levelMin: "4.0" as const, levelMax: "3.5" as const }, "play_session_level_range"],
+      [{ levelMin: "3.5" as const, levelMax: "3.5" as const }, "ok"],
+      [{ durationMinutes: 10 }, "play_session_duration_range"],
+      [{ courtName: "" }, "play_session_court_name_length"],
+      [{ notes: "x".repeat(501) }, "play_session_notes_length"],
+    ])("%j -> %s", async (overrides, expected) => {
+      expect(await run(tryInsert(overrides))).toBe(expected);
+    });
+
+    it("keeps one row per player per session, and the host accepted", async () => {
+      const errors = await run(
+        withPlayer((hostId) =>
+          withDb((db) =>
+            Effect.gen(function* () {
+              const [session] = yield* db
+                .insert(playSession)
+                .values({ ...base, hostId })
+                .returning({ id: playSession.id });
+              const sessionId = session!.id;
+              yield* db
+                .insert(playSessionParticipant)
+                .values({ sessionId, userId: hostId, role: "host", state: "accepted" });
+              const duplicate = yield* db
+                .insert(playSessionParticipant)
+                .values({ sessionId, userId: hostId, state: "invited" })
+                .pipe(Effect.flip);
+              const invitedHost = yield* db
+                .update(playSessionParticipant)
+                .set({ state: "invited" })
+                .where(eq(playSessionParticipant.sessionId, sessionId))
+                .pipe(Effect.flip);
+              return [duplicate, invitedHost].map((e) => JSON.stringify(e.cause));
+            }),
+          ),
+        ),
+      );
+      expect(errors[0]).toContain("play_session_participant_pkey");
+      expect(errors[1]).toContain("play_session_participant_host_accepted");
+    });
   });
 });
