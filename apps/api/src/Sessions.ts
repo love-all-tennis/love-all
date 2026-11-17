@@ -121,6 +121,13 @@ export class Sessions extends Context.Service<
           and ${playSessionParticipant.state} = 'accepted'
       )`.mapWith(Number);
 
+      /** Players waiting on the host's answer. Only the host sees the count; others get 0. */
+      const requestCount = sql<number>`case when ${mine.role} = 'host' then (
+        select count(*)::int from ${playSessionParticipant}
+        where ${playSessionParticipant.sessionId} = ${playSession.id}
+          and ${playSessionParticipant.state} = 'requested'
+      ) else 0 end`.mapWith(Number);
+
       /** True when the session's level range includes `ntrp`. No rating fits only "any level". */
       const levelIncludes = (ntrp: Ntrp | null | undefined): SQL =>
         ntrp
@@ -156,6 +163,7 @@ export class Sessions extends Context.Service<
             levelMax: playSession.levelMax,
             spots: playSession.spots,
             acceptedCount,
+            requestCount,
             visibility: playSession.visibility,
             status: playSession.status,
             notes: playSession.notes,

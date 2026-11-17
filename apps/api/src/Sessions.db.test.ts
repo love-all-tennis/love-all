@@ -291,6 +291,9 @@ describe.skipIf(!process.env.DATABASE_URL)("Sessions.get", () => {
       "requested",
     ]);
     expect(result.requester.me).toEqual({ role: "player", state: "requested" });
+    expect(result.host.requestCount).toBe(1);
+    expect(result.viewer.requestCount).toBe(0);
+    expect(result.requester.requestCount).toBe(0);
   });
 
   it("hides participants blocked with the viewer", async () => {

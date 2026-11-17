@@ -158,6 +158,8 @@ const sessionFields = {
   spots: Schema.Int,
   /** Accepted players, host included. Spots left is `spots - acceptedCount`. */
   acceptedCount: Schema.Int,
+  /** Players who asked to join and wait on the host. Counted only for the host; 0 for everyone else. */
+  requestCount: Schema.Int,
   visibility: SessionVisibility,
   status: SessionStatus,
   notes: Schema.NullOr(Schema.String),
