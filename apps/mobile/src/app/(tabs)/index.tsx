@@ -42,6 +42,13 @@ export default function HomeScreen() {
           label="Edit your profile"
           onPress={() => router.push("/profile-setup")}
         />
+        {session?.user.role === "admin" ? (
+          <Button
+            variant="secondary"
+            label="Review reports"
+            onPress={() => router.push("/moderation")}
+          />
+        ) : null}
         <Button variant="quiet" label="Sign out" onPress={() => void authClient.signOut()} />
       </View>
     </Screen>
