@@ -136,7 +136,7 @@ The tab bar uses `NativeTabs` from `expo-router/native-tabs`, so iOS and Android
 | Forum                      | Forum    | `bubble.left.and.bubble.right` / `bubble.left.and.bubble.right.fill` | `forum`          |
 | Messages                   | Messages | `envelope` / `envelope.fill`                                         | `mail`           |
 
-Five tabs at most. Today's app has Home, Players and Play (`src/components/app-tabs.tsx`, with a matching bar for web in `app-tabs.web.tsx`). Add the others as their features land, rather than as empty tabs.
+Five tabs at most. Today's app has Home, Players, Play and Forum (`src/components/app-tabs.tsx`, with a matching bar for web in `app-tabs.web.tsx`). Add the others as their features land, rather than as empty tabs.
 
 - Player photos are round (`size.avatar`: 32 in dense lists, 48 in rows, 72 to 112 on a profile). Without a photo, show initials on `surfaceSunken`, as `PlayerAvatar` does.
 - No stock photos, illustrations of tennis players, or mascots. Empty states use type, not pictures.
