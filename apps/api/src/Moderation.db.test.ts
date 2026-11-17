@@ -2,7 +2,7 @@ import { SessionUser } from "@love-all/domain";
 import { eq, inArray, or } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
-import { makeAuth } from "./auth";
+import { BetterAuth } from "./BetterAuth";
 import { Db } from "./Db";
 import {
   accountSuspension,
@@ -361,27 +361,26 @@ describe.skipIf(!process.env.DATABASE_URL)("Moderation", () => {
   });
 
   it("stops a suspended player signing in", async () => {
-    const auth = makeAuth({ databaseUrl: process.env.DATABASE_URL!, trustedOrigins: [] });
     const email = `test_${crypto.randomUUID()}@example.com`;
     const body = { email, password: "correct-horse-battery", name: "Suspended" };
-    const signedUp = await auth.api.signUpEmail({ body });
-    try {
-      await Effect.runPromise(
-        Effect.gen(function* () {
-          const db = yield* Db;
+    const signIn = await Effect.runPromise(
+      Effect.gen(function* () {
+        const auth = yield* BetterAuth;
+        const db = yield* Db;
+        const signedUp = yield* Effect.promise(() => auth.api.signUpEmail({ body }));
+        return yield* Effect.gen(function* () {
           yield* db.insert(accountSuspension).values({ userId: signedUp.user.id });
-        }).pipe(Effect.provide(Db.layer)),
-      );
-      await expect(
-        auth.api.signInEmail({ body: { email, password: body.password } }),
-      ).rejects.toMatchObject({ status: "FORBIDDEN" });
-    } finally {
-      await Effect.runPromise(
-        Effect.gen(function* () {
-          const db = yield* Db;
-          yield* db.delete(user).where(eq(user.id, signedUp.user.id));
-        }).pipe(Effect.provide(Db.layer)),
-      );
-    }
+          return yield* Effect.promise(() =>
+            auth.api.signInEmail({ body: { email, password: body.password } }).then(
+              () => "signed in",
+              (error: unknown) => error,
+            ),
+          );
+        }).pipe(
+          Effect.ensuring(Effect.orDie(db.delete(user).where(eq(user.id, signedUp.user.id)))),
+        );
+      }).pipe(Effect.provide(BetterAuth.layer.pipe(Layer.provideMerge(Db.layer)))),
+    );
+    expect(signIn).toMatchObject({ status: "FORBIDDEN" });
   });
 });

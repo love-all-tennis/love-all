@@ -1,7 +1,14 @@
+import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { makeAuth } from "./auth";
 
-/** Only for the Better Auth CLI (`pnpm auth:generate`), which needs a default export. */
+/**
+ * Only for the Better Auth CLI (`pnpm auth:generate`), which needs a default
+ * export and an adapter that can write a Drizzle schema. Nothing connects to a
+ * database: the API itself uses `effectSqlAdapter` (see `BetterAuth.ts`).
+ */
 export const auth = makeAuth({
-  databaseUrl: process.env.DATABASE_URL ?? "postgres://love_all:love_all@localhost:5432/love_all",
+  database: drizzleAdapter(drizzle.mock(), { provider: "pg" }),
+  isSuspended: async () => false,
   trustedOrigins: [],
 });

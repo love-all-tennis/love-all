@@ -4,9 +4,14 @@ import * as PgDrizzle from "drizzle-orm/effect-postgres";
 
 const makeDb = PgDrizzle.makeWithDefaults();
 
-/** Drizzle on top of Effect's Postgres client. Queries are Effects. */
+/**
+ * Drizzle on top of Effect's Postgres client. Queries are Effects.
+ *
+ * The layer also provides the `SqlClient` underneath, which Better Auth's
+ * adapter uses, so the whole API runs on one pool.
+ */
 export class Db extends Context.Service<Db, Effect.Success<typeof makeDb>>()("love-all/Db") {
   static readonly layer = Layer.effect(Db, makeDb).pipe(
-    Layer.provide(PgClient.layerConfig({ url: Config.Redacted("DATABASE_URL") })),
+    Layer.provideMerge(PgClient.layerConfig({ url: Config.Redacted("DATABASE_URL") })),
   );
 }
