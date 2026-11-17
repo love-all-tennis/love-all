@@ -8,6 +8,7 @@ import {
   rememberAdultConfirmation,
 } from "@/lib/adult-confirmation";
 import { authClient } from "@/lib/auth-client";
+import { signOut } from "@/lib/sign-out";
 
 /**
  * Shown to a signed-in player who hasn't confirmed they're 18 or older yet:
@@ -42,7 +43,7 @@ export default function ConfirmAgeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const signOut = () => void authClient.signOut();
+  const onSignOut = () => void signOut();
 
   if (autoConfirming && submitting && !error) {
     return (
@@ -58,7 +59,7 @@ export default function ConfirmAgeScreen() {
         title="Love All is for players 18 and older"
         subtitle="You need to be 18 or older to use Love All. Thanks for checking it out."
       >
-        <Button label="Sign out" variant="secondary" onPress={signOut} />
+        <Button label="Sign out" variant="secondary" onPress={onSignOut} />
       </Screen>
     );
   }
@@ -79,7 +80,7 @@ export default function ConfirmAgeScreen() {
         />
       </View>
       <View style={styles.center}>
-        <Button variant="quiet" size="small" label="Sign out" onPress={signOut} />
+        <Button variant="quiet" size="small" label="Sign out" onPress={onSignOut} />
       </View>
     </Screen>
   );

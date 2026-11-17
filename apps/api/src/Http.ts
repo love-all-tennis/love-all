@@ -9,13 +9,19 @@ import { AuthenticationLive } from "./Authentication";
 import { BetterAuth, TrustedOrigins } from "./BetterAuth";
 import { Clubs } from "./Clubs";
 import { Db } from "./Db";
+import { Equipment } from "./Equipment";
 import { Follows } from "./Follows";
 import { Forum } from "./Forum";
+import { Notifications } from "./Notifications";
+import { PushSender } from "./PushSender";
 import { ApiHandlers } from "./Handlers";
+import { Messages } from "./Messages";
+import { Moderation } from "./Moderation";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
 import { SessionActivity } from "./SessionActivity";
+import { SessionReminders } from "./SessionReminders";
 import { Sessions } from "./Sessions";
 import { SessionJoins } from "./SessionJoins";
 
@@ -33,20 +39,27 @@ const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pi
   Layer.provide([
     AuthenticationLive,
     Accounts.layer,
+    Equipment.layer,
     Clubs.layer,
     Follows.layer,
-    Forum.layer,
+    Moderation.layer,
+    Messages.layer,
     Players.layer,
     Profiles.layer,
-    Safety.layer,
+    Safety.layer.pipe(Layer.provideMerge(Forum.layer)),
     SessionJoins.layer,
     SessionActivity.layer.pipe(Layer.provideMerge(Sessions.layer)),
   ]),
 );
 
+/** Sends "starting soon" reminders in the background while the server runs. */
+const Reminders = SessionReminders.schedule.pipe(Layer.provide(SessionReminders.layer));
+
 const DocsRoute = HttpApiScalar.layer(Api, { path: "/docs" });
 
-export const AllRoutes = Layer.mergeAll(ApiRoutes, AuthRoutes, DocsRoute).pipe(
+export const AllRoutes = Layer.mergeAll(ApiRoutes, AuthRoutes, DocsRoute, Reminders).pipe(
+  // Notifications is shared, so notices from every service go through one sender.
+  Layer.provide(Notifications.layer.pipe(Layer.provide(PushSender.expo))),
   Layer.provide([BetterAuth.layer, Db.layer]),
 );
 

@@ -15,6 +15,21 @@ import {
   ClubsQuery,
   NewClub,
 } from "./Club";
+import { NewDevice, PushToken } from "./Device";
+import {
+  EquipmentDetail,
+  EquipmentExists,
+  EquipmentId,
+  EquipmentNotFound,
+  EquipmentPage,
+  EquipmentQuery,
+  EquipmentRateLimited,
+  EquipmentReview,
+  EquipmentReviewInput,
+  EquipmentReviewsPage,
+  EquipmentReviewsQuery,
+  NewEquipment,
+} from "./Equipment";
 import {
   ForumCategory,
   ForumCategoryNotFound,
@@ -44,6 +59,29 @@ import {
   PlayersPage,
   PlayersQuery,
 } from "./Player";
+import {
+  HideableTargetType,
+  ModerationReportsPage,
+  ModerationReportsQuery,
+  NewSuspension,
+  NotModerator,
+  ReportId,
+  ReportNotFound,
+} from "./Moderation";
+import {
+  CannotMessageSelf,
+  Conversation,
+  ConversationId,
+  ConversationNotFound,
+  ConversationsPage,
+  ConversationsQuery,
+  DirectMessage,
+  MessagesPage,
+  MessagesQuery,
+  MessagesRateLimited,
+  NewConversation,
+  NewDirectMessage,
+} from "./Message";
 import { Availability, Me, ProfilePatch } from "./Profile";
 import {
   BlockedPlayer,
@@ -172,7 +210,11 @@ export class SafetyApi extends HttpApiGroup.make("safety")
   .add(HttpApiEndpoint.delete("unblock", "/players/:id/block", { params: PlayerIdParam }))
   /** Players I blocked, most recent first. */
   .add(HttpApiEndpoint.get("listBlocks", "/me/blocks", { success: Schema.Array(BlockedPlayer) }))
-  /** Reports a player to the moderators. It doesn't block them; the app offers that next. */
+  /**
+   * Reports a player, or a forum thread or reply, to the moderators. It
+   * doesn't block anyone; the app offers that next. Content must be visible
+   * to me and not mine.
+   */
   .add(
     HttpApiEndpoint.post("report", "/reports", {
       payload: NewReport,
@@ -447,6 +489,187 @@ export class ForumApi extends HttpApiGroup.make("forum")
   )
   .middleware(Authentication) {}
 
+const HiddenContentParams = { type: HideableTargetType, id: Schema.String };
+
+/**
+ * Moderation, for admins only: everyone else gets `NotModerator`. Hiding and
+ * suspending are idempotent, and each closes the open reports it answers.
+ */
+export class ModerationApi extends HttpApiGroup.make("moderation")
+  /** Reports, newest first, cursor-paginated. Open ones unless `status=resolved`. */
+  .add(
+    HttpApiEndpoint.get("listReports", "/moderation/reports", {
+      query: ModerationReportsQuery,
+      success: ModerationReportsPage,
+      error: [NotModerator, InvalidCursor],
+    }),
+  )
+  /** Closes this report, and the other open reports on the same target, with no action. */
+  .add(
+    HttpApiEndpoint.post("dismissReport", "/moderation/reports/:id/dismiss", {
+      params: { id: ReportId },
+      error: [NotModerator, ReportNotFound],
+    }),
+  )
+  /** Hides a thread or reply from everyone, and closes its open reports. */
+  .add(
+    HttpApiEndpoint.put("hideContent", "/moderation/content/:type/:id/hidden", {
+      params: HiddenContentParams,
+      error: [NotModerator, TargetNotFound],
+    }),
+  )
+  /** Shows hidden content again. */
+  .add(
+    HttpApiEndpoint.delete("unhideContent", "/moderation/content/:type/:id/hidden", {
+      params: HiddenContentParams,
+      error: [NotModerator, TargetNotFound],
+    }),
+  )
+  /**
+   * Suspends a player: signs them out everywhere, stops them signing in,
+   * and drops them from player search. Closes the open reports about them.
+   */
+  .add(
+    HttpApiEndpoint.put("suspend", "/moderation/players/:id/suspension", {
+      params: PlayerIdParam,
+      payload: NewSuspension,
+      error: [NotModerator, TargetNotFound, CannotTargetSelf],
+    }),
+  )
+  /** Lets a suspended player sign in again. */
+  .add(
+    HttpApiEndpoint.delete("unsuspend", "/moderation/players/:id/suspension", {
+      params: PlayerIdParam,
+      error: [NotModerator, TargetNotFound],
+    }),
+  )
+  .middleware(Authentication) {}
+
+/**
+ * This phone's push token, so the API can send it notifications. The app
+ * registers it after signing in and removes it before signing out.
+ */
+export class DevicesApi extends HttpApiGroup.make("devices")
+  /**
+   * Saves the token for me. A token that belonged to another account (the
+   * phone switched accounts) moves to me. Registering again is a no-op.
+   */
+  .add(HttpApiEndpoint.post("register", "/devices", { payload: NewDevice }))
+  /** Stops notifications to this token. Removing a token that isn't mine does nothing. */
+  .add(HttpApiEndpoint.delete("unregister", "/devices/:token", { params: { token: PushToken } }))
+  .middleware(Authentication) {}
+
+const ConversationParam = { id: ConversationId };
+
+/**
+ * Direct messages: async one-to-one conversations. Only the two players in a
+ * conversation can see it, and a block either way ends it for both.
+ */
+export class MessagesApi extends HttpApiGroup.make("messages")
+  /** My conversations that have messages, latest message first, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("listConversations", "/conversations", {
+      query: ConversationsQuery,
+      success: ConversationsPage,
+      error: InvalidCursor,
+    }),
+  )
+  /**
+   * Opens my conversation with a player, starting one if we have none.
+   * Starting one needs a profile, and the player must be one I can see.
+   */
+  .add(
+    HttpApiEndpoint.post("openConversation", "/conversations", {
+      payload: NewConversation,
+      success: Conversation,
+      error: [PlayerNotFound, CannotMessageSelf, ProfileRequired, MessagesRateLimited],
+    }),
+  )
+  /** The conversation and a page of its messages, newest first. Doesn't mark anything read. */
+  .add(
+    HttpApiEndpoint.get("listMessages", "/conversations/:id/messages", {
+      params: ConversationParam,
+      query: MessagesQuery,
+      success: MessagesPage,
+      error: [ConversationNotFound, InvalidCursor],
+    }),
+  )
+  /** Sends a message. Everything before it counts as read for me. */
+  .add(
+    HttpApiEndpoint.post("send", "/conversations/:id/messages", {
+      params: ConversationParam,
+      payload: NewDirectMessage,
+      success: DirectMessage.pipe(HttpApiSchema.status(201)),
+      error: [ConversationNotFound, MessagesRateLimited],
+    }),
+  )
+  /** Marks every message in the conversation read for me. */
+  .add(
+    HttpApiEndpoint.post("markRead", "/conversations/:id/read", {
+      params: ConversationParam,
+      error: ConversationNotFound,
+    }),
+  )
+  .middleware(Authentication) {}
+
+const EquipmentIdParam = { id: EquipmentId };
+
+/**
+ * Equipment reviews: a shared catalog of gear that any player can add to,
+ * and one review per player per item. Reviews by players blocked either way
+ * with me are left out, and don't count toward the ratings I see.
+ */
+export class EquipmentApi extends HttpApiGroup.make("equipment")
+  /** The catalog by brand then model, optionally one kind or matching `q`, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("list", "/equipment", {
+      query: EquipmentQuery,
+      success: EquipmentPage,
+      error: InvalidCursor,
+    }),
+  )
+  /** Adds an item to the catalog. Fails with the existing id when it's already there. */
+  .add(
+    HttpApiEndpoint.post("create", "/equipment", {
+      payload: NewEquipment,
+      success: EquipmentDetail.pipe(HttpApiSchema.status(201)),
+      error: [EquipmentExists, EquipmentRateLimited],
+    }),
+  )
+  /** An item with its rating summary and my review. */
+  .add(
+    HttpApiEndpoint.get("get", "/equipment/:id", {
+      params: EquipmentIdParam,
+      success: EquipmentDetail,
+      error: EquipmentNotFound,
+    }),
+  )
+  /** Other players' reviews of an item, newest first, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("listReviews", "/equipment/:id/reviews", {
+      params: EquipmentIdParam,
+      query: EquipmentReviewsQuery,
+      success: EquipmentReviewsPage,
+      error: [EquipmentNotFound, InvalidCursor],
+    }),
+  )
+  /** Writes or replaces my review of an item. */
+  .add(
+    HttpApiEndpoint.put("saveReview", "/equipment/:id/review", {
+      params: EquipmentIdParam,
+      payload: EquipmentReviewInput,
+      success: EquipmentReview,
+      error: EquipmentNotFound,
+    }),
+  )
+  /** Idempotent: deleting a review I haven't written does nothing. */
+  .add(
+    HttpApiEndpoint.delete("deleteReview", "/equipment/:id/review", {
+      params: EquipmentIdParam,
+    }),
+  )
+  .middleware(Authentication) {}
+
 const ClubParam = { id: ClubId };
 
 /**
@@ -510,5 +733,9 @@ export class Api extends HttpApi.make("love-all")
   .add(SessionsApi)
   .add(SessionActivityApi)
   .add(ForumApi)
+  .add(ModerationApi)
+  .add(DevicesApi)
+  .add(MessagesApi)
+  .add(EquipmentApi)
   .add(ClubsApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}
