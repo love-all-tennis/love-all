@@ -287,11 +287,16 @@ export const playSession = pgTable(
     visibility: playSessionVisibility("visibility").notNull(),
     status: playSessionStatus("status").notNull().default("open"),
     notes: text("notes"),
+    /** When the "starting soon" push went out. Cleared when the start time changes. */
+    reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => [
     index("play_session_host_id_idx").on(t.hostId),
     index("play_session_court_point_idx").using("gist", t.courtPoint),
+    index("play_session_reminder_due_idx")
+      .on(t.startsAt)
+      .where(sql`${t.reminderSentAt} is null and ${t.status} <> 'cancelled'`),
     index("play_session_open_starts_at_idx")
       .on(t.startsAt)
       .where(sql`${t.visibility} = 'open' and ${t.status} = 'open'`),
@@ -519,4 +524,24 @@ export const forumReaction = pgTable(
       .where(sql`${t.postId} is not null`),
     check("forum_reaction_one_target", sql`num_nonnulls(${t.threadId}, ${t.postId}) = 1`),
   ],
+);
+
+export const devicePlatform = pgEnum("device_platform", ["ios", "android"]);
+
+/**
+ * An Expo push token for one phone. A token belongs to one account at a time:
+ * when a phone signs in to another account, the token moves. Tokens that
+ * Expo reports as no longer registered are deleted.
+ */
+export const pushToken = pgTable(
+  "push_token",
+  {
+    token: text("token").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    platform: devicePlatform("platform").notNull(),
+    ...timestamps,
+  },
+  (t) => [index("push_token_user_id_idx").on(t.userId)],
 );

@@ -6,10 +6,12 @@ import { Db } from "./Db";
 import { block, playSession, playSessionParticipant, profile, user } from "./db/schema";
 import { SessionActivity } from "./SessionActivity";
 import { Sessions } from "./Sessions";
+import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = SessionActivity.layer.pipe(
   Layer.provideMerge(Sessions.layer),
+  Layer.provide(makeNotificationsMemory().layer),
   Layer.provideMerge(Db.layer),
 );
 

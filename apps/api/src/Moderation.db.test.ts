@@ -19,6 +19,7 @@ import { Moderation } from "./Moderation";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
+import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = Layer.mergeAll(
@@ -26,7 +27,7 @@ const TestLayer = Layer.mergeAll(
   Safety.layer.pipe(Layer.provideMerge(Forum.layer)),
   Players.layer,
   Profiles.layer,
-).pipe(Layer.provideMerge(Db.layer));
+).pipe(Layer.provide(makeNotificationsMemory().layer), Layer.provideMerge(Db.layer));
 
 interface World {
   /** players[0] is an admin. */
