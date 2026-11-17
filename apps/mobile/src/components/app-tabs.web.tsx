@@ -5,12 +5,13 @@ import { Icon, motion, radius, size, space, Text, useColors, type IconProps } fr
 
 const TABS: ReadonlyArray<{
   name: string;
-  href: "/" | "/players";
+  href: "/" | "/players" | "/play";
   label: string;
   icon: Pick<IconProps, "ios" | "md">;
 }> = [
   { name: "index", href: "/", label: "Home", icon: { ios: "house", md: "home" } },
   { name: "players", href: "/players", label: "Players", icon: { ios: "person.2", md: "group" } },
+  { name: "play", href: "/play", label: "Play", icon: { ios: "calendar", md: "calendar_month" } },
 ];
 
 /** The web tab bar: a bottom bar on `surface`, matching the native tabs. */

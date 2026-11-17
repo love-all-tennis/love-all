@@ -182,11 +182,16 @@ function ProfileBody({
 
       {isMe ? null : (
         <View style={styles.actions}>
-          {/* Sessions (#13) will open the invite flow from here. */}
-          <Button label="Invite to play" onPress={() => undefined} disabled />
-          <Text variant="caption" color="textMuted" style={styles.center}>
-            Invites open once matches and hitting sessions arrive.
-          </Text>
+          <Button
+            label="Invite to play"
+            accessibilityHint="Invites them to a new session or one of yours"
+            onPress={() =>
+              router.push({
+                pathname: "/sessions/invite-to",
+                params: { playerId: player.id, name: player.displayName },
+              })
+            }
+          />
           <Button
             variant="secondary"
             label={following ? "Following" : "Follow for later"}
