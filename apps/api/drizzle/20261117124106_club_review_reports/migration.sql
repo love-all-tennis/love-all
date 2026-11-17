@@ -1,0 +1,1 @@
+ALTER TYPE "report_target_type" ADD VALUE 'club_review';

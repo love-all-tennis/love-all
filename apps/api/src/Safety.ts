@@ -9,6 +9,7 @@ import {
 } from "@love-all/domain";
 import { and, desc, eq, or } from "drizzle-orm";
 import { Context, Effect, Layer, Option } from "effect";
+import { reportableClubReview } from "./Clubs";
 import { Db } from "./Db";
 import { reportableEquipmentReview } from "./Equipment";
 import { Forum } from "./Forum";
@@ -108,6 +109,10 @@ export class Safety extends Context.Service<
             );
           case "equipment_review":
             return reportableEquipmentReview(db, viewer.id, id).pipe(
+              Effect.flatMap((found) => otherAuthor(viewer, id, found)),
+            );
+          case "club_review":
+            return reportableClubReview(db, viewer.id, id).pipe(
               Effect.flatMap((found) => otherAuthor(viewer, id, found)),
             );
         }

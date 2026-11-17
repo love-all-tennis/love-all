@@ -15,6 +15,7 @@ export const TARGET_LABELS: Record<ReportTargetType, string> = {
   forum_thread: "Thread",
   forum_post: "Reply",
   direct_message: "Message",
+  club_review: "Club review",
   equipment_review: "Gear review",
 };
 
@@ -38,10 +39,11 @@ export type StateTag = {
   readonly tone: "neutral" | "clay" | "danger";
 };
 
-/** Forum threads, replies and gear reviews can be hidden; players and direct messages can't. */
+/** Forum threads and replies, club reviews and gear reviews can be hidden; players and direct messages can't. */
 export const hideableType = (report: ModerationReport): HideableTargetType | null =>
   report.targetType === "forum_thread" ||
   report.targetType === "forum_post" ||
+  report.targetType === "club_review" ||
   report.targetType === "equipment_review"
     ? report.targetType
     : null;
@@ -81,6 +83,8 @@ export const reportActions = (report: ModerationReport) => {
     unsuspend: report.subject !== null && report.subject.suspended,
     dismiss: report.status === "open",
     openThread: report.threadId !== null && !report.hidden && !report.removed,
+    // The club stays open to everyone, whatever happened to the review.
+    openClub: report.clubId !== null,
     openItem: report.equipmentId !== null,
   };
 };

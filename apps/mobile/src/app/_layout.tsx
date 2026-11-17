@@ -109,6 +109,7 @@ export default function RootLayout() {
           <Stack.Screen name="clubs/[id]" options={{ ...header, title: "" }} />
           <Stack.Screen name="clubs/new" options={{ ...header, title: "Add a club" }} />
           <Stack.Screen name="clubs/review" options={{ ...sheet, title: "Write a review" }} />
+          <Stack.Screen name="clubs/report" options={{ ...sheet, title: "Report" }} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && !confirmedAdult}>
           <Stack.Screen name="confirm-age" />

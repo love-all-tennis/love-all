@@ -3,9 +3,12 @@
  * notification's `data.url`; only routes the app knows are followed, so a
  * malformed or unexpected payload just opens the app.
  */
-const ROUTES = [/^\/sessions\/[\w-]+$/, /^\/forum\/thread\/[\w-]+$/];
+const ROUTES = [/^\/sessions\/[\w-]+$/, /^\/forum\/thread\/[\w-]+$/, /^\/messages\/[\w-]+$/];
 
-export type NotificationRoute = `/sessions/${string}` | `/forum/thread/${string}`;
+export type NotificationRoute =
+  | `/sessions/${string}`
+  | `/forum/thread/${string}`
+  | `/messages/${string}`;
 
 export function notificationRoute(data: unknown): NotificationRoute | null {
   if (typeof data !== "object" || data === null || !("url" in data)) return null;

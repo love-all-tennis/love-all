@@ -23,6 +23,7 @@ export const REPORT_TARGET_TYPES = [
   "forum_thread",
   "forum_post",
   "direct_message",
+  "club_review",
   "equipment_review",
 ] as const;
 export const ReportTargetType = Schema.Literals(REPORT_TARGET_TYPES);

@@ -77,6 +77,11 @@ export default function ModerationScreen() {
           router.push({ pathname: "/gear/[id]", params: { id: report.equipmentId } });
         }
         return;
+      case "openClub":
+        if (report.clubId) {
+          router.push({ pathname: "/clubs/[id]", params: { id: report.clubId } });
+        }
+        return;
       case "openPlayer":
         if (subject) router.push({ pathname: "/players/[id]", params: { id: subject.id } });
         return;

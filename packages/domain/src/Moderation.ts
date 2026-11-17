@@ -30,6 +30,7 @@ export type ReportResolution = typeof ReportResolution.Type;
 export const HideableTargetType = Schema.Literals([
   "forum_thread",
   "forum_post",
+  "club_review",
   "equipment_review",
 ]);
 export type HideableTargetType = typeof HideableTargetType.Type;
@@ -60,6 +61,8 @@ export class ModerationReport extends Schema.Class<ModerationReport>("Moderation
   subject: Schema.NullOr(ModerationPlayer),
   /** For forum content: the thread it's in, to open it. */
   threadId: Schema.NullOr(Schema.String),
+  /** For a club review: its club, to open it. */
+  clubId: Schema.NullOr(Schema.String),
   /** For a gear review: the item it reviews, to open it. */
   equipmentId: Schema.NullOr(Schema.String),
   /** For content: whether a moderator has hidden it. */
