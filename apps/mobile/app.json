@@ -60,6 +60,12 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#3B6B53"
+        }
       ]
     ],
     "experiments": {
