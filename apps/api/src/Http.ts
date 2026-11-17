@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import { Accounts } from "./Accounts";
 import { AuthenticationLive } from "./Authentication";
 import { BetterAuth, TrustedOrigins } from "./BetterAuth";
+import { Clubs } from "./Clubs";
 import { Db } from "./Db";
 import { Equipment } from "./Equipment";
 import { Follows } from "./Follows";
@@ -39,6 +40,7 @@ const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pi
     AuthenticationLive,
     Accounts.layer,
     Equipment.layer,
+    Clubs.layer,
     Follows.layer,
     Moderation.layer,
     Messages.layer,

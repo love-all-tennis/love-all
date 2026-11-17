@@ -1,5 +1,6 @@
 export * from "./Api";
 export * from "./Auth";
+export * from "./Club";
 export * from "./Device";
 export * from "./Equipment";
 export * from "./Follow";

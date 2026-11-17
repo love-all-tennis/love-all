@@ -1,6 +1,20 @@
 import { Schema } from "effect";
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/http-api";
 import { Authentication } from "./Auth";
+import {
+  Club,
+  ClubAlreadyExists,
+  ClubId,
+  ClubNotFound,
+  ClubRateLimited,
+  ClubReview,
+  ClubReviewInput,
+  ClubReviewsPage,
+  ClubReviewsQuery,
+  ClubSummary,
+  ClubsQuery,
+  NewClub,
+} from "./Club";
 import { NewDevice, PushToken } from "./Device";
 import {
   EquipmentDetail,
@@ -656,6 +670,59 @@ export class EquipmentApi extends HttpApiGroup.make("equipment")
   )
   .middleware(Authentication) {}
 
+const ClubParam = { id: ClubId };
+
+/**
+ * Clubs and their reviews. Anyone can add a club; each player reviews a club
+ * once and can change or remove their review. Reviews by players blocked
+ * either way with me are left out, of lists and of the star counts.
+ */
+export class ClubsApi extends HttpApiGroup.make("clubs")
+  /** Clubs near my home point, nearest first, at most `CLUBS_LIST_MAX`. */
+  .add(
+    HttpApiEndpoint.get("list", "/clubs", {
+      query: ClubsQuery,
+      success: Schema.Array(ClubSummary),
+      error: HomePointRequired,
+    }),
+  )
+  /** Adds a club. Fails with the existing club when the same name is already pinned nearby. */
+  .add(
+    HttpApiEndpoint.post("create", "/clubs", {
+      payload: NewClub,
+      success: Club.pipe(HttpApiSchema.status(201)),
+      error: [ClubAlreadyExists, ClubRateLimited],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("get", "/clubs/:id", {
+      params: ClubParam,
+      success: Club,
+      error: ClubNotFound,
+    }),
+  )
+  /** Newest first, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("listReviews", "/clubs/:id/reviews", {
+      params: ClubParam,
+      query: ClubReviewsQuery,
+      success: ClubReviewsPage,
+      error: [ClubNotFound, InvalidCursor],
+    }),
+  )
+  /** Writes my review of the club, or replaces the one I wrote. */
+  .add(
+    HttpApiEndpoint.put("saveReview", "/clubs/:id/review", {
+      params: ClubParam,
+      payload: ClubReviewInput,
+      success: ClubReview,
+      error: ClubNotFound,
+    }),
+  )
+  /** Idempotent: removing a review I never wrote does nothing. */
+  .add(HttpApiEndpoint.delete("deleteReview", "/clubs/:id/review", { params: ClubParam }))
+  .middleware(Authentication) {}
+
 /** The whole Love All API. Shared by the server and the mobile client. */
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
@@ -670,4 +737,5 @@ export class Api extends HttpApi.make("love-all")
   .add(DevicesApi)
   .add(MessagesApi)
   .add(EquipmentApi)
+  .add(ClubsApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}
