@@ -14,9 +14,19 @@ const bad = (sets: unknown) => expect(score(sets)._tag).toBe("Failure");
 
 describe("MatchScore", () => {
   it("accepts normal two- and three-set matches", () => {
-    ok([[6, 4], [6, 3]]);
-    ok([[4, 6], [7, 5], [7, 6]]);
-    ok([[0, 6], [0, 6]]);
+    ok([
+      [6, 4],
+      [6, 3],
+    ]);
+    ok([
+      [4, 6],
+      [7, 5],
+      [7, 6],
+    ]);
+    ok([
+      [0, 6],
+      [0, 6],
+    ]);
   });
 
   it("accepts a one-set match", () => {
@@ -25,9 +35,21 @@ describe("MatchScore", () => {
   });
 
   it("accepts a match tiebreak as the deciding set", () => {
-    ok([[6, 4], [3, 6], [10, 7]]);
-    ok([[6, 4], [3, 6], [12, 14]]);
-    ok([[6, 4], [3, 6], [10, 0]]);
+    ok([
+      [6, 4],
+      [3, 6],
+      [10, 7],
+    ]);
+    ok([
+      [6, 4],
+      [3, 6],
+      [12, 14],
+    ]);
+    ok([
+      [6, 4],
+      [3, 6],
+      [10, 0],
+    ]);
   });
 
   it("rejects sets that aren't finished or can't happen", () => {
@@ -36,36 +58,79 @@ describe("MatchScore", () => {
     bad([[7, 3]]);
     bad([[8, 6]]);
     bad([[6, 6]]);
-    bad([[6, 4], [6, -1]]);
-    bad([[6, 4], [6, 2.5]]);
+    bad([
+      [6, 4],
+      [6, -1],
+    ]);
+    bad([
+      [6, 4],
+      [6, 2.5],
+    ]);
   });
 
   it("rejects a match tiebreak outside the deciding set or with a bad margin", () => {
     bad([[10, 7]]);
-    bad([[6, 4], [10, 7]]);
-    bad([[6, 4], [3, 6], [10, 9]]);
-    bad([[6, 4], [3, 6], [13, 10]]);
+    bad([
+      [6, 4],
+      [10, 7],
+    ]);
+    bad([
+      [6, 4],
+      [3, 6],
+      [10, 9],
+    ]);
+    bad([
+      [6, 4],
+      [3, 6],
+      [13, 10],
+    ]);
   });
 
   it("rejects matches with no winner, too many sets, or sets after the end", () => {
     bad([]);
-    bad([[6, 4], [4, 6]]);
-    bad([[6, 4], [6, 4], [6, 4]]);
-    bad([[6, 4], [4, 6], [6, 4], [6, 4]]);
+    bad([
+      [6, 4],
+      [4, 6],
+    ]);
+    bad([
+      [6, 4],
+      [6, 4],
+      [6, 4],
+    ]);
+    bad([
+      [6, 4],
+      [4, 6],
+      [6, 4],
+      [6, 4],
+    ]);
   });
 });
 
 describe("winningSide", () => {
   it("is the side that took more sets", () => {
-    expect(winningSide([[6, 4], [6, 3]])).toBe("a");
-    expect(winningSide([[6, 4], [3, 6], [7, 10]])).toBe("b");
+    expect(
+      winningSide([
+        [6, 4],
+        [6, 3],
+      ]),
+    ).toBe("a");
+    expect(
+      winningSide([
+        [6, 4],
+        [3, 6],
+        [7, 10],
+      ]),
+    ).toBe("b");
     expect(winningSide([[2, 6]])).toBe("b");
   });
 });
 
 describe("NewSessionResult", () => {
   const decode = Schema.decodeUnknownExit(NewSessionResult);
-  const sets = [[6, 4], [6, 3]];
+  const sets = [
+    [6, 4],
+    [6, 3],
+  ];
 
   it("accepts singles and doubles sides", () => {
     expect(decode({ sideA: ["u1"], sideB: ["u2"], sets })._tag).toBe("Success");
