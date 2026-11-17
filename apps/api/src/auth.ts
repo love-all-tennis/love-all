@@ -1,6 +1,8 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { expo } from "@better-auth/expo";
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./db/schema";
@@ -48,14 +50,29 @@ const appleOrigin = "https://appleid.apple.com";
  */
 export const makeAuth = (options: AuthOptions) => {
   const { google, apple } = options.socialProviders ?? {};
+  const db = drizzle({ client: new Pool({ connectionString: options.databaseUrl, max: 5 }) });
   return betterAuth({
-    database: drizzleAdapter(
-      drizzle({ client: new Pool({ connectionString: options.databaseUrl, max: 5 }) }),
-      {
-        provider: "pg",
-        schema,
+    database: drizzleAdapter(db, { provider: "pg", schema }),
+    databaseHooks: {
+      session: {
+        create: {
+          // Suspended players can't sign in. Suspending also deletes their sessions.
+          before: async (session) => {
+            const [suspended] = await db
+              .select({ userId: schema.accountSuspension.userId })
+              .from(schema.accountSuspension)
+              .where(eq(schema.accountSuspension.userId, session.userId));
+            if (suspended) {
+              throw APIError.from("FORBIDDEN", {
+                message:
+                  "This account is suspended. Contact support if you think this is a mistake.",
+                code: "ACCOUNT_SUSPENDED",
+              });
+            }
+          },
+        },
       },
-    ),
+    },
     emailAndPassword: { enabled: true },
     socialProviders: {
       ...(google && {

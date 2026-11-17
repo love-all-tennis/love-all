@@ -31,6 +31,15 @@ import {
   PlayersPage,
   PlayersQuery,
 } from "./Player";
+import {
+  HideableTargetType,
+  ModerationReportsPage,
+  ModerationReportsQuery,
+  NewSuspension,
+  NotModerator,
+  ReportId,
+  ReportNotFound,
+} from "./Moderation";
 import { Availability, Me, ProfilePatch } from "./Profile";
 import {
   BlockedPlayer,
@@ -438,6 +447,62 @@ export class ForumApi extends HttpApiGroup.make("forum")
   )
   .middleware(Authentication) {}
 
+const HiddenContentParams = { type: HideableTargetType, id: Schema.String };
+
+/**
+ * Moderation, for admins only: everyone else gets `NotModerator`. Hiding and
+ * suspending are idempotent, and each closes the open reports it answers.
+ */
+export class ModerationApi extends HttpApiGroup.make("moderation")
+  /** Reports, newest first, cursor-paginated. Open ones unless `status=resolved`. */
+  .add(
+    HttpApiEndpoint.get("listReports", "/moderation/reports", {
+      query: ModerationReportsQuery,
+      success: ModerationReportsPage,
+      error: [NotModerator, InvalidCursor],
+    }),
+  )
+  /** Closes this report, and the other open reports on the same target, with no action. */
+  .add(
+    HttpApiEndpoint.post("dismissReport", "/moderation/reports/:id/dismiss", {
+      params: { id: ReportId },
+      error: [NotModerator, ReportNotFound],
+    }),
+  )
+  /** Hides a thread or reply from everyone, and closes its open reports. */
+  .add(
+    HttpApiEndpoint.put("hideContent", "/moderation/content/:type/:id/hidden", {
+      params: HiddenContentParams,
+      error: [NotModerator, TargetNotFound],
+    }),
+  )
+  /** Shows hidden content again. */
+  .add(
+    HttpApiEndpoint.delete("unhideContent", "/moderation/content/:type/:id/hidden", {
+      params: HiddenContentParams,
+      error: [NotModerator, TargetNotFound],
+    }),
+  )
+  /**
+   * Suspends a player: signs them out everywhere, stops them signing in,
+   * and drops them from player search. Closes the open reports about them.
+   */
+  .add(
+    HttpApiEndpoint.put("suspend", "/moderation/players/:id/suspension", {
+      params: PlayerIdParam,
+      payload: NewSuspension,
+      error: [NotModerator, TargetNotFound, CannotTargetSelf],
+    }),
+  )
+  /** Lets a suspended player sign in again. */
+  .add(
+    HttpApiEndpoint.delete("unsuspend", "/moderation/players/:id/suspension", {
+      params: PlayerIdParam,
+      error: [NotModerator, TargetNotFound],
+    }),
+  )
+  .middleware(Authentication) {}
+
 /**
  * This phone's push token, so the API can send it notifications. The app
  * registers it after signing in and removes it before signing out.
@@ -462,5 +527,6 @@ export class Api extends HttpApi.make("love-all")
   .add(SessionsApi)
   .add(SessionActivityApi)
   .add(ForumApi)
+  .add(ModerationApi)
   .add(DevicesApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}

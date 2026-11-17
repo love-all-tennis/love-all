@@ -13,6 +13,7 @@ import { Forum } from "./Forum";
 import { Notifications } from "./Notifications";
 import { PushSender } from "./PushSender";
 import { ApiHandlers } from "./Handlers";
+import { Moderation } from "./Moderation";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
@@ -36,6 +37,7 @@ const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pi
     AuthenticationLive,
     Accounts.layer,
     Follows.layer,
+    Moderation.layer,
     Players.layer,
     Profiles.layer,
     Safety.layer.pipe(Layer.provideMerge(Forum.layer)),
