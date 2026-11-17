@@ -11,6 +11,11 @@ const refusals = {
   CannotTargetSelf: () => Effect.succeed<Outcome>("You can't do that to your own profile."),
 };
 
+const messageRefusals = {
+  TargetNotFound: () => Effect.succeed<Outcome>("This message is no longer available."),
+  CannotTargetSelf: () => Effect.succeed<Outcome>("You can't report your own message."),
+};
+
 /** Blocks a player. They disappear from search, follows and their profile for both of us. */
 export const blockPlayer = (id: string): Promise<Outcome> =>
   callApi((api) =>
@@ -30,4 +35,23 @@ export const reportPlayer = (id: string, reason: ReportReason, details: string):
         },
       })
       .pipe(Effect.as<Outcome>(null), Effect.catchTags(refusals)),
+  );
+
+/** Sends a report about a direct message they sent me. Works after blocking them too. */
+export const reportMessage = (
+  messageId: string,
+  reason: ReportReason,
+  details: string,
+): Promise<Outcome> =>
+  callApi((api) =>
+    api.safety
+      .report({
+        payload: {
+          targetType: "direct_message",
+          targetId: messageId,
+          reason,
+          ...(details.trim() ? { details: details.trim() } : {}),
+        },
+      })
+      .pipe(Effect.as<Outcome>(null), Effect.catchTags(messageRefusals)),
   );

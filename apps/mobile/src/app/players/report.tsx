@@ -6,15 +6,20 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, ChoiceRow, ErrorBanner, size, space, Text, TextField, useColors } from "@/design";
 import { confirmBlock } from "@/features/safety/confirm-block";
 import { REPORT_REASONS } from "@/features/safety/reasons";
-import { blockPlayer, reportPlayer } from "@/features/safety/safety-api";
+import { blockPlayer, reportMessage, reportPlayer } from "@/features/safety/safety-api";
 
 /**
- * Report a player, in a form sheet: a reason, optional details for the
- * moderators, then the offer to block them as well.
+ * Report a player, or one of their direct messages (`messageId`), in a form
+ * sheet: a reason, optional details for the moderators, then the offer to
+ * block them as well.
  */
 export default function ReportPlayerSheet() {
   const palette = useColors();
-  const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
+  const { id, name, messageId } = useLocalSearchParams<{
+    id: string;
+    name: string;
+    messageId?: string;
+  }>();
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState("");
   const [tried, setTried] = useState(false);
@@ -28,7 +33,9 @@ export default function ReportPlayerSheet() {
     setBusy("report");
     setProblem(null);
     try {
-      const refusal = await reportPlayer(id, reason, details);
+      const refusal = messageId
+        ? await reportMessage(messageId, reason, details)
+        : await reportPlayer(id, reason, details);
       if (refusal) setProblem(refusal);
       else setSent(true);
     } catch {
@@ -44,8 +51,8 @@ export default function ReportPlayerSheet() {
     try {
       const refusal = await blockPlayer(id);
       if (refusal) setProblem(refusal);
-      // They're hidden from me now: close the sheet and their profile.
-      else router.dismissTo("/players");
+      // They're hidden from me now: close the sheet and their profile or conversation.
+      else router.dismissTo(messageId ? "/messages" : "/players");
     } catch {
       setProblem("Couldn't block them. Check your connection and try again.");
     } finally {
@@ -60,7 +67,9 @@ export default function ReportPlayerSheet() {
       contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
     >
-      <Stack.Screen options={{ title: sent ? "Report sent" : `Report ${name}` }} />
+      <Stack.Screen
+        options={{ title: sent ? "Report sent" : messageId ? "Report message" : `Report ${name}` }}
+      />
       {sent ? (
         <>
           <View style={styles.group}>
@@ -68,8 +77,8 @@ export default function ReportPlayerSheet() {
               Thanks for telling us
             </Text>
             <Text color="textMuted">
-              The moderators will look at your report about {name}. You can block them too, so you
-              won't see each other.
+              The moderators will look at your report about {messageId ? `${name}'s message` : name}
+              . You can block them too, so you won't see each other.
             </Text>
           </View>
           <ErrorBanner>{problem}</ErrorBanner>
