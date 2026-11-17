@@ -43,4 +43,12 @@ describe("notification messages", () => {
     expect(truncate("short", 10)).toBe("short");
     expect(truncate("a long sentence here", 10)).toBe("a long se…");
   });
+
+  it("quotes a direct message and opens the conversation", () => {
+    expect(messages.directMessage("c1", "Maya", "Thursday after 6?\nPalmer Park")).toEqual({
+      title: "Maya",
+      body: "Thursday after 6? Palmer Park",
+      url: "/messages/c1",
+    });
+  });
 });
