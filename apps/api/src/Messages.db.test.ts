@@ -10,10 +10,11 @@ import { Safety } from "./Safety";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
+const sent = makeNotificationsMemory();
 const TestLayer = Layer.mergeAll(
   Messages.layer,
   Safety.layer.pipe(Layer.provide(Forum.layer)),
-).pipe(Layer.provide(makeNotificationsMemory().layer), Layer.provideMerge(Db.layer));
+).pipe(Layer.provide(sent.layer), Layer.provideMerge(Db.layer));
 
 interface World {
   readonly players: ReadonlyArray<SessionUser>;
@@ -298,5 +299,27 @@ describe.skipIf(!process.env.DATABASE_URL)("Blocking and reporting", () => {
     expect(result.own._tag).toBe("CannotTargetSelf");
     expect(result.notMine._tag).toBe("TargetNotFound");
     expect(result.bogus._tag).toBe("TargetNotFound");
+  });
+});
+
+describe.skipIf(!process.env.DATABASE_URL)("Message notifications", () => {
+  it("tells the other player about a new message, by name, and never the sender", async () => {
+    const result = await withPlayers({ count: 2 }, ({ players: [a, b], messages }) =>
+      Effect.gen(function* () {
+        const convo = yield* messages.openConversation(a!, b!.id);
+        yield* messages.send(a!, convo.id, say("Court 3 at 6?"));
+        return { convo, a: a!, b: b! };
+      }),
+    );
+    const notices = sent.about(`/messages/${result.convo.id}`);
+    expect(notices).toEqual([
+      {
+        to: [result.b.id],
+        from: result.a.id,
+        title: "Player P0",
+        body: "Court 3 at 6?",
+        url: `/messages/${result.convo.id}`,
+      },
+    ]);
   });
 });

@@ -50,6 +50,7 @@ const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1
 
 export const sessionUrl = (id: string) => `/sessions/${id}`;
 export const threadUrl = (id: string) => `/forum/thread/${id}`;
+export const conversationUrl = (id: string) => `/messages/${id}`;
 
 interface Message {
   readonly title: string;
@@ -102,6 +103,13 @@ export const messages = {
     title: `${replier} replied to "${truncate(thread.title, 60)}"`,
     body: truncate(reply, 140),
     url: threadUrl(thread.id),
+  }),
+
+  /** A new direct message: the sender's name, then the start of what they wrote. */
+  directMessage: (conversationId: string, sender: string, body: string) => ({
+    title: sender,
+    body: truncate(body, 140),
+    url: conversationUrl(conversationId),
   }),
 };
 

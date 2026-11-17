@@ -23,6 +23,8 @@ import { Db } from "./Db";
 import { notBlocked } from "./db/blocks";
 import { conversation, conversationMember, directMessage, profile, user } from "./db/schema";
 import { decodeCursor, encodeCursor, isUuid } from "./messages/cursor";
+import { Notifications } from "./Notifications";
+import { messages as notices } from "./notifications/messages";
 
 const HOUR_MS = 3_600_000;
 
@@ -74,6 +76,7 @@ export class Messages extends Context.Service<
     Messages,
     Effect.gen(function* () {
       const db = yield* Db;
+      const notifications = yield* Notifications;
 
       /** The other player's id in a conversation row, from the viewer's side. */
       const otherId = (viewer: SessionUser) =>
@@ -361,7 +364,7 @@ export class Messages extends Context.Service<
 
         send: (viewer, conversationId, input) =>
           Effect.gen(function* () {
-            yield* requireConversation(viewer, conversationId);
+            const found = yield* requireConversation(viewer, conversationId);
             const [sent] = yield* db
               .select({ total: count() })
               .from(directMessage)
@@ -406,7 +409,18 @@ export class Messages extends Context.Service<
                 }),
               )
               .pipe(Effect.orDie);
-            // Push notifications (#16) hook in here, to tell the other player.
+            // Tell the other player, once the message is saved (`notify` also skips blocked players).
+            const [me] = yield* db
+              .select({ name: sql<string>`coalesce(${profile.displayName}, ${user.name})` })
+              .from(user)
+              .leftJoin(profile, eq(profile.userId, user.id))
+              .where(eq(user.id, viewer.id))
+              .pipe(Effect.orDie);
+            yield* notifications.notify({
+              to: [found.otherPlayer.id],
+              from: viewer.id,
+              ...notices.directMessage(conversationId, me?.name ?? viewer.name, input.body),
+            });
             return toMessage(viewer, row);
           }).pipe(Effect.withSpan("Messages.send")),
 
