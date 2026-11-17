@@ -481,3 +481,67 @@ export const forumReaction = pgTable(
     check("forum_reaction_one_target", sql`num_nonnulls(${t.threadId}, ${t.postId}) = 1`),
   ],
 );
+
+/** Who can play at a club; keep in step with `CLUB_ACCESS` in the domain. */
+export const clubAccess = pgEnum("club_access", ["free", "pay_to_play", "members_only"]);
+
+/**
+ * A place with tennis courts that players added: a park, a public tennis
+ * center or a private club. Clubs are public places, so `point` is stored as
+ * given. `metro_id` is the launch area whose radius covers the pin, if any.
+ * `created_by` goes null if that player deletes their account.
+ */
+export const club = pgTable(
+  "club",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    address: text("address"),
+    point: point("point").notNull(),
+    access: clubAccess("access").notNull(),
+    indoorCourts: boolean("indoor_courts").notNull().default(false),
+    metroId: uuid("metro_id").references(() => metro.id, { onDelete: "set null" }),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    index("club_point_idx").using("gist", t.point),
+    index("club_created_by_idx").on(t.createdBy, t.createdAt),
+    check("club_name_length", sql`char_length(${t.name}) between 1 and 100`),
+    check("club_address_length", sql`char_length(${t.address}) between 1 and 200`),
+  ],
+);
+
+/**
+ * One player's review of a club: whole stars and an optional note. A player
+ * has at most one per club and replaces it to change it. `created_at` is
+ * stored to the millisecond so the list cursor can carry it exactly.
+ * `hidden_at` is for moderators.
+ */
+export const clubReview = pgTable(
+  "club_review",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clubId: uuid("club_id")
+      .notNull()
+      .references(() => club.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    rating: smallint("rating").notNull(),
+    body: text("body"),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true, precision: 3 }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (t) => [
+    unique("club_review_author_unique").on(t.clubId, t.authorId),
+    index("club_review_club_created_idx").on(t.clubId, t.createdAt.desc(), t.id.desc()),
+    index("club_review_author_idx").on(t.authorId),
+    check("club_review_rating_range", sql`${t.rating} between 1 and 5`),
+    check("club_review_body_length", sql`char_length(${t.body}) between 1 and 2000`),
+  ],
+);

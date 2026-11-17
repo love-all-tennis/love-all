@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { Accounts } from "./Accounts";
+import { Clubs } from "./Clubs";
 import { Db } from "./Db";
 import { Follows } from "./Follows";
 import { Forum } from "./Forum";
@@ -202,6 +203,31 @@ export const ForumHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const ClubsHandlers = HttpApiBuilder.group(
+  Api,
+  "clubs",
+  Effect.fn(function* (handlers) {
+    const clubs = yield* Clubs;
+    return handlers
+      .handle("list", ({ query }) => Effect.flatMap(CurrentUser, (user) => clubs.list(user, query)))
+      .handle("create", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => clubs.create(user, payload)),
+      )
+      .handle("get", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => clubs.get(user, params.id)),
+      )
+      .handle("listReviews", ({ params, query }) =>
+        Effect.flatMap(CurrentUser, (user) => clubs.listReviews(user, params.id, query)),
+      )
+      .handle("saveReview", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => clubs.saveReview(user, params.id, payload)),
+      )
+      .handle("deleteReview", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => clubs.deleteReview(user, params.id)),
+      );
+  }),
+);
+
 export const ApiHandlers = Layer.mergeAll(
   SystemHandlers,
   MeHandlers,
@@ -211,4 +237,5 @@ export const ApiHandlers = Layer.mergeAll(
   SessionsHandlers,
   SessionActivityHandlers,
   ForumHandlers,
+  ClubsHandlers,
 );

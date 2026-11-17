@@ -1,0 +1,842 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "4fded5cd-a91e-4ff3-8747-fa46863b8ea4",
+  "prevIds": [
+    "7c0539a0-ac34-44fe-8926-c0aadcf3fbd4"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "club_access"
+      ],
+      "writes": [
+        "s|enum|public.club_access",
+        "n|enum|public.club_access",
+        "e|enum|public.club_access",
+        "n|type|public.club_access"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "club"
+      ],
+      "writes": [
+        "s|tbl|public.club",
+        "n|tbl|public.club",
+        "e|tbl|public.club",
+        "n|rel|public.club",
+        "n|type|public.club",
+        "n|rel|public.club_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.club_access"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "club_review"
+      ],
+      "writes": [
+        "s|tbl|public.club_review",
+        "n|tbl|public.club_review",
+        "e|tbl|public.club_review",
+        "n|rel|public.club_review",
+        "n|type|public.club_review",
+        "n|rel|public.club_review_pkey",
+        "n|rel|public.club_review_author_unique"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "club",
+        "club_point_idx"
+      ],
+      "writes": [
+        "s|idx|public.club_point_idx",
+        "n|idx|public.club_point_idx",
+        "e|idx|public.club_point_idx",
+        "n|rel|public.club_point_idx"
+      ],
+      "reads": [
+        "n|tbl|public.club",
+        "n|sch|public",
+        "n|col|public.club.point"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "club",
+        "club_created_by_idx"
+      ],
+      "writes": [
+        "s|idx|public.club_created_by_idx",
+        "n|idx|public.club_created_by_idx",
+        "e|idx|public.club_created_by_idx",
+        "n|rel|public.club_created_by_idx"
+      ],
+      "reads": [
+        "n|tbl|public.club",
+        "n|sch|public",
+        "n|col|public.club.created_by",
+        "n|col|public.club.created_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "club_review",
+        "club_review_club_created_idx"
+      ],
+      "writes": [
+        "s|idx|public.club_review_club_created_idx",
+        "n|idx|public.club_review_club_created_idx",
+        "e|idx|public.club_review_club_created_idx",
+        "n|rel|public.club_review_club_created_idx"
+      ],
+      "reads": [
+        "n|tbl|public.club_review",
+        "n|sch|public",
+        "n|col|public.club_review.club_id",
+        "n|col|public.club_review.created_at",
+        "n|col|public.club_review.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "club_review",
+        "club_review_author_idx"
+      ],
+      "writes": [
+        "s|idx|public.club_review_author_idx",
+        "n|idx|public.club_review_author_idx",
+        "e|idx|public.club_review_author_idx",
+        "n|rel|public.club_review_author_idx"
+      ],
+      "reads": [
+        "n|tbl|public.club_review",
+        "n|sch|public",
+        "n|col|public.club_review.author_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "club"
+      ],
+      "writes": [
+        "s|fk|public.club.club_metro_id_metro_id_fkey",
+        "n|fk|public.club.club_metro_id_metro_id_fkey",
+        "e|fk|public.club.club_metro_id_metro_id_fkey",
+        "n|con|public.club.club_metro_id_metro_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.club",
+        "n|sch|public",
+        "n|tbl|public.metro",
+        "n|sch|public",
+        "n|col|public.club.metro_id",
+        "n|col|public.metro.id",
+        "e|uniqueness|public.metro.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "club"
+      ],
+      "writes": [
+        "s|fk|public.club.club_created_by_user_id_fkey",
+        "n|fk|public.club.club_created_by_user_id_fkey",
+        "e|fk|public.club.club_created_by_user_id_fkey",
+        "n|con|public.club.club_created_by_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.club",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.club.created_by",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "club_review"
+      ],
+      "writes": [
+        "s|fk|public.club_review.club_review_club_id_club_id_fkey",
+        "n|fk|public.club_review.club_review_club_id_club_id_fkey",
+        "e|fk|public.club_review.club_review_club_id_club_id_fkey",
+        "n|con|public.club_review.club_review_club_id_club_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.club_review",
+        "n|sch|public",
+        "n|tbl|public.club",
+        "n|sch|public",
+        "n|col|public.club_review.club_id",
+        "n|col|public.club.id",
+        "e|uniqueness|public.club.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "club_review"
+      ],
+      "writes": [
+        "s|fk|public.club_review.club_review_author_id_user_id_fkey",
+        "n|fk|public.club_review.club_review_author_id_user_id_fkey",
+        "e|fk|public.club_review.club_review_author_id_user_id_fkey",
+        "n|con|public.club_review.club_review_author_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.club_review",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.club_review.author_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "club",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "club_review",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "club_access",
+        "values": [
+          "free",
+          "pay_to_play",
+          "members_only"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "address",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "point",
+        "type": "geometry(point,4326)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "access",
+        "type": "club_access",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "indoor_courts",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "metro_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "created_by",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "club_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "author_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "rating",
+        "type": "smallint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "body",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "hidden_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "created_at",
+        "type": "timestamp(3) with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "club_point_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "point",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "gist",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "club_created_by_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "created_by",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "created_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "club_review_club_created_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "club_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "created_at",
+            "isExpression": false,
+            "asc": false,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": false,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "club_review_author_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "author_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "club_metro_id_metro_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "metro_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "metro",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "club_created_by_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "created_by"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "club_review_club_id_club_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "club_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "club",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "club_review_author_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "author_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "club_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "club_review_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "club_review_author_unique",
+        "nameExplicit": true,
+        "columns": [
+          "club_id",
+          "author_id"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "club_name_length",
+        "value": "char_length(\"name\") between 1 and 100",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club",
+        "name": "club_address_length",
+        "value": "char_length(\"address\") between 1 and 200",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "club_review_rating_range",
+        "value": "\"rating\" between 1 and 5",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "club_review",
+        "name": "club_review_body_length",
+        "value": "char_length(\"body\") between 1 and 2000",
+        "entityType": "checks"
+      }
+    }
+  ]
+}
