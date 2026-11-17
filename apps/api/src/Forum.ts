@@ -1,5 +1,6 @@
 import {
   FORUM_PAGE_DEFAULT,
+  FORUM_REACTION_KINDS,
   FORUM_REPLIES_PER_HOUR,
   FORUM_THREADS_PER_HOUR,
   ForumCategory,
@@ -7,6 +8,8 @@ import {
   ForumPost,
   ForumPostNotFound,
   ForumRateLimited,
+  type ForumReactionCount,
+  type ForumReactionKind,
   type ForumRepliesQuery,
   ForumThread,
   ForumThreadNotFound,
@@ -20,11 +23,11 @@ import {
   NotForumAuthor,
   type SessionUser,
 } from "@love-all/domain";
-import { type SQL, and, asc, count, desc, eq, gte, isNull, or, sql } from "drizzle-orm";
+import { type SQL, and, asc, count, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { Context, Effect, Layer, Option } from "effect";
 import { Db } from "./Db";
 import { notBlocked } from "./db/blocks";
-import { forumCategory, forumPost, forumThread, profile, user } from "./db/schema";
+import { forumCategory, forumPost, forumReaction, forumThread, profile, user } from "./db/schema";
 import {
   decodeRepliesCursor,
   decodeThreadsCursor,
@@ -33,6 +36,10 @@ import {
 } from "./forum/cursor";
 
 const HOUR_MS = 3_600_000;
+
+/** Every kind at zero, for a deleted reply or a target nobody reacted to. */
+const noReactions = (): Array<ForumReactionCount> =>
+  FORUM_REACTION_KINDS.map((kind) => ({ kind, count: 0, mine: false }));
 
 /** How an author is shown: their profile name, or their account name before they have a profile. */
 const authorName = sql<string>`coalesce(${profile.displayName}, ${user.name})`;
@@ -44,7 +51,8 @@ const authorName = sql<string>`coalesce(${profile.displayName}, ${user.name})`;
  * - Global categories (no metro) are for everyone. A Local category is only
  *   for players whose profile is in its metro, for reading and posting.
  * - Threads that are deleted or hidden by a moderator are left out.
- * - Threads and replies by players blocked either way with me are left out.
+ * - Threads and replies by players blocked either way with me are left out,
+ *   and so are their reactions from the counts.
  *   A deleted reply stays as a placeholder ("Post deleted"); a hidden one
  *   is left out.
  *
@@ -80,6 +88,26 @@ export class Forum extends Context.Service<
       viewer: SessionUser,
       id: string,
     ) => Effect.Effect<void, ForumPostNotFound | NotForumAuthor>;
+    readonly reactToThread: (
+      viewer: SessionUser,
+      threadId: string,
+      kind: ForumReactionKind,
+    ) => Effect.Effect<void, ForumThreadNotFound>;
+    readonly unreactToThread: (
+      viewer: SessionUser,
+      threadId: string,
+      kind: ForumReactionKind,
+    ) => Effect.Effect<void>;
+    readonly reactToPost: (
+      viewer: SessionUser,
+      postId: string,
+      kind: ForumReactionKind,
+    ) => Effect.Effect<void, ForumPostNotFound>;
+    readonly unreactToPost: (
+      viewer: SessionUser,
+      postId: string,
+      kind: ForumReactionKind,
+    ) => Effect.Effect<void>;
   }
 >()("love-all/Forum") {
   static readonly layer = Layer.effect(
@@ -144,7 +172,47 @@ export class Forum extends Context.Service<
         readonly authorPhotoUrl: string | null;
       }) => ({ id: row.authorId, displayName: row.authorName, photoUrl: row.authorPhotoUrl });
 
-      const toThread = (row: ThreadRow) =>
+      /**
+       * Reaction counts for each thread (or reply) in `ids`, leaving out
+       * reactions by players blocked either way with the viewer.
+       */
+      const reactionsFor = (
+        viewer: SessionUser,
+        target: typeof forumReaction.threadId,
+        ids: ReadonlyArray<string>,
+      ) =>
+        ids.length === 0
+          ? Effect.succeed(new Map<string, Array<ForumReactionCount>>())
+          : db
+              .select({
+                targetId: sql<string>`${target}`,
+                kind: forumReaction.kind,
+                total: count(),
+                mine: sql<boolean>`bool_or(${forumReaction.userId} = ${viewer.id})`,
+              })
+              .from(forumReaction)
+              .where(and(inArray(target, [...ids]), notBlocked(viewer.id, forumReaction.userId)))
+              .groupBy(target, forumReaction.kind)
+              .pipe(
+                Effect.map((rows) => {
+                  const byTarget = new Map<string, Array<ForumReactionCount>>();
+                  for (const row of rows) {
+                    const counts = byTarget.get(row.targetId) ?? noReactions();
+                    byTarget.set(
+                      row.targetId,
+                      counts.map((c) =>
+                        c.kind === row.kind
+                          ? { kind: c.kind, count: row.total, mine: row.mine }
+                          : c,
+                      ),
+                    );
+                  }
+                  return byTarget;
+                }),
+                Effect.orDie,
+              );
+
+      const toThread = (row: ThreadRow, reactions: Array<ForumReactionCount>) =>
         new ForumThread({
           id: row.id,
           category: { id: row.categoryId, slug: row.categorySlug, name: row.categoryName },
@@ -154,6 +222,7 @@ export class Forum extends Context.Service<
           replyCount: row.replyCount,
           lastPostAt: row.lastPostAt,
           createdAt: row.createdAt,
+          reactions,
         });
 
       const toSummary = (row: ThreadRow) =>
@@ -193,7 +262,7 @@ export class Forum extends Context.Service<
 
       type PostRow = Effect.Success<ReturnType<typeof selectPosts>>[number];
 
-      const toPost = (row: PostRow) =>
+      const toPost = (row: PostRow, reactions: Array<ForumReactionCount>) =>
         row.deletedAt
           ? new ForumPost({
               id: row.id,
@@ -202,6 +271,7 @@ export class Forum extends Context.Service<
               body: null,
               author: null,
               createdAt: row.createdAt,
+              reactions: noReactions(),
             })
           : new ForumPost({
               id: row.id,
@@ -210,6 +280,7 @@ export class Forum extends Context.Service<
               body: row.body,
               author: authorOf(row),
               createdAt: row.createdAt,
+              reactions,
             });
 
       /** Fails when the viewer already wrote `limit` rows of `table` in the last hour. */
@@ -346,7 +417,7 @@ export class Forum extends Context.Service<
             const [row] = yield* selectThreads()
               .where(eq(forumThread.id, inserted!.id))
               .pipe(Effect.orDie);
-            return toThread(row!);
+            return toThread(row!, noReactions());
           }).pipe(Effect.withSpan("Forum.createThread")),
 
         getThread: (viewer, id, query) =>
@@ -380,9 +451,15 @@ export class Forum extends Context.Service<
               .pipe(Effect.orDie);
             const page = rows.slice(0, limit);
             const last = page.at(-1);
+            const threadReactions = yield* reactionsFor(viewer, forumReaction.threadId, [id]);
+            const postReactions = yield* reactionsFor(
+              viewer,
+              forumReaction.postId,
+              page.filter((p) => !p.deletedAt).map((p) => p.id),
+            );
             return new ForumThreadPage({
-              thread: toThread(thread),
-              replies: page.map(toPost),
+              thread: toThread(thread, threadReactions.get(id) ?? noReactions()),
+              replies: page.map((p) => toPost(p, postReactions.get(p.id) ?? noReactions())),
               nextCursor: rows.length > limit && last ? encodeRepliesCursor(last.id) : null,
             });
           }).pipe(Effect.withSpan("Forum.getThread")),
@@ -419,7 +496,7 @@ export class Forum extends Context.Service<
             const [row] = yield* selectPosts()
               .where(eq(forumPost.id, inserted.id))
               .pipe(Effect.orDie);
-            return toPost(row!);
+            return toPost(row!, noReactions());
           }).pipe(Effect.withSpan("Forum.reply")),
 
         deleteThread: (viewer, id) =>
@@ -469,6 +546,69 @@ export class Forum extends Context.Service<
               )
               .pipe(Effect.orDie);
           }).pipe(Effect.withSpan("Forum.deletePost")),
+
+        reactToThread: (viewer, threadId, kind) =>
+          Effect.gen(function* () {
+            const metroId = yield* viewerMetro(viewer);
+            const thread = yield* findThread(viewer, metroId, threadId);
+            if (!thread) return yield* new ForumThreadNotFound({ id: threadId });
+            yield* db
+              .insert(forumReaction)
+              .values({ threadId, userId: viewer.id, kind })
+              .onConflictDoNothing()
+              .pipe(Effect.orDie);
+          }).pipe(Effect.withSpan("Forum.reactToThread")),
+
+        unreactToThread: (viewer, threadId, kind) =>
+          db
+            .delete(forumReaction)
+            .where(
+              and(
+                eq(forumReaction.threadId, threadId),
+                eq(forumReaction.userId, viewer.id),
+                eq(forumReaction.kind, kind),
+              ),
+            )
+            .pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("Forum.unreactToThread")),
+
+        reactToPost: (viewer, postId, kind) =>
+          Effect.gen(function* () {
+            const metroId = yield* viewerMetro(viewer);
+            // The reply must be live, by a player I can see, in a thread I can see.
+            const [post] = yield* db
+              .select({ id: forumPost.id })
+              .from(forumPost)
+              .innerJoin(forumThread, eq(forumThread.id, forumPost.threadId))
+              .innerJoin(forumCategory, eq(forumCategory.id, forumThread.categoryId))
+              .where(
+                and(
+                  eq(forumPost.id, postId),
+                  isNull(forumPost.deletedAt),
+                  isNull(forumPost.hiddenAt),
+                  notBlocked(viewer.id, forumPost.authorId),
+                  visibleThread(viewer, metroId),
+                ),
+              )
+              .pipe(Effect.orDie);
+            if (!post) return yield* new ForumPostNotFound({ id: postId });
+            yield* db
+              .insert(forumReaction)
+              .values({ postId, userId: viewer.id, kind })
+              .onConflictDoNothing()
+              .pipe(Effect.orDie);
+          }).pipe(Effect.withSpan("Forum.reactToPost")),
+
+        unreactToPost: (viewer, postId, kind) =>
+          db
+            .delete(forumReaction)
+            .where(
+              and(
+                eq(forumReaction.postId, postId),
+                eq(forumReaction.userId, viewer.id),
+                eq(forumReaction.kind, kind),
+              ),
+            )
+            .pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("Forum.unreactToPost")),
       });
     }),
   );

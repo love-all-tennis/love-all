@@ -8,6 +8,7 @@ import {
   ForumPostId,
   ForumPostNotFound,
   ForumRateLimited,
+  ForumReactionKind,
   ForumRepliesQuery,
   ForumThread,
   ForumThreadId,
@@ -341,6 +342,8 @@ export class SessionActivityApi extends HttpApiGroup.make("sessionActivity")
 
 const ForumThreadParam = { id: ForumThreadId };
 const ForumPostParam = { id: ForumPostId };
+const ThreadReactionParams = { id: ForumThreadId, kind: ForumReactionKind };
+const PostReactionParams = { id: ForumPostId, kind: ForumReactionKind };
 
 /**
  * The forum: global categories plus the Local category for my metro.
@@ -400,6 +403,32 @@ export class ForumApi extends HttpApiGroup.make("forum")
     HttpApiEndpoint.delete("deletePost", "/forum/posts/:id", {
       params: ForumPostParam,
       error: [ForumPostNotFound, NotForumAuthor],
+    }),
+  )
+  /** Idempotent. Not on deleted or hidden threads. */
+  .add(
+    HttpApiEndpoint.put("reactToThread", "/forum/threads/:id/reactions/:kind", {
+      params: ThreadReactionParams,
+      error: ForumThreadNotFound,
+    }),
+  )
+  /** Idempotent: removing a reaction I didn't make does nothing. */
+  .add(
+    HttpApiEndpoint.delete("unreactToThread", "/forum/threads/:id/reactions/:kind", {
+      params: ThreadReactionParams,
+    }),
+  )
+  /** Idempotent. Not on deleted or hidden replies. */
+  .add(
+    HttpApiEndpoint.put("reactToPost", "/forum/posts/:id/reactions/:kind", {
+      params: PostReactionParams,
+      error: ForumPostNotFound,
+    }),
+  )
+  /** Idempotent: removing a reaction I didn't make does nothing. */
+  .add(
+    HttpApiEndpoint.delete("unreactToPost", "/forum/posts/:id/reactions/:kind", {
+      params: PostReactionParams,
     }),
   )
   .middleware(Authentication) {}

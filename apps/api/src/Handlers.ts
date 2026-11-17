@@ -186,6 +186,18 @@ export const ForumHandlers = HttpApiBuilder.group(
       )
       .handle("deletePost", ({ params }) =>
         Effect.flatMap(CurrentUser, (user) => forum.deletePost(user, params.id)),
+      )
+      .handle("reactToThread", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => forum.reactToThread(user, params.id, params.kind)),
+      )
+      .handle("unreactToThread", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => forum.unreactToThread(user, params.id, params.kind)),
+      )
+      .handle("reactToPost", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => forum.reactToPost(user, params.id, params.kind)),
+      )
+      .handle("unreactToPost", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => forum.unreactToPost(user, params.id, params.kind)),
       );
   }),
 );

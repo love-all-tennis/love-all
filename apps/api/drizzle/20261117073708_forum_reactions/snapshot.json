@@ -1,0 +1,440 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7c0539a0-ac34-44fe-8926-c0aadcf3fbd4",
+  "prevIds": [
+    "edd3cb4b-0bb8-47c8-a98c-859cf45e6f85"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "forum_reaction_kind"
+      ],
+      "writes": [
+        "s|enum|public.forum_reaction_kind",
+        "n|enum|public.forum_reaction_kind",
+        "e|enum|public.forum_reaction_kind",
+        "n|type|public.forum_reaction_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "forum_reaction"
+      ],
+      "writes": [
+        "s|tbl|public.forum_reaction",
+        "n|tbl|public.forum_reaction",
+        "e|tbl|public.forum_reaction",
+        "n|rel|public.forum_reaction",
+        "n|type|public.forum_reaction",
+        "n|rel|public.forum_reaction_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.forum_reaction_kind"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "forum_reaction",
+        "forum_reaction_thread_unique"
+      ],
+      "writes": [
+        "s|idx|public.forum_reaction_thread_unique",
+        "n|idx|public.forum_reaction_thread_unique",
+        "e|idx|public.forum_reaction_thread_unique",
+        "n|rel|public.forum_reaction_thread_unique"
+      ],
+      "reads": [
+        "n|tbl|public.forum_reaction",
+        "n|sch|public",
+        "n|col|public.forum_reaction.thread_id",
+        "n|col|public.forum_reaction.user_id",
+        "n|col|public.forum_reaction.kind"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "forum_reaction",
+        "forum_reaction_post_unique"
+      ],
+      "writes": [
+        "s|idx|public.forum_reaction_post_unique",
+        "n|idx|public.forum_reaction_post_unique",
+        "e|idx|public.forum_reaction_post_unique",
+        "n|rel|public.forum_reaction_post_unique"
+      ],
+      "reads": [
+        "n|tbl|public.forum_reaction",
+        "n|sch|public",
+        "n|col|public.forum_reaction.post_id",
+        "n|col|public.forum_reaction.user_id",
+        "n|col|public.forum_reaction.kind"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "forum_reaction"
+      ],
+      "writes": [
+        "s|fk|public.forum_reaction.forum_reaction_thread_id_forum_thread_id_fkey",
+        "n|fk|public.forum_reaction.forum_reaction_thread_id_forum_thread_id_fkey",
+        "e|fk|public.forum_reaction.forum_reaction_thread_id_forum_thread_id_fkey",
+        "n|con|public.forum_reaction.forum_reaction_thread_id_forum_thread_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.forum_reaction",
+        "n|sch|public",
+        "n|tbl|public.forum_thread",
+        "n|sch|public",
+        "n|col|public.forum_reaction.thread_id",
+        "n|col|public.forum_thread.id",
+        "e|uniqueness|public.forum_thread.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "forum_reaction"
+      ],
+      "writes": [
+        "s|fk|public.forum_reaction.forum_reaction_post_id_forum_post_id_fkey",
+        "n|fk|public.forum_reaction.forum_reaction_post_id_forum_post_id_fkey",
+        "e|fk|public.forum_reaction.forum_reaction_post_id_forum_post_id_fkey",
+        "n|con|public.forum_reaction.forum_reaction_post_id_forum_post_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.forum_reaction",
+        "n|sch|public",
+        "n|tbl|public.forum_post",
+        "n|sch|public",
+        "n|col|public.forum_reaction.post_id",
+        "n|col|public.forum_post.id",
+        "e|uniqueness|public.forum_post.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "forum_reaction"
+      ],
+      "writes": [
+        "s|fk|public.forum_reaction.forum_reaction_user_id_user_id_fkey",
+        "n|fk|public.forum_reaction.forum_reaction_user_id_user_id_fkey",
+        "e|fk|public.forum_reaction.forum_reaction_user_id_user_id_fkey",
+        "n|con|public.forum_reaction.forum_reaction_user_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.forum_reaction",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.forum_reaction.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "forum_reaction",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "forum_reaction_kind",
+        "values": [
+          "like",
+          "helpful",
+          "ace"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "thread_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "post_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "kind",
+        "type": "forum_reaction_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "forum_reaction_thread_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "thread_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "kind",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"thread_id\" is not null",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "forum_reaction_post_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "post_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "kind",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"post_id\" is not null",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "forum_reaction_thread_id_forum_thread_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "thread_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "forum_thread",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "forum_reaction_post_id_forum_post_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "post_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "forum_post",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "forum_reaction_user_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "forum_reaction_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "forum_reaction",
+        "name": "forum_reaction_one_target",
+        "value": "num_nonnulls(\"thread_id\", \"post_id\") = 1",
+        "entityType": "checks"
+      }
+    }
+  ]
+}
