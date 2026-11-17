@@ -248,11 +248,16 @@ export const playSession = pgTable(
     visibility: playSessionVisibility("visibility").notNull(),
     status: playSessionStatus("status").notNull().default("open"),
     notes: text("notes"),
+    /** When the "starting soon" push went out. Cleared when the start time changes. */
+    reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => [
     index("play_session_host_id_idx").on(t.hostId),
     index("play_session_court_point_idx").using("gist", t.courtPoint),
+    index("play_session_reminder_due_idx")
+      .on(t.startsAt)
+      .where(sql`${t.reminderSentAt} is null and ${t.status} <> 'cancelled'`),
     index("play_session_open_starts_at_idx")
       .on(t.startsAt)
       .where(sql`${t.visibility} = 'open' and ${t.status} = 'open'`),

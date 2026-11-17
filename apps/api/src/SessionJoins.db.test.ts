@@ -6,9 +6,12 @@ import { Db } from "./Db";
 import { block, playSession, playSessionParticipant, profile, user } from "./db/schema";
 import { Safety } from "./Safety";
 import { SessionJoins } from "./SessionJoins";
+import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
+const sent = makeNotificationsMemory();
 const TestLayer = Layer.mergeAll(SessionJoins.layer, Safety.layer).pipe(
+  Layer.provide(sent.layer),
   Layer.provideMerge(Db.layer),
 );
 
@@ -433,6 +436,90 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
       hosted: { status: "open", states: { P0: "accepted" } },
       theirs: { status: "open", states: { P1: "accepted" } },
       unrelated: "accepted",
+    });
+  });
+
+  describe("notifications", () => {
+    /** Notices about the session, with players named instead of ids. */
+    const heard = (id: string, players: ReadonlyArray<SessionUser>) =>
+      sent.about(`/sessions/${id}`).map((notice) => ({
+        to: notice.to.map((to) => players.find((p) => p.id === to)?.name ?? to).sort(),
+        title: notice.title,
+      }));
+
+    it("tells the host about answers to invites, and everyone when it fills", async () => {
+      await withPlayers(["3.5", "3.5", "3.5", "3.5"], (players, { db, joins }) =>
+        Effect.gen(function* () {
+          const [host, a, b, c] = players;
+          const id = yield* makeSession(db, host!, { kind: "doubles", invited: [a!, b!, c!] });
+          yield* joins.respond(a!, id, "accept");
+          yield* joins.respond(b!, id, "decline");
+          expect(heard(id, players)).toEqual([
+            { to: ["P0"], title: "P1 is in" },
+            { to: ["P0"], title: "P2 can't make it" },
+          ]);
+        }),
+      );
+      await withPlayers(["3.5", "3.5"], (players, { db, joins }) =>
+        Effect.gen(function* () {
+          const [host, guest] = players;
+          const id = yield* makeSession(db, host!, { invited: [guest!] });
+          yield* joins.respond(guest!, id, "accept");
+          // The guest filled the last spot, so only the host needs telling.
+          expect(heard(id, players)).toEqual([{ to: ["P0"], title: "Session confirmed" }]);
+        }),
+      );
+    });
+
+    it("tells the host about requests, and the player about the answer", async () => {
+      await withPlayers(["4.0", "4.0", "4.0", "4.0"], (players, { db, joins }) =>
+        Effect.gen(function* () {
+          const [host, a, b, c] = players;
+          const id = yield* makeSession(db, host!, { kind: "doubles", accepted: [a!] });
+          yield* joins.respond(b!, id, "request");
+          yield* joins.respond(c!, id, "request");
+          yield* joins.reject(host!, id, c!.id);
+          yield* joins.approve(host!, id, b!.id);
+          expect(heard(id, players)).toEqual([
+            { to: ["P0"], title: "P2 asked to join" },
+            { to: ["P0"], title: "P3 asked to join" },
+            { to: ["P3"], title: "Request not approved" },
+            { to: ["P2"], title: "You're in" },
+          ]);
+        }),
+      );
+    });
+
+    it("tells the host when a player gives up a spot, but not when a request is withdrawn", async () => {
+      await withPlayers(["4.0", "4.0", "4.0"], (players, { db, joins }) =>
+        Effect.gen(function* () {
+          const [host, a, b] = players;
+          const id = yield* makeSession(db, host!, { kind: "doubles", accepted: [a!] });
+          yield* joins.respond(b!, id, "request");
+          yield* joins.leave(b!, id);
+          yield* joins.leave(a!, id);
+          expect(heard(id, players).slice(1)).toEqual([{ to: ["P0"], title: "P1 left" }]);
+        }),
+      );
+    });
+
+    it("tells every invited, waiting and accepted player when the host cancels", async () => {
+      await withPlayers(["4.0", "4.0", "4.0", "4.0"], (players, { db, joins }) =>
+        Effect.gen(function* () {
+          const [host, a, b, c] = players;
+          const id = yield* makeSession(db, host!, {
+            kind: "doubles",
+            accepted: [a!],
+            invited: [b!],
+          });
+          yield* joins.respond(c!, id, "request");
+          yield* joins.cancel(host!, id);
+          yield* joins.cancel(host!, id);
+          expect(heard(id, players).slice(1)).toEqual([
+            { to: ["P1", "P2", "P3"], title: "Session cancelled" },
+          ]);
+        }),
+      );
     });
   });
 });

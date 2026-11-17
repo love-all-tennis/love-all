@@ -26,6 +26,8 @@ import {
 import { type SQL, and, asc, count, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { Context, Effect, Layer, Option } from "effect";
 import { Db } from "./Db";
+import { Notifications } from "./Notifications";
+import { messages } from "./notifications/messages";
 import { notBlocked } from "./db/blocks";
 import { forumCategory, forumPost, forumReaction, forumThread, profile, user } from "./db/schema";
 import {
@@ -114,6 +116,7 @@ export class Forum extends Context.Service<
     Forum,
     Effect.gen(function* () {
       const db = yield* Db;
+      const notifications = yield* Notifications;
 
       /** The metro of my profile, or null when I have no profile or no metro. */
       const viewerMetro = (viewer: SessionUser) =>
@@ -496,6 +499,14 @@ export class Forum extends Context.Service<
             const [row] = yield* selectPosts()
               .where(eq(forumPost.id, inserted.id))
               .pipe(Effect.orDie);
+            // The thread's author hears about others' replies (`notify` also skips blocked players).
+            if (thread.authorId !== viewer.id) {
+              yield* notifications.notify({
+                to: [thread.authorId],
+                from: viewer.id,
+                ...messages.forumReply(thread, row!.authorName, input.body),
+              });
+            }
             return toPost(row!, noReactions());
           }).pipe(Effect.withSpan("Forum.reply")),
 
