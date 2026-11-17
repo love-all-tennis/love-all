@@ -1,10 +1,22 @@
-import type { SessionScope } from "@love-all/domain";
+import type { SessionScope, SessionSummary } from "@love-all/domain";
 import { router } from "expo-router";
 import { useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { RefreshControl, SectionList, StyleSheet, View } from "react-native";
 
-import { Button, Chip, EmptyState, Icon, Loading, Screen, size, space, useColors } from "@/design";
+import {
+  Button,
+  Chip,
+  EmptyState,
+  Icon,
+  Loading,
+  Screen,
+  size,
+  space,
+  Text,
+  useColors,
+} from "@/design";
 import { SessionCard } from "@/features/sessions/components";
+import { groupMySessions } from "@/features/sessions/joining";
 import { useNow, useSessionList } from "@/features/sessions/use-sessions";
 
 const openSession = (id: string) => router.push({ pathname: "/sessions/[id]", params: { id } });
@@ -51,11 +63,21 @@ function SessionList({ scope }: { scope: SessionScope }) {
     );
   }
 
+  const sections = listSections(scope, list.sessions, now);
+
   return (
-    <FlatList
+    <SectionList
       style={styles.fill}
       contentContainerStyle={styles.list}
-      data={list.sessions}
+      sections={sections}
+      stickySectionHeadersEnabled={false}
+      renderSectionHeader={({ section }) =>
+        section.title ? (
+          <Text variant="heading" accessibilityRole="header" style={styles.header}>
+            {section.title}
+          </Text>
+        ) : null
+      }
       keyExtractor={(session) => session.id}
       renderItem={({ item }) => (
         <SessionCard
@@ -103,7 +125,30 @@ function SessionList({ scope }: { scope: SessionScope }) {
   );
 }
 
+type ListSection = { readonly title: string | null; readonly data: ReadonlyArray<SessionSummary> };
+
+/**
+ * My sessions puts invites and requests waiting on me in a short group at the
+ * top. Nearby is one plain list. Empty groups are left out, so an empty list
+ * shows its empty state.
+ */
+const listSections = (
+  scope: SessionScope,
+  sessions: ReadonlyArray<SessionSummary>,
+  now: Date,
+): ReadonlyArray<ListSection> => {
+  if (scope === "nearby") return sessions.length > 0 ? [{ title: null, data: sessions }] : [];
+  const { needsAnswer, rest } = groupMySessions(sessions, now);
+  const sections: Array<ListSection> = [];
+  if (needsAnswer.length > 0) sections.push({ title: "Needs your answer", data: needsAnswer });
+  if (rest.length > 0) {
+    sections.push({ title: needsAnswer.length > 0 ? "All sessions" : null, data: rest });
+  }
+  return sections;
+};
+
 const styles = StyleSheet.create({
+  header: { paddingTop: space[2] },
   fill: { flex: 1 },
   bar: { flexDirection: "row", alignItems: "center", gap: space[2] },
   switcher: { flex: 1, flexDirection: "row", gap: space[2] },
