@@ -6,6 +6,7 @@ import { Accounts } from "./Accounts";
 import { Db } from "./Db";
 import { Follows } from "./Follows";
 import { Forum } from "./Forum";
+import { Moderation } from "./Moderation";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
@@ -202,6 +203,35 @@ export const ForumHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const ModerationHandlers = HttpApiBuilder.group(
+  Api,
+  "moderation",
+  Effect.fn(function* (handlers) {
+    const moderation = yield* Moderation;
+    return handlers
+      .handle("listReports", ({ query }) =>
+        Effect.flatMap(CurrentUser, (user) => moderation.listReports(user, query)),
+      )
+      .handle("dismissReport", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => moderation.dismissReport(user, params.id)),
+      )
+      .handle("hideContent", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => moderation.hideContent(user, params.type, params.id)),
+      )
+      .handle("unhideContent", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) =>
+          moderation.unhideContent(user, params.type, params.id),
+        ),
+      )
+      .handle("suspend", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => moderation.suspend(user, params.id, payload)),
+      )
+      .handle("unsuspend", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => moderation.unsuspend(user, params.id)),
+      );
+  }),
+);
+
 export const ApiHandlers = Layer.mergeAll(
   SystemHandlers,
   MeHandlers,
@@ -211,4 +241,5 @@ export const ApiHandlers = Layer.mergeAll(
   SessionsHandlers,
   SessionActivityHandlers,
   ForumHandlers,
+  ModerationHandlers,
 );

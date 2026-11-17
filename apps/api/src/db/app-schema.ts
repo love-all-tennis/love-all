@@ -179,6 +179,13 @@ export const reportReason = pgEnum("report_reason", [
 
 export const reportStatus = pgEnum("report_status", ["open", "resolved"]);
 
+/** How a report was closed. Keep in step with `ReportResolution` in the domain. */
+export const reportResolution = pgEnum("report_resolution", [
+  "dismissed",
+  "content_hidden",
+  "player_suspended",
+]);
+
 /**
  * A report for moderators. `target_id` is the reported thing's id (a user id
  * for a player, a thread or reply id for forum content), with no foreign key,
@@ -200,6 +207,9 @@ export const report = pgTable(
     reason: reportReason("reason").notNull(),
     details: text("details"),
     status: reportStatus("status").notNull().default("open"),
+    resolution: reportResolution("resolution"),
+    /** The moderator who closed it. Kept as null if their account goes. */
+    resolvedById: text("resolved_by_id").references(() => user.id, { onDelete: "set null" }),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
     ...timestamps,
   },
@@ -211,6 +221,24 @@ export const report = pgTable(
       .where(sql`${t.status} = 'open'`),
     check("report_details_length", sql`char_length(${t.details}) <= 1000`),
   ],
+);
+
+/**
+ * A suspended player: one row while the suspension lasts, deleted when it's
+ * lifted. Suspended players can't sign in (see `auth.ts`) and drop out of
+ * player search; filter other lists with `notSuspended` from `./suspensions`.
+ */
+export const accountSuspension = pgTable(
+  "account_suspension",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => user.id, { onDelete: "cascade" }),
+    suspendedById: text("suspended_by_id").references(() => user.id, { onDelete: "set null" }),
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [check("account_suspension_reason_length", sql`char_length(${t.reason}) <= 500`)],
 );
 
 export const playSessionKind = pgEnum("play_session_kind", ["singles", "doubles", "hitting"]);
