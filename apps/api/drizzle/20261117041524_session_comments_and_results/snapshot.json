@@ -1,0 +1,775 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "b1e11a4d-fe29-40ed-b746-db5e93f9770a",
+  "prevIds": [
+    "95f45e8d-7eab-44e5-a30d-67ccc8752433"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "play_session_result_side"
+      ],
+      "writes": [
+        "s|enum|public.play_session_result_side",
+        "n|enum|public.play_session_result_side",
+        "e|enum|public.play_session_result_side",
+        "n|type|public.play_session_result_side"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "play_session_result_status"
+      ],
+      "writes": [
+        "s|enum|public.play_session_result_status",
+        "n|enum|public.play_session_result_status",
+        "e|enum|public.play_session_result_status",
+        "n|type|public.play_session_result_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_comment"
+      ],
+      "writes": [
+        "s|tbl|public.play_session_comment",
+        "n|tbl|public.play_session_comment",
+        "e|tbl|public.play_session_comment",
+        "n|rel|public.play_session_comment",
+        "n|type|public.play_session_comment",
+        "n|rel|public.play_session_comment_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_result"
+      ],
+      "writes": [
+        "s|tbl|public.play_session_result",
+        "n|tbl|public.play_session_result",
+        "e|tbl|public.play_session_result",
+        "n|rel|public.play_session_result",
+        "n|type|public.play_session_result",
+        "n|rel|public.play_session_result_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.play_session_result_side",
+        "n|enum|public.play_session_result_status"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "play_session_comment",
+        "play_session_comment_session_created_idx"
+      ],
+      "writes": [
+        "s|idx|public.play_session_comment_session_created_idx",
+        "n|idx|public.play_session_comment_session_created_idx",
+        "e|idx|public.play_session_comment_session_created_idx",
+        "n|rel|public.play_session_comment_session_created_idx"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_comment",
+        "n|sch|public",
+        "n|col|public.play_session_comment.session_id",
+        "n|col|public.play_session_comment.created_at",
+        "n|col|public.play_session_comment.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_comment"
+      ],
+      "writes": [
+        "s|fk|public.play_session_comment.play_session_comment_session_id_play_session_id_fkey",
+        "n|fk|public.play_session_comment.play_session_comment_session_id_play_session_id_fkey",
+        "e|fk|public.play_session_comment.play_session_comment_session_id_play_session_id_fkey",
+        "n|con|public.play_session_comment.play_session_comment_session_id_play_session_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_comment",
+        "n|sch|public",
+        "n|tbl|public.play_session",
+        "n|sch|public",
+        "n|col|public.play_session_comment.session_id",
+        "n|col|public.play_session.id",
+        "e|uniqueness|public.play_session.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_comment"
+      ],
+      "writes": [
+        "s|fk|public.play_session_comment.play_session_comment_author_id_user_id_fkey",
+        "n|fk|public.play_session_comment.play_session_comment_author_id_user_id_fkey",
+        "e|fk|public.play_session_comment.play_session_comment_author_id_user_id_fkey",
+        "n|con|public.play_session_comment.play_session_comment_author_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_comment",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.play_session_comment.author_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_result"
+      ],
+      "writes": [
+        "s|fk|public.play_session_result.play_session_result_session_id_play_session_id_fkey",
+        "n|fk|public.play_session_result.play_session_result_session_id_play_session_id_fkey",
+        "e|fk|public.play_session_result.play_session_result_session_id_play_session_id_fkey",
+        "n|con|public.play_session_result.play_session_result_session_id_play_session_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_result",
+        "n|sch|public",
+        "n|tbl|public.play_session",
+        "n|sch|public",
+        "n|col|public.play_session_result.session_id",
+        "n|col|public.play_session.id",
+        "e|uniqueness|public.play_session.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_result"
+      ],
+      "writes": [
+        "s|fk|public.play_session_result.play_session_result_recorded_by_user_id_fkey",
+        "n|fk|public.play_session_result.play_session_result_recorded_by_user_id_fkey",
+        "e|fk|public.play_session_result.play_session_result_recorded_by_user_id_fkey",
+        "n|con|public.play_session_result.play_session_result_recorded_by_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_result",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.play_session_result.recorded_by",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_result"
+      ],
+      "writes": [
+        "s|fk|public.play_session_result.play_session_result_responded_by_user_id_fkey",
+        "n|fk|public.play_session_result.play_session_result_responded_by_user_id_fkey",
+        "e|fk|public.play_session_result.play_session_result_responded_by_user_id_fkey",
+        "n|con|public.play_session_result.play_session_result_responded_by_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_result",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.play_session_result.responded_by",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session_comment",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session_result",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session_result_side",
+        "values": [
+          "a",
+          "b"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session_result_status",
+        "values": [
+          "pending",
+          "confirmed",
+          "disputed"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "session_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "author_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "body",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "deleted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "session_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "side_a",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 1,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "side_b",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 1,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "sets",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "winner",
+        "type": "play_session_result_side",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "status",
+        "type": "play_session_result_status",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'pending'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "recorded_by",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "recorded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "responded_by",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "responded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "play_session_comment_session_created_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "session_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "created_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "play_session_comment_session_id_play_session_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "session_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "play_session",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "play_session_comment_author_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "author_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "play_session_result_session_id_play_session_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "session_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "play_session",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "play_session_result_recorded_by_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "recorded_by"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "play_session_result_responded_by_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "responded_by"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "play_session_comment_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "play_session_result_pkey",
+        "columns": [
+          "session_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_comment",
+        "name": "play_session_comment_body_length",
+        "value": "char_length(\"body\") between 1 and 1000",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "play_session_result_sides",
+        "value": "cardinality(\"side_a\") between 1 and 2 and cardinality(\"side_a\") = cardinality(\"side_b\")",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "play_session_result_sets",
+        "value": "jsonb_typeof(\"sets\") = 'array' and jsonb_array_length(\"sets\") between 1 and 3",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_result",
+        "name": "play_session_result_response",
+        "value": "(\"status\" = 'pending') = (\"responded_at\" is null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

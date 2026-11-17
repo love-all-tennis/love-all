@@ -35,6 +35,23 @@ import {
   SessionsQuery,
 } from "./Session";
 import { JoinRequestNotFound, LevelOutOfRange, NotInvited, SessionResponse } from "./SessionJoin";
+import {
+  CommentNotFound,
+  InvalidResult,
+  NewSessionComment,
+  NewSessionResult,
+  NotCommentAuthor,
+  NotOnOtherSide,
+  NotSessionPlayer,
+  ResultConflict,
+  ResultNotFound,
+  ResultResponse,
+  SessionComment,
+  SessionCommentId,
+  SessionCommentsPage,
+  SessionCommentsQuery,
+  SessionResult,
+} from "./SessionResult";
 
 export const Health = Schema.Struct({
   status: Schema.Literal("ok"),
@@ -241,6 +258,69 @@ export class SessionsApi extends HttpApiGroup.make("sessions")
   )
   .middleware(Authentication) {}
 
+/**
+ * What happens around a session once players are in: logistics comments and,
+ * for singles and doubles, the score. Only the host and accepted players can
+ * use these. A separate group from `sessions` so each has its own handlers.
+ */
+export class SessionActivityApi extends HttpApiGroup.make("sessionActivity")
+  /** Oldest first, cursor-paginated. Comments by players blocked either way with me are left out. */
+  .add(
+    HttpApiEndpoint.get("listComments", "/sessions/:id/comments", {
+      params: SessionIdParam,
+      query: SessionCommentsQuery,
+      success: SessionCommentsPage,
+      error: [SessionNotFound, NotSessionPlayer, InvalidCursor],
+    }),
+  )
+  /** Not on cancelled sessions. */
+  .add(
+    HttpApiEndpoint.post("addComment", "/sessions/:id/comments", {
+      params: SessionIdParam,
+      payload: NewSessionComment,
+      success: SessionComment.pipe(HttpApiSchema.status(201)),
+      error: [SessionNotFound, NotSessionPlayer, SessionClosed],
+    }),
+  )
+  /** Author only. The comment disappears for everyone. */
+  .add(
+    HttpApiEndpoint.delete("deleteComment", "/sessions/comments/:commentId", {
+      params: { commentId: SessionCommentId },
+      error: [CommentNotFound, NotCommentAuthor],
+    }),
+  )
+  /** The session's score, or null when nobody has recorded one. */
+  .add(
+    HttpApiEndpoint.get("getResult", "/sessions/:id/result", {
+      params: SessionIdParam,
+      success: Schema.NullOr(SessionResult),
+      error: [SessionNotFound, NotSessionPlayer],
+    }),
+  )
+  /**
+   * An accepted player records the score of a singles or doubles session
+   * after it starts. It waits for the other side to confirm. Replaces a
+   * disputed score; fails if one is pending or confirmed.
+   */
+  .add(
+    HttpApiEndpoint.post("recordResult", "/sessions/:id/result", {
+      params: SessionIdParam,
+      payload: NewSessionResult,
+      success: SessionResult.pipe(HttpApiSchema.status(201)),
+      error: [SessionNotFound, NotSessionPlayer, SessionClosed, InvalidResult, ResultConflict],
+    }),
+  )
+  /** A player on the other side confirms or disputes a pending score. */
+  .add(
+    HttpApiEndpoint.post("respondToResult", "/sessions/:id/result/confirm", {
+      params: SessionIdParam,
+      payload: ResultResponse,
+      success: SessionResult,
+      error: [SessionNotFound, NotSessionPlayer, ResultNotFound, NotOnOtherSide, ResultConflict],
+    }),
+  )
+  .middleware(Authentication) {}
+
 /** The whole Love All API. Shared by the server and the mobile client. */
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
@@ -249,4 +329,5 @@ export class Api extends HttpApi.make("love-all")
   .add(FollowsApi)
   .add(SafetyApi)
   .add(SessionsApi)
+  .add(SessionActivityApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}

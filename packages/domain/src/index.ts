@@ -6,3 +6,4 @@ export * from "./Profile";
 export * from "./Safety";
 export * from "./Session";
 export * from "./SessionJoin";
+export * from "./SessionResult";
