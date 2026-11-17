@@ -1,0 +1,832 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "0061de7b-4c16-474c-8779-36f43683a1e1",
+  "prevIds": [
+    "12685be2-77e7-4f46-804c-ad02f41bd52f"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "equipment_kind"
+      ],
+      "writes": [
+        "s|enum|public.equipment_kind",
+        "n|enum|public.equipment_kind",
+        "e|enum|public.equipment_kind",
+        "n|type|public.equipment_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "equipment"
+      ],
+      "writes": [
+        "s|tbl|public.equipment",
+        "n|tbl|public.equipment",
+        "e|tbl|public.equipment",
+        "n|rel|public.equipment",
+        "n|type|public.equipment",
+        "n|rel|public.equipment_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.equipment_kind"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "equipment_review"
+      ],
+      "writes": [
+        "s|tbl|public.equipment_review",
+        "n|tbl|public.equipment_review",
+        "e|tbl|public.equipment_review",
+        "n|rel|public.equipment_review",
+        "n|type|public.equipment_review",
+        "n|rel|public.equipment_review_pkey",
+        "n|rel|public.equipment_review_author_unique"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.ntrp_level"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "equipment",
+        "equipment_kind_name_unique"
+      ],
+      "writes": [
+        "s|idx|public.equipment_kind_name_unique",
+        "n|idx|public.equipment_kind_name_unique",
+        "e|idx|public.equipment_kind_name_unique",
+        "n|rel|public.equipment_kind_name_unique"
+      ],
+      "reads": [
+        "n|tbl|public.equipment",
+        "n|sch|public",
+        "n|col|public.equipment.kind",
+        "n|col|public.equipment.name_key"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "equipment",
+        "equipment_name_idx"
+      ],
+      "writes": [
+        "s|idx|public.equipment_name_idx",
+        "n|idx|public.equipment_name_idx",
+        "e|idx|public.equipment_name_idx",
+        "n|rel|public.equipment_name_idx"
+      ],
+      "reads": [
+        "n|tbl|public.equipment",
+        "n|sch|public",
+        "n|col|public.equipment.name_key",
+        "n|col|public.equipment.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "equipment",
+        "equipment_created_by_idx"
+      ],
+      "writes": [
+        "s|idx|public.equipment_created_by_idx",
+        "n|idx|public.equipment_created_by_idx",
+        "e|idx|public.equipment_created_by_idx",
+        "n|rel|public.equipment_created_by_idx"
+      ],
+      "reads": [
+        "n|tbl|public.equipment",
+        "n|sch|public",
+        "n|col|public.equipment.created_by",
+        "n|col|public.equipment.created_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "equipment_review",
+        "equipment_review_recent_idx"
+      ],
+      "writes": [
+        "s|idx|public.equipment_review_recent_idx",
+        "n|idx|public.equipment_review_recent_idx",
+        "e|idx|public.equipment_review_recent_idx",
+        "n|rel|public.equipment_review_recent_idx"
+      ],
+      "reads": [
+        "n|tbl|public.equipment_review",
+        "n|sch|public",
+        "n|col|public.equipment_review.equipment_id",
+        "n|col|public.equipment_review.created_at",
+        "n|col|public.equipment_review.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "equipment"
+      ],
+      "writes": [
+        "s|fk|public.equipment.equipment_created_by_user_id_fkey",
+        "n|fk|public.equipment.equipment_created_by_user_id_fkey",
+        "e|fk|public.equipment.equipment_created_by_user_id_fkey",
+        "n|con|public.equipment.equipment_created_by_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.equipment",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.equipment.created_by",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "equipment_review"
+      ],
+      "writes": [
+        "s|fk|public.equipment_review.equipment_review_equipment_id_equipment_id_fkey",
+        "n|fk|public.equipment_review.equipment_review_equipment_id_equipment_id_fkey",
+        "e|fk|public.equipment_review.equipment_review_equipment_id_equipment_id_fkey",
+        "n|con|public.equipment_review.equipment_review_equipment_id_equipment_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.equipment_review",
+        "n|sch|public",
+        "n|tbl|public.equipment",
+        "n|sch|public",
+        "n|col|public.equipment_review.equipment_id",
+        "n|col|public.equipment.id",
+        "e|uniqueness|public.equipment.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "equipment_review"
+      ],
+      "writes": [
+        "s|fk|public.equipment_review.equipment_review_author_id_user_id_fkey",
+        "n|fk|public.equipment_review.equipment_review_author_id_user_id_fkey",
+        "e|fk|public.equipment_review.equipment_review_author_id_user_id_fkey",
+        "n|con|public.equipment_review.equipment_review_author_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.equipment_review",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.equipment_review.author_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "equipment",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "equipment_review",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "equipment_kind",
+        "values": [
+          "racket",
+          "strings",
+          "shoes",
+          "balls",
+          "bag",
+          "other"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "kind",
+        "type": "equipment_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "brand",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "model",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "name_key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": {
+          "as": "lower(regexp_replace(brand || ' ' || model, '\\s+', ' ', 'g'))",
+          "type": "stored"
+        },
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "created_by",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "hidden_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "equipment_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "author_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "rating",
+        "type": "smallint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "title",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "body",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "author_ntrp",
+        "type": "ntrp_level",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "hidden_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "created_at",
+        "type": "timestamp(3) with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "equipment_kind_name_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "kind",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "name_key",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "equipment_name_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "name_key",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "equipment_created_by_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "created_by",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "created_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "equipment_review_recent_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "equipment_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "created_at",
+            "isExpression": false,
+            "asc": false,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": false,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "equipment_created_by_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "created_by"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "equipment_review_equipment_id_equipment_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "equipment_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "equipment",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "equipment_review_author_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "author_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "equipment_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "equipment_review_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "equipment_review_author_unique",
+        "nameExplicit": true,
+        "columns": [
+          "equipment_id",
+          "author_id"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "equipment_brand_length",
+        "value": "char_length(\"brand\") between 1 and 40",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment",
+        "name": "equipment_model_length",
+        "value": "char_length(\"model\") between 1 and 80",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "equipment_review_rating_range",
+        "value": "\"rating\" between 1 and 5",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "equipment_review_title_length",
+        "value": "\"title\" is null or char_length(\"title\") between 1 and 80",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "equipment_review",
+        "name": "equipment_review_body_length",
+        "value": "\"body\" is null or char_length(\"body\") between 1 and 2000",
+        "entityType": "checks"
+      }
+    }
+  ]
+}
