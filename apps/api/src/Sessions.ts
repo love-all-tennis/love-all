@@ -30,6 +30,8 @@ import { Db } from "./Db";
 import { notBlocked } from "./db/blocks";
 import type { LngLat } from "./db/geo";
 import { playSession, playSessionParticipant, profile } from "./db/schema";
+import { Notifications } from "./Notifications";
+import { messages } from "./notifications/messages";
 import { displayKm } from "./players/cursor";
 import { decodeCursor, encodeCursor } from "./sessions/cursor";
 
@@ -83,6 +85,7 @@ export class Sessions extends Context.Service<
     Sessions,
     Effect.gen(function* () {
       const db = yield* Db;
+      const notifications = yield* Notifications;
       const hostProfile = alias(profile, "host_profile");
       const mine = alias(playSessionParticipant, "mine");
 
@@ -349,7 +352,8 @@ export class Sessions extends Context.Service<
             .update(playSession)
             .set({
               ...rest,
-              ...(startsAt === undefined ? {} : { startsAt }),
+              // A new start time gets a new "starting soon" reminder.
+              ...(startsAt === undefined ? {} : { startsAt, reminderSentAt: null }),
               ...(courtPoint === undefined ? {} : { courtPoint: toPoint(courtPoint) }),
               // More or fewer spots can fill a session or open one up again.
               ...(patch.spots === undefined
@@ -381,11 +385,18 @@ export class Sessions extends Context.Service<
           const missing = ids.find((playerId) => !foundIds.has(playerId));
           if (missing !== undefined) return yield* new PlayerNotFound({ id: missing });
 
-          yield* db
+          const invited = yield* db
             .insert(playSessionParticipant)
             .values(ids.map((userId) => ({ sessionId: id, userId, state: "invited" as const })))
             .onConflictDoNothing()
+            .returning({ userId: playSessionParticipant.userId })
             .pipe(Effect.orDie);
+          // Only players new to the session hear about it.
+          yield* notifications.notify({
+            to: invited.map((p) => p.userId),
+            from: viewer.id,
+            ...messages.invited({ ...row, id }, row.host.displayName),
+          });
           return yield* get(viewer, id).pipe(Effect.orDie);
         }).pipe(Effect.withSpan("Sessions.invite"));
 

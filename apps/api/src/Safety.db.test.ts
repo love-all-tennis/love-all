@@ -10,6 +10,7 @@ import { Forum } from "./Forum";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
+import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = Layer.mergeAll(
@@ -17,7 +18,7 @@ const TestLayer = Layer.mergeAll(
   Players.layer,
   Profiles.layer,
   Follows.layer,
-).pipe(Layer.provideMerge(Db.layer));
+).pipe(Layer.provide(makeNotificationsMemory().layer), Layer.provideMerge(Db.layer));
 
 /** Creates `count` throwaway accounts, runs `f` with them, then deletes them. */
 const withPlayers = <A, E>(

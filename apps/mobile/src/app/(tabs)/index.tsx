@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 
 import { Button, Card, Screen, space, Text } from "@/design";
 import { authClient } from "@/lib/auth-client";
+import { signOut } from "@/lib/sign-out";
 
 /**
  * The way into the players list and the Play tab, and account actions.
@@ -49,7 +50,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/moderation")}
           />
         ) : null}
-        <Button variant="quiet" label="Sign out" onPress={() => void authClient.signOut()} />
+        <Button variant="quiet" label="Sign out" onPress={() => void signOut()} />
       </View>
     </Screen>
   );
