@@ -72,6 +72,18 @@ describe("sessionTags", () => {
       { label: "1 spot open", tone: "highlight" },
     ]);
   });
+
+  it("shows the host how many requests wait on them, while the session is still on", () => {
+    const hosting = { role: "host", state: "accepted" } as const;
+    expect(sessionTags({ ...base, me: hosting, requestCount: 2 }, now)).toEqual([
+      { label: "2 requests", tone: "clay" },
+      { label: "2 spots open", tone: "highlight" },
+    ]);
+    expect(sessionTags({ ...base, me: hosting, requestCount: 1 }, now)[0]?.label).toBe("1 request");
+    expect(
+      sessionTags({ ...base, me: hosting, requestCount: 1, status: "cancelled" }, now)[0],
+    ).toEqual({ label: "Hosting", tone: "neutral" });
+  });
 });
 
 describe("misc", () => {

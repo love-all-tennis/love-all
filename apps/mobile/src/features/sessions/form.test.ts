@@ -46,6 +46,7 @@ const saved = new Session({
   levelMax: "4.0",
   spots: 2,
   acceptedCount: 1,
+  requestCount: 0,
   visibility: "open",
   status: "open",
   notes: null,

@@ -65,36 +65,6 @@ export const viewerAction = (s: JoinFacts, now: Date): ViewerAction => {
   }
 };
 
-/** How the session's status reads, with the tag tone that goes with it. */
-export type StatusTag = {
-  readonly label: string;
-  readonly tone: "highlight" | "accent" | "danger" | "neutral";
-};
-
-export const statusTag = (s: JoinFacts, now: Date): StatusTag => {
-  if (s.status === "cancelled") return { label: "Cancelled", tone: "danger" };
-  if (hasStarted(s, now)) {
-    return { label: s.status === "confirmed" ? "Played" : "Started", tone: "neutral" };
-  }
-  if (s.status === "confirmed") return { label: "Confirmed", tone: "accent" };
-  const left = spotsLeft(s);
-  return { label: `Open · ${left} ${left === 1 ? "spot" : "spots"} left`, tone: "highlight" };
-};
-
-/** My own state as a tag on a list row, or null when there's nothing to add. */
-export const myPlaceTag = (s: JoinFacts, now: Date): StatusTag | null => {
-  if (s.status === "cancelled" || hasStarted(s, now)) return null;
-  if (s.me?.role === "host" && s.requestCount > 0) {
-    return {
-      label: s.requestCount === 1 ? "1 request" : `${s.requestCount} requests`,
-      tone: "neutral",
-    };
-  }
-  if (s.me?.state === "invited") return { label: "Invited", tone: "neutral" };
-  if (s.me?.state === "requested") return { label: "Requested", tone: "neutral" };
-  return null;
-};
-
 /** Whether a session in My sessions waits on me: an invite, or requests to my session. */
 export const needsMyAnswer = (s: JoinFacts, now: Date): boolean =>
   s.status !== "cancelled" &&

@@ -2,29 +2,19 @@ import type { Session, SessionParticipant } from "@love-all/domain";
 import { useRef, useState } from "react";
 import { Alert, Platform, StyleSheet, View } from "react-native";
 
-import { Avatar, Button, Card, ErrorBanner, space, Tag, Text } from "@/design";
+import { Avatar, Button, Card, ErrorBanner, space, Text } from "@/design";
 import { levelLabel } from "../players/components";
+import { Section } from "./components";
 import {
   applyChange,
   cancelPrompt,
   isOptimistic,
   pendingRequests,
-  statusTag,
   viewerAction,
   type JoinChange,
   type JoinFacts,
 } from "./joining";
 import { sendJoinChange } from "./joining-api";
-
-/** When the screen opened: "now" for working out whether a session has started. */
-const useOpenedAt = (): Date => useState(() => new Date())[0];
-
-/** Open with N spots left, confirmed or cancelled, as a tag. */
-export function SessionStatusTag({ session, now }: { session: JoinFacts; now?: Date }) {
-  const opened = useOpenedAt();
-  const tag = statusTag(session, now ?? opened);
-  return <Tag label={tag.label} tone={tag.tone} />;
-}
 
 /** Asks before cancelling, since players can't undo it. Named for the action, never "OK". */
 export const confirmCancel = (session: JoinFacts, onConfirm: () => void): void => {
@@ -40,26 +30,34 @@ export const confirmCancel = (session: JoinFacts, onConfirm: () => void): void =
   ]);
 };
 
-/** What's in flight: the change, and for approve/reject, whose request. */
+/** The change in flight, if any. */
 export type PendingChange = JoinChange | null;
 
+export type JoinChanges = {
+  readonly pending: PendingChange;
+  /** What the server said no with, or a connection problem. */
+  readonly notice: string | null;
+  readonly run: (change: JoinChange) => void;
+};
+
 /**
- * Runs join changes for the session shown on a detail screen. Safe changes
- * show at once and roll back if the server says no; accepting and approving
- * wait for the server, which may say the last spot just went. Every change
- * ends with `reload`, so the screen shows what the server holds.
+ * Runs join changes for the session on the detail screen. Safe changes show
+ * at once and roll back if the server says no; accepting and approving wait
+ * for the server, which may say the last spot just went. Every change that
+ * reaches the server ends with `reload`, so the screen shows what it holds.
  */
 export const useJoinChanges = ({
   session,
   myId,
-  setSession,
+  replace,
   reload,
 }: {
   session: Session;
-  myId: string;
-  setSession: (next: Session) => void;
-  reload: () => Promise<void> | void;
-}) => {
+  myId: string | undefined;
+  /** Shows a session in place, with no request. */
+  replace: (next: Session) => void;
+  reload: () => void;
+}): JoinChanges => {
   const [pending, setPending] = useState<PendingChange>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const running = useRef(false);
@@ -70,16 +68,16 @@ export const useJoinChanges = ({
     const before = session;
     setPending(change);
     setNotice(null);
-    if (isOptimistic(change)) setSession(applyChange(session, change, myId));
+    if (myId && isOptimistic(change)) replace(applyChange(session, change, myId));
     try {
       const refusal = await sendJoinChange(session.id, change);
       if (refusal) {
-        setSession(before);
+        replace(before);
         setNotice(refusal);
       }
-      await reload();
+      reload();
     } catch {
-      setSession(before);
+      replace(before);
       setNotice("Couldn't update this session. Check your connection and try again.");
     } finally {
       running.current = false;
@@ -87,7 +85,7 @@ export const useJoinChanges = ({
     }
   };
 
-  return { pending, notice, run };
+  return { pending, notice, run: (change) => void run(change) };
 };
 
 const isPending = (pending: PendingChange, kind: JoinChange["kind"], userId?: string) =>
@@ -95,36 +93,32 @@ const isPending = (pending: PendingChange, kind: JoinChange["kind"], userId?: st
   (userId === undefined || ("userId" in pending && pending.userId === userId));
 
 /**
- * The detail screen's join action for where I stand: Accept and Decline for
- * an invite, Ask to join, Requested, Leave, or Cancel session for the host.
- * Accept and Ask to join are the screen's primary action; leaving and
- * cancelling are quieter so they aren't hit by mistake.
+ * The join action for where I stand, under the session's time: Accept and
+ * Decline for an invite, Ask to join, a pending request I can withdraw, or
+ * Leave. The host's Cancel sits with Edit at the end of the screen.
  */
 export function SessionJoinActions({
   session,
-  pending,
-  notice,
-  run,
   now,
+  changes: { pending, notice, run },
 }: {
   session: Session;
-  pending: PendingChange;
-  notice: string | null;
-  run: (change: JoinChange) => void;
-  now?: Date;
+  now: Date;
+  changes: JoinChanges;
 }) {
-  const opened = useOpenedAt();
-  const action = viewerAction(session, now ?? opened);
+  const action = viewerAction(session, now);
   const busy = pending !== null;
+  const host = session.host.displayName;
   const body = (() => {
     switch (action.kind) {
       case "answerInvite":
         return (
           <>
-            <Text variant="subheading">{`${session.host.displayName} invited you`}</Text>
-            {action.full ? (
-              <Text color="textMuted">Every spot is taken, so you can't accept right now.</Text>
-            ) : null}
+            <Text color="textMuted">
+              {action.full
+                ? `${host} invited you, but every spot is taken right now.`
+                : `${host} invited you. Accepting takes a spot.`}
+            </Text>
             <View style={styles.stack}>
               {action.full ? null : (
                 <Button
@@ -147,9 +141,7 @@ export function SessionJoinActions({
       case "askToJoin":
         return (
           <>
-            <Text color="textMuted">
-              {`${session.host.displayName} gets your request and decides who plays.`}
-            </Text>
+            <Text color="textMuted">{`${host} gets your request and decides who plays.`}</Text>
             <Button
               label="Ask to join"
               onPress={() => run({ kind: "request" })}
@@ -161,15 +153,10 @@ export function SessionJoinActions({
       case "requested":
         return (
           <>
-            <View style={styles.row}>
-              <Tag label="Requested" tone="clay" />
-              <Text color="textMuted" style={styles.flex}>
-                {`Waiting on ${session.host.displayName}.`}
-              </Text>
-            </View>
+            <Text color="textMuted">{`Requested. Waiting on ${host} to answer.`}</Text>
             <Button
               label="Withdraw request"
-              variant="quiet"
+              variant="secondary"
               onPress={() => run({ kind: "leave" })}
               loading={isPending(pending, "leave")}
               disabled={busy}
@@ -179,9 +166,7 @@ export function SessionJoinActions({
       case "leave":
         return (
           <>
-            <View style={styles.row}>
-              <Tag label="You're in" tone="accent" />
-            </View>
+            <Text color="textMuted">You're playing. Can't make it? Leave so someone else can.</Text>
             <Button
               label="Leave session"
               variant="secondary"
@@ -193,15 +178,7 @@ export function SessionJoinActions({
           </>
         );
       case "host":
-        return (
-          <Button
-            label="Cancel session"
-            variant="quiet"
-            onPress={() => confirmCancel(session, () => run({ kind: "cancel" }))}
-            loading={isPending(pending, "cancel")}
-            disabled={busy}
-          />
-        );
+        return null;
       case "none":
         return action.note ? <Text color="textMuted">{action.note}</Text> : null;
     }
@@ -216,33 +193,50 @@ export function SessionJoinActions({
   );
 }
 
+/** The host's Cancel session, with a confirm step. */
+export function CancelSessionButton({
+  session,
+  changes: { pending, run },
+}: {
+  session: Session;
+  changes: JoinChanges;
+}) {
+  return (
+    <Button
+      label="Cancel session"
+      variant="quiet"
+      onPress={() => confirmCancel(session, () => run({ kind: "cancel" }))}
+      loading={isPending(pending, "cancel")}
+      disabled={pending !== null}
+    />
+  );
+}
+
 /** For the host: players who asked to join, each with Approve and Decline. */
 export function JoinRequests({
   session,
-  pending,
-  run,
-  onOpenPlayer,
   now,
+  changes: { pending, run },
+  onOpenPlayer,
 }: {
   session: Session;
-  pending: PendingChange;
-  run: (change: JoinChange) => void;
+  now: Date;
+  changes: JoinChanges;
   onOpenPlayer: (id: string) => void;
-  now?: Date;
 }) {
-  const opened = useOpenedAt();
-  if (viewerAction(session, now ?? opened).kind !== "host") return null;
+  if (viewerAction(session, now).kind !== "host") return null;
   const requests = pendingRequests(session);
   if (requests.length === 0) return null;
   const full = session.acceptedCount >= session.spots;
   return (
-    <View style={styles.requests}>
-      <Text variant="heading" accessibilityRole="header">
-        Asked to join
-      </Text>
-      {full ? (
-        <Text color="textMuted">Every spot is taken. Approving needs someone to leave first.</Text>
-      ) : null}
+    <Section
+      label="Asked to join"
+      hint={
+        full
+          ? "Every spot is taken. Someone has to leave before you approve."
+          : "Approving gives them a spot."
+      }
+    >
       {requests.map((p) => (
         <RequestRow
           key={p.player.id}
@@ -253,7 +247,7 @@ export function JoinRequests({
           onOpenPlayer={onOpenPlayer}
         />
       ))}
-    </View>
+    </Section>
   );
 }
 
@@ -271,17 +265,16 @@ function RequestRow({
   onOpenPlayer: (id: string) => void;
 }) {
   const busy = pending !== null;
-  const level = levelLabel(player.ntrp);
   return (
     <Card style={styles.request}>
       <View style={styles.row}>
         <Avatar name={player.displayName} photoUrl={player.photoUrl} />
-        <View style={styles.flex}>
+        <View style={styles.fill}>
           <Text variant="subheading" numberOfLines={1}>
             {player.displayName}
           </Text>
           <Text variant="caption" color="textMuted" tabular numberOfLines={1}>
-            {level}
+            {levelLabel(player.ntrp)}
           </Text>
         </View>
         <Button
@@ -296,6 +289,7 @@ function RequestRow({
         {full ? null : (
           <Button
             label="Approve"
+            variant="secondary"
             size="small"
             onPress={() => run({ kind: "approve", userId: player.id })}
             loading={isPending(pending, "approve", player.id)}
@@ -305,7 +299,7 @@ function RequestRow({
         )}
         <Button
           label="Decline"
-          variant="secondary"
+          variant="quiet"
           size="small"
           onPress={() => run({ kind: "reject", userId: player.id })}
           loading={isPending(pending, "reject", player.id)}
@@ -322,7 +316,6 @@ const styles = StyleSheet.create({
   stack: { gap: space[2] },
   buttons: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
   row: { flexDirection: "row", alignItems: "center", gap: space[3] },
-  flex: { flex: 1 },
-  requests: { gap: space[3] },
+  fill: { flex: 1 },
   request: { gap: space[3] },
 });

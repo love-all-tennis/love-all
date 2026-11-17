@@ -4,10 +4,8 @@ import {
   cancelPrompt,
   groupMySessions,
   isOptimistic,
-  myPlaceTag,
   needsMyAnswer,
   pendingRequests,
-  statusTag,
   viewerAction,
   type JoinDetail,
   type JoinFacts,
@@ -96,29 +94,6 @@ describe("viewerAction", () => {
   });
 });
 
-describe("statusTag", () => {
-  it("counts the spots left on an open session", () => {
-    expect(statusTag(facts(), now)).toEqual({ label: "Open · 1 spot left", tone: "highlight" });
-    expect(statusTag(facts({ spots: 4 }), now)).toEqual({
-      label: "Open · 3 spots left",
-      tone: "highlight",
-    });
-  });
-
-  it("reads confirmed, cancelled and past sessions", () => {
-    expect(statusTag(facts({ status: "confirmed", acceptedCount: 2 }), now)).toEqual({
-      label: "Confirmed",
-      tone: "accent",
-    });
-    expect(statusTag(facts({ status: "cancelled" }), now)).toEqual({
-      label: "Cancelled",
-      tone: "danger",
-    });
-    expect(statusTag(facts({ status: "confirmed", startsAt: now }), now).label).toBe("Played");
-    expect(statusTag(facts({ startsAt: now }), now).label).toBe("Started");
-  });
-});
-
 describe("Needs your answer", () => {
   const invite = facts({ me: { ...player, state: "invited" } });
   const requests = facts({ me: { role: "host", state: "accepted" }, requestCount: 2 });
@@ -143,16 +118,6 @@ describe("Needs your answer", () => {
       needsAnswer: [soon, requests],
       rest: [mine, past],
     });
-  });
-
-  it("tags rows with my invite, my request, or the host's request count", () => {
-    expect(myPlaceTag(invite, now)).toEqual({ label: "Invited", tone: "neutral" });
-    expect(myPlaceTag(facts({ me: { ...player, state: "requested" } }), now)?.label).toBe(
-      "Requested",
-    );
-    expect(myPlaceTag(requests, now)?.label).toBe("2 requests");
-    expect(myPlaceTag({ ...requests, requestCount: 1 }, now)?.label).toBe("1 request");
-    expect(myPlaceTag(facts({ me: { ...player, state: "accepted" } }), now)).toBeNull();
   });
 });
 
