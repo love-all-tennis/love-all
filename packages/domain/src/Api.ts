@@ -158,7 +158,11 @@ export class SafetyApi extends HttpApiGroup.make("safety")
   .add(HttpApiEndpoint.delete("unblock", "/players/:id/block", { params: PlayerIdParam }))
   /** Players I blocked, most recent first. */
   .add(HttpApiEndpoint.get("listBlocks", "/me/blocks", { success: Schema.Array(BlockedPlayer) }))
-  /** Reports a player to the moderators. It doesn't block them; the app offers that next. */
+  /**
+   * Reports a player, or a forum thread or reply, to the moderators. It
+   * doesn't block anyone; the app offers that next. Content must be visible
+   * to me and not mine.
+   */
   .add(
     HttpApiEndpoint.post("report", "/reports", {
       payload: NewReport,

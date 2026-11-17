@@ -161,8 +161,12 @@ export const block = pgTable(
   ],
 );
 
-/** What a report is about. Forum posts and direct messages join when those features land. */
-export const reportTargetType = pgEnum("report_target_type", ["player"]);
+/** What a report is about. Keep in step with `REPORT_TARGET_TYPES` in the domain. */
+export const reportTargetType = pgEnum("report_target_type", [
+  "player",
+  "forum_thread",
+  "forum_post",
+]);
 
 export const reportReason = pgEnum("report_reason", [
   "spam",
@@ -177,7 +181,11 @@ export const reportStatus = pgEnum("report_status", ["open", "resolved"]);
 
 /**
  * A report for moderators. `target_id` is the reported thing's id (a user id
- * for a player), with no foreign key, so one table covers every target type.
+ * for a player, a thread or reply id for forum content), with no foreign key,
+ * so one table covers every target type. `subject_id` is the player
+ * responsible: the reported player, or whoever wrote the content.
+ * `content` is a copy of reported text as it was when reported, so
+ * moderators can still read it if the author edits or deletes it.
  * The report outlives the reporter's account, so moderation history stays.
  */
 export const report = pgTable(
@@ -187,6 +195,8 @@ export const report = pgTable(
     reporterId: text("reporter_id").references(() => user.id, { onDelete: "set null" }),
     targetType: reportTargetType("target_type").notNull(),
     targetId: text("target_id").notNull(),
+    subjectId: text("subject_id").references(() => user.id, { onDelete: "set null" }),
+    content: text("content"),
     reason: reportReason("reason").notNull(),
     details: text("details"),
     status: reportStatus("status").notNull().default("open"),
@@ -195,6 +205,7 @@ export const report = pgTable(
   },
   (t) => [
     index("report_target_idx").on(t.targetType, t.targetId),
+    index("report_subject_idx").on(t.subjectId),
     index("report_open_idx")
       .on(t.createdAt)
       .where(sql`${t.status} = 'open'`),

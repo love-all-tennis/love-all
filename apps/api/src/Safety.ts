@@ -3,18 +3,30 @@ import {
   CannotTargetSelf,
   type NewReport,
   ReportCreated,
+  type ReportTargetType,
   type SessionUser,
   TargetNotFound,
 } from "@love-all/domain";
 import { and, desc, eq, or } from "drizzle-orm";
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Option } from "effect";
 import { Db } from "./Db";
+import { Forum } from "./Forum";
 import { block, follow, profile, report, user } from "./db/schema";
 import { removeFromEachOthersSessions } from "./SessionJoins";
+
+/** Who a report is about, and a copy of the reported text when it is content. */
+interface ReportSubject {
+  readonly subjectId: string;
+  readonly content: string | null;
+}
 
 /**
  * Blocks and reports. Hiding blocked players from other queries is done in
  * those queries, with `notBlocked` from `./db/blocks`.
+ *
+ * A report can be about a player or about something a player wrote. Each
+ * target type says, in `subjectOf`, how to find it as the reporter sees it
+ * and who wrote it; that is all a new reportable thing needs.
  *
  * Database failures are defects (a 500), as in `Profiles`.
  */
@@ -37,6 +49,7 @@ export class Safety extends Context.Service<
     Safety,
     Effect.gen(function* () {
       const db = yield* Db;
+      const forum = yield* Forum;
 
       /** Fails unless `id` is another player's existing account. */
       const requireOtherPlayer = (viewer: SessionUser, id: string, verb: string) =>
@@ -53,6 +66,41 @@ export class Safety extends Context.Service<
             return yield* new TargetNotFound({ id });
           }
         });
+
+      /** Content the reporter can see, written by someone else. */
+      const otherAuthor = (
+        viewer: SessionUser,
+        id: string,
+        found: Option.Option<{ readonly authorId: string; readonly content: string }>,
+      ): Effect.Effect<ReportSubject, TargetNotFound | CannotTargetSelf> =>
+        Option.match(found, {
+          onNone: () => Effect.fail(new TargetNotFound({ id })),
+          onSome: ({ authorId, content }) =>
+            authorId === viewer.id
+              ? Effect.fail(new CannotTargetSelf({ message: "You can't report your own post" }))
+              : Effect.succeed({ subjectId: authorId, content }),
+        });
+
+      const subjectOf = (
+        viewer: SessionUser,
+        targetType: ReportTargetType,
+        id: string,
+      ): Effect.Effect<ReportSubject, TargetNotFound | CannotTargetSelf> => {
+        switch (targetType) {
+          case "player":
+            return requireOtherPlayer(viewer, id, "report").pipe(
+              Effect.as({ subjectId: id, content: null }),
+            );
+          case "forum_thread":
+            return forum
+              .findReportable(viewer, "thread", id)
+              .pipe(Effect.flatMap((found) => otherAuthor(viewer, id, found)));
+          case "forum_post":
+            return forum
+              .findReportable(viewer, "post", id)
+              .pipe(Effect.flatMap((found) => otherAuthor(viewer, id, found)));
+        }
+      };
 
       return Safety.of({
         block: (viewer, playerId) =>
@@ -109,14 +157,16 @@ export class Safety extends Context.Service<
             ),
 
         report: (viewer, input) =>
-          requireOtherPlayer(viewer, input.targetId, "report").pipe(
-            Effect.andThen(
+          subjectOf(viewer, input.targetType, input.targetId).pipe(
+            Effect.flatMap((subject) =>
               db
                 .insert(report)
                 .values({
                   reporterId: viewer.id,
                   targetType: input.targetType,
                   targetId: input.targetId,
+                  subjectId: subject.subjectId,
+                  content: subject.content,
                   reason: input.reason,
                   details: input.details || null,
                 })
