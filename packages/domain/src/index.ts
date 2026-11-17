@@ -5,3 +5,4 @@ export * from "./Player";
 export * from "./Profile";
 export * from "./Safety";
 export * from "./Session";
+export * from "./SessionResult";
