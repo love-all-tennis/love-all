@@ -19,7 +19,8 @@ export const blockPlayer = (id: string): Promise<Outcome> =>
 
 /**
  * Sends a report to the moderators about a player (by account id) or
- * something they wrote (a forum thread or reply id). It doesn't block them.
+ * something they wrote (a forum thread or reply id, or a direct message id).
+ * It doesn't block them.
  */
 export const sendReport = (
   targetType: ReportTargetType,
@@ -44,7 +45,9 @@ export const sendReport = (
             Effect.succeed<Outcome>(
               targetType === "player"
                 ? "This player is no longer available."
-                : "This post is no longer available.",
+                : targetType === "direct_message"
+                  ? "This message is no longer available."
+                  : "This post is no longer available.",
             ),
           CannotTargetSelf: () =>
             Effect.succeed<Outcome>("You can't report yourself or your own posts."),

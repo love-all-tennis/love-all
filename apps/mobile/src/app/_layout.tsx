@@ -98,6 +98,8 @@ export default function RootLayout() {
           <Stack.Protected guard={session?.user.role === "admin"}>
             <Stack.Screen name="moderation" options={{ ...header, title: "Moderation" }} />
           </Stack.Protected>
+          <Stack.Screen name="messages/[id]" options={{ ...header, title: "" }} />
+          <Stack.Screen name="messages/report" options={{ ...sheet, title: "Report" }} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && !confirmedAdult}>
           <Stack.Screen name="confirm-age" />
