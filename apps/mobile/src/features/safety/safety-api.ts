@@ -1,4 +1,4 @@
-import type { ReportReason } from "@love-all/domain";
+import type { ReportReason, ReportTargetType } from "@love-all/domain";
 import { Effect } from "effect";
 
 import { callApi } from "@/lib/api";
@@ -17,17 +17,37 @@ export const blockPlayer = (id: string): Promise<Outcome> =>
     api.safety.block({ params: { id } }).pipe(Effect.as<Outcome>(null), Effect.catchTags(refusals)),
   );
 
-/** Sends a report about a player to the moderators. It doesn't block them. */
-export const reportPlayer = (id: string, reason: ReportReason, details: string): Promise<Outcome> =>
+/**
+ * Sends a report to the moderators about a player (by account id) or
+ * something they wrote (a forum thread or reply id). It doesn't block them.
+ */
+export const sendReport = (
+  targetType: ReportTargetType,
+  targetId: string,
+  reason: ReportReason,
+  details: string,
+): Promise<Outcome> =>
   callApi((api) =>
     api.safety
       .report({
         payload: {
-          targetType: "player",
-          targetId: id,
+          targetType,
+          targetId,
           reason,
           ...(details.trim() ? { details: details.trim() } : {}),
         },
       })
-      .pipe(Effect.as<Outcome>(null), Effect.catchTags(refusals)),
+      .pipe(
+        Effect.as<Outcome>(null),
+        Effect.catchTags({
+          TargetNotFound: () =>
+            Effect.succeed<Outcome>(
+              targetType === "player"
+                ? "This player is no longer available."
+                : "This post is no longer available.",
+            ),
+          CannotTargetSelf: () =>
+            Effect.succeed<Outcome>("You can't report yourself or your own posts."),
+        }),
+      ),
   );

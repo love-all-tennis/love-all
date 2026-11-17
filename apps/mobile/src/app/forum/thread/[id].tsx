@@ -1,5 +1,6 @@
 import {
   FORUM_BODY_MAX,
+  type ForumAuthor,
   type ForumPost,
   type ForumReactionKind,
   type ForumThread,
@@ -223,9 +224,12 @@ export default function ThreadScreen() {
       },
     );
 
-  /** Report goes to the player report sheet until posts can be reported on their own (#18). */
-  const report = (authorId: string, name: string) =>
-    router.push({ pathname: "/players/report", params: { id: authorId, name } });
+  /** Reports the thread or reply itself, so moderators see what was written. */
+  const report = (type: "thread" | "post", postId: string, author: ForumAuthor) =>
+    router.push({
+      pathname: "/forum/report",
+      params: { type, id: postId, authorId: author.id, name: author.displayName },
+    });
 
   const title = state.status === "ready" ? state.thread.category.name : "";
 
@@ -256,9 +260,9 @@ export default function ThreadScreen() {
   const threadMine = thread.author.id === meId;
   const onAction = (
     action: PostMenuAction,
-    author: { id: string; displayName: string },
+    target: { type: "thread" | "post"; id: string; author: ForumAuthor },
     remove: () => void,
-  ) => (action === "delete" ? remove() : report(author.id, author.displayName));
+  ) => (action === "delete" ? remove() : report(target.type, target.id, target.author));
 
   return (
     <Screen scroll={false} edges={["left", "right", "bottom"]}>
@@ -282,7 +286,11 @@ export default function ThreadScreen() {
               busy={busy === thread.id}
               onOpenAuthor={() => openPlayer(thread.author.id)}
               onToggleReaction={(kind) => react("thread", thread.id, kind)}
-              onAction={(action) => onAction(action, thread.author, () => removeThread(thread))}
+              onAction={(action) =>
+                onAction(action, { type: "thread", id: thread.id, author: thread.author }, () =>
+                  removeThread(thread),
+                )
+              }
             />
             <Text variant="heading" accessibilityRole="header" tabular>
               {replyCountLabel(thread.replyCount)}
@@ -301,7 +309,10 @@ export default function ThreadScreen() {
             onOpenAuthor={() => item.author && openPlayer(item.author.id)}
             onToggleReaction={(kind) => react("post", item.id, kind)}
             onAction={(action) =>
-              item.author && onAction(action, item.author, () => removeReply(item))
+              item.author &&
+              onAction(action, { type: "post", id: item.id, author: item.author }, () =>
+                removeReply(item),
+              )
             }
           />
         )}
