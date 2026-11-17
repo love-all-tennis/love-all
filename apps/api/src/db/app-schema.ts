@@ -371,3 +371,82 @@ export const playSessionResult = pgTable(
     ),
   ],
 );
+
+/**
+ * A forum category. Global categories have no metro; a metro's Local
+ * category points at it, and only players in that metro see it. Seeded by
+ * migration: General, Find a partner, Gear talk, Technique, and Detroit Local.
+ */
+export const forumCategory = pgTable(
+  "forum_category",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+    name: text("name").notNull(),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    metroId: uuid("metro_id").references(() => metro.id, { onDelete: "cascade" }),
+    ...timestamps,
+  },
+  (t) => [unique("forum_category_metro_unique").on(t.metroId)],
+);
+
+/**
+ * A forum thread. Its opening text is `body`; replies are `forum_post`
+ * rows. `last_post_at` and `reply_count` change with each reply, in the same
+ * transaction, and lists are ordered by `last_post_at`. It is stored to the
+ * millisecond so the list cursor can carry it exactly. `deleted_at` is the
+ * author's soft delete and `hidden_at` a moderator's.
+ */
+export const forumThread = pgTable(
+  "forum_thread",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => forumCategory.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    lastPostAt: timestamp("last_post_at", { withTimezone: true, precision: 3 })
+      .defaultNow()
+      .notNull(),
+    replyCount: integer("reply_count").notNull().default(0),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("forum_thread_category_activity_idx")
+      .on(t.categoryId, t.lastPostAt.desc(), t.id.desc())
+      .where(sql`${t.deletedAt} is null and ${t.hiddenAt} is null`),
+    index("forum_thread_author_created_idx").on(t.authorId, t.createdAt),
+    check("forum_thread_title_length", sql`char_length(${t.title}) between 1 and 120`),
+    check("forum_thread_body_length", sql`char_length(${t.body}) between 1 and 5000`),
+    check("forum_thread_reply_count_positive", sql`${t.replyCount} >= 0`),
+  ],
+);
+
+/** A reply in a forum thread. Deleting sets `deleted_at`; the reply shows as "Post deleted". */
+export const forumPost = pgTable(
+  "forum_post",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => forumThread.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("forum_post_thread_created_idx").on(t.threadId, t.createdAt, t.id),
+    index("forum_post_author_created_idx").on(t.authorId, t.createdAt),
+    check("forum_post_body_length", sql`char_length(${t.body}) between 1 and 5000`),
+  ],
+);
