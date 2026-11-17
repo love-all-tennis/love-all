@@ -26,6 +26,8 @@ import {
 import { type SQL, and, asc, count, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { Context, Effect, Layer, Option } from "effect";
 import { Db } from "./Db";
+import { Notifications } from "./Notifications";
+import { messages } from "./notifications/messages";
 import { notBlocked } from "./db/blocks";
 import { forumCategory, forumPost, forumReaction, forumThread, profile, user } from "./db/schema";
 import {
@@ -36,6 +38,15 @@ import {
 } from "./forum/cursor";
 
 const HOUR_MS = 3_600_000;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Forum content as a report sees it. */
+export interface ForumReportable {
+  readonly authorId: string;
+  /** The thread's title and opening text, or the reply's text. */
+  readonly content: string;
+}
 
 /** Every kind at zero, for a deleted reply or a target nobody reacted to. */
 const noReactions = (): Array<ForumReactionCount> =>
@@ -108,12 +119,22 @@ export class Forum extends Context.Service<
       postId: string,
       kind: ForumReactionKind,
     ) => Effect.Effect<void>;
+    /**
+     * A thread or live reply I can see, for reporting it: who wrote it and
+     * its text. None when it's gone or hidden from me.
+     */
+    readonly findReportable: (
+      viewer: SessionUser,
+      kind: "thread" | "post",
+      id: string,
+    ) => Effect.Effect<Option.Option<ForumReportable>>;
   }
 >()("love-all/Forum") {
   static readonly layer = Layer.effect(
     Forum,
     Effect.gen(function* () {
       const db = yield* Db;
+      const notifications = yield* Notifications;
 
       /** The metro of my profile, or null when I have no profile or no metro. */
       const viewerMetro = (viewer: SessionUser) =>
@@ -282,6 +303,28 @@ export class Forum extends Context.Service<
               createdAt: row.createdAt,
               reactions,
             });
+
+      /** A reply that is live, by a player I can see, in a thread I can see. */
+      const findLivePost = (viewer: SessionUser, postId: string) =>
+        Effect.gen(function* () {
+          const metroId = yield* viewerMetro(viewer);
+          const [post] = yield* db
+            .select({ id: forumPost.id, authorId: forumPost.authorId, body: forumPost.body })
+            .from(forumPost)
+            .innerJoin(forumThread, eq(forumThread.id, forumPost.threadId))
+            .innerJoin(forumCategory, eq(forumCategory.id, forumThread.categoryId))
+            .where(
+              and(
+                eq(forumPost.id, postId),
+                isNull(forumPost.deletedAt),
+                isNull(forumPost.hiddenAt),
+                notBlocked(viewer.id, forumPost.authorId),
+                visibleThread(viewer, metroId),
+              ),
+            )
+            .pipe(Effect.orDie);
+          return post;
+        });
 
       /** Fails when the viewer already wrote `limit` rows of `table` in the last hour. */
       const checkRate = (
@@ -496,6 +539,14 @@ export class Forum extends Context.Service<
             const [row] = yield* selectPosts()
               .where(eq(forumPost.id, inserted.id))
               .pipe(Effect.orDie);
+            // The thread's author hears about others' replies (`notify` also skips blocked players).
+            if (thread.authorId !== viewer.id) {
+              yield* notifications.notify({
+                to: [thread.authorId],
+                from: viewer.id,
+                ...messages.forumReply(thread, row!.authorName, input.body),
+              });
+            }
             return toPost(row!, noReactions());
           }).pipe(Effect.withSpan("Forum.reply")),
 
@@ -573,23 +624,7 @@ export class Forum extends Context.Service<
 
         reactToPost: (viewer, postId, kind) =>
           Effect.gen(function* () {
-            const metroId = yield* viewerMetro(viewer);
-            // The reply must be live, by a player I can see, in a thread I can see.
-            const [post] = yield* db
-              .select({ id: forumPost.id })
-              .from(forumPost)
-              .innerJoin(forumThread, eq(forumThread.id, forumPost.threadId))
-              .innerJoin(forumCategory, eq(forumCategory.id, forumThread.categoryId))
-              .where(
-                and(
-                  eq(forumPost.id, postId),
-                  isNull(forumPost.deletedAt),
-                  isNull(forumPost.hiddenAt),
-                  notBlocked(viewer.id, forumPost.authorId),
-                  visibleThread(viewer, metroId),
-                ),
-              )
-              .pipe(Effect.orDie);
+            const post = yield* findLivePost(viewer, postId);
             if (!post) return yield* new ForumPostNotFound({ id: postId });
             yield* db
               .insert(forumReaction)
@@ -609,6 +644,26 @@ export class Forum extends Context.Service<
               ),
             )
             .pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("Forum.unreactToPost")),
+
+        findReportable: (viewer, kind, id) =>
+          Effect.gen(function* () {
+            // Ids are uuids; anything else can't name a thread or reply.
+            if (!UUID.test(id)) return Option.none<ForumReportable>();
+            if (kind === "thread") {
+              const metroId = yield* viewerMetro(viewer);
+              const thread = yield* findThread(viewer, metroId, id);
+              return thread
+                ? Option.some({
+                    authorId: thread.authorId,
+                    content: `${thread.title}\n\n${thread.body}`,
+                  })
+                : Option.none();
+            }
+            const post = yield* findLivePost(viewer, id);
+            return post
+              ? Option.some({ authorId: post.authorId, content: post.body })
+              : Option.none();
+          }).pipe(Effect.withSpan("Forum.findReportable")),
       });
     }),
   );

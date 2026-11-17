@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/http-api";
 import { Authentication } from "./Auth";
+import { NewDevice, PushToken } from "./Device";
 import {
   ForumCategory,
   ForumCategoryNotFound,
@@ -30,6 +31,15 @@ import {
   PlayersPage,
   PlayersQuery,
 } from "./Player";
+import {
+  HideableTargetType,
+  ModerationReportsPage,
+  ModerationReportsQuery,
+  NewSuspension,
+  NotModerator,
+  ReportId,
+  ReportNotFound,
+} from "./Moderation";
 import {
   CannotMessageSelf,
   Conversation,
@@ -172,7 +182,11 @@ export class SafetyApi extends HttpApiGroup.make("safety")
   .add(HttpApiEndpoint.delete("unblock", "/players/:id/block", { params: PlayerIdParam }))
   /** Players I blocked, most recent first. */
   .add(HttpApiEndpoint.get("listBlocks", "/me/blocks", { success: Schema.Array(BlockedPlayer) }))
-  /** Reports a player to the moderators. It doesn't block them; the app offers that next. */
+  /**
+   * Reports a player, or a forum thread or reply, to the moderators. It
+   * doesn't block anyone; the app offers that next. Content must be visible
+   * to me and not mine.
+   */
   .add(
     HttpApiEndpoint.post("report", "/reports", {
       payload: NewReport,
@@ -447,6 +461,76 @@ export class ForumApi extends HttpApiGroup.make("forum")
   )
   .middleware(Authentication) {}
 
+const HiddenContentParams = { type: HideableTargetType, id: Schema.String };
+
+/**
+ * Moderation, for admins only: everyone else gets `NotModerator`. Hiding and
+ * suspending are idempotent, and each closes the open reports it answers.
+ */
+export class ModerationApi extends HttpApiGroup.make("moderation")
+  /** Reports, newest first, cursor-paginated. Open ones unless `status=resolved`. */
+  .add(
+    HttpApiEndpoint.get("listReports", "/moderation/reports", {
+      query: ModerationReportsQuery,
+      success: ModerationReportsPage,
+      error: [NotModerator, InvalidCursor],
+    }),
+  )
+  /** Closes this report, and the other open reports on the same target, with no action. */
+  .add(
+    HttpApiEndpoint.post("dismissReport", "/moderation/reports/:id/dismiss", {
+      params: { id: ReportId },
+      error: [NotModerator, ReportNotFound],
+    }),
+  )
+  /** Hides a thread or reply from everyone, and closes its open reports. */
+  .add(
+    HttpApiEndpoint.put("hideContent", "/moderation/content/:type/:id/hidden", {
+      params: HiddenContentParams,
+      error: [NotModerator, TargetNotFound],
+    }),
+  )
+  /** Shows hidden content again. */
+  .add(
+    HttpApiEndpoint.delete("unhideContent", "/moderation/content/:type/:id/hidden", {
+      params: HiddenContentParams,
+      error: [NotModerator, TargetNotFound],
+    }),
+  )
+  /**
+   * Suspends a player: signs them out everywhere, stops them signing in,
+   * and drops them from player search. Closes the open reports about them.
+   */
+  .add(
+    HttpApiEndpoint.put("suspend", "/moderation/players/:id/suspension", {
+      params: PlayerIdParam,
+      payload: NewSuspension,
+      error: [NotModerator, TargetNotFound, CannotTargetSelf],
+    }),
+  )
+  /** Lets a suspended player sign in again. */
+  .add(
+    HttpApiEndpoint.delete("unsuspend", "/moderation/players/:id/suspension", {
+      params: PlayerIdParam,
+      error: [NotModerator, TargetNotFound],
+    }),
+  )
+  .middleware(Authentication) {}
+
+/**
+ * This phone's push token, so the API can send it notifications. The app
+ * registers it after signing in and removes it before signing out.
+ */
+export class DevicesApi extends HttpApiGroup.make("devices")
+  /**
+   * Saves the token for me. A token that belonged to another account (the
+   * phone switched accounts) moves to me. Registering again is a no-op.
+   */
+  .add(HttpApiEndpoint.post("register", "/devices", { payload: NewDevice }))
+  /** Stops notifications to this token. Removing a token that isn't mine does nothing. */
+  .add(HttpApiEndpoint.delete("unregister", "/devices/:token", { params: { token: PushToken } }))
+  .middleware(Authentication) {}
+
 const ConversationParam = { id: ConversationId };
 
 /**
@@ -510,5 +594,7 @@ export class Api extends HttpApi.make("love-all")
   .add(SessionsApi)
   .add(SessionActivityApi)
   .add(ForumApi)
+  .add(ModerationApi)
+  .add(DevicesApi)
   .add(MessagesApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}

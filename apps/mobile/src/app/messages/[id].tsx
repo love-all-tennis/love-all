@@ -154,8 +154,8 @@ export default function ConversationScreen() {
     if (!other) return;
     const report = () =>
       router.push({
-        pathname: "/players/report",
-        params: { id: other.id, name: other.displayName, messageId: message.id },
+        pathname: "/messages/report",
+        params: { id: message.id, authorId: other.id, name: other.displayName },
       });
     if (Platform.OS === "web") {
       report();

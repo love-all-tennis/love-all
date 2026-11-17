@@ -430,15 +430,15 @@ export class Messages extends Context.Service<
 }
 
 /**
- * Whether `viewer` may report message `messageId`: it must be in one of
- * their conversations and sent by the other player. Reporting still works
- * after a block, since blocking first and reporting next is a common order.
+ * A message `viewerId` may see for a report: in one of their conversations,
+ * whoever sent it (the caller refuses their own). Found even after a block,
+ * since blocking first and reporting next is a common order.
  */
 export const reportableMessage = (db: Db["Service"], viewerId: string, messageId: string) =>
   Effect.gen(function* () {
-    if (!isUuid(messageId)) return "not-found" as const;
+    if (!isUuid(messageId)) return Option.none();
     const [row] = yield* db
-      .select({ senderId: directMessage.senderId })
+      .select({ authorId: directMessage.senderId, content: directMessage.body })
       .from(directMessage)
       .innerJoin(conversation, eq(conversation.id, directMessage.conversationId))
       .where(
@@ -448,6 +448,5 @@ export const reportableMessage = (db: Db["Service"], viewerId: string, messageId
         ),
       )
       .pipe(Effect.orDie);
-    if (!row) return "not-found" as const;
-    return row.senderId === viewerId ? ("own" as const) : ("ok" as const);
+    return Option.fromNullishOr(row);
   });

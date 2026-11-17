@@ -11,11 +11,14 @@ import {
   SessionNotFound,
   type SessionUser,
 } from "@love-all/domain";
-import { and, count, eq, ne, or, sql } from "drizzle-orm";
+import { and, count, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
 import { Db } from "./Db";
 import { notBlocked } from "./db/blocks";
 import { playSession, playSessionParticipant, profile } from "./db/schema";
+import { type Notice, Notifications } from "./Notifications";
+import { messages } from "./notifications/messages";
+import { playerName } from "./notifications/names";
 
 /** A transaction handle, as `db.transaction` passes it. */
 export type Tx = Parameters<Parameters<Db["Service"]["transaction"]>[0]>[0];
@@ -58,6 +61,8 @@ const lockSession = (tx: Tx, sessionId: string) =>
     .select({
       id: playSession.id,
       hostId: playSession.hostId,
+      kind: playSession.kind,
+      courtName: playSession.courtName,
       spots: playSession.spots,
       status: playSession.status,
       visibility: playSession.visibility,
@@ -111,7 +116,7 @@ const setState = (
 /**
  * Gives `userId` a spot on a locked session. When that fills the last spot,
  * the session becomes `confirmed` and every other pending request is
- * declined.
+ * declined. Succeeds with whether it did.
  */
 const takeSpot = (tx: Tx, session: LockedSession, userId: string) =>
   Effect.gen(function* () {
@@ -120,7 +125,7 @@ const takeSpot = (tx: Tx, session: LockedSession, userId: string) =>
       return yield* new SessionFull({ message: "Every spot is taken" });
     }
     yield* setState(tx, session.id, userId, "accepted");
-    if (taken + 1 < session.spots) return;
+    if (taken + 1 < session.spots) return false;
     yield* tx
       .update(playSession)
       .set({ status: "confirmed" })
@@ -134,7 +139,35 @@ const takeSpot = (tx: Tx, session: LockedSession, userId: string) =>
           eq(playSessionParticipant.state, "requested"),
         ),
       );
+    return true;
   });
+
+/** Players whose rows are in one of `states`, host included when accepted. */
+const playersIn = (
+  tx: Tx,
+  sessionId: string,
+  states: ReadonlyArray<"invited" | "requested" | "accepted">,
+) =>
+  tx
+    .select({ userId: playSessionParticipant.userId })
+    .from(playSessionParticipant)
+    .where(
+      and(
+        eq(playSessionParticipant.sessionId, sessionId),
+        inArray(playSessionParticipant.state, states),
+      ),
+    )
+    .pipe(Effect.map((rows) => rows.map((row) => row.userId)));
+
+/** The notices for a spot taken by `userId`: "confirmed" to everyone else once it fills. */
+const confirmedNotices = (tx: Tx, session: LockedSession, userId: string, confirmed: boolean) =>
+  confirmed
+    ? playersIn(tx, session.id, ["accepted"]).pipe(
+        Effect.map((ids): ReadonlyArray<Notice> => [
+          { to: ids.filter((id) => id !== userId), ...messages.confirmed(session) },
+        ]),
+      )
+    : Effect.succeed<ReadonlyArray<Notice>>([]);
 
 /** A confirmed session with a spot free again goes back to `open`. */
 const reopenIfSpotFree = (tx: Tx, sessionId: string) =>
@@ -249,12 +282,19 @@ export class SessionJoins extends Context.Service<
     SessionJoins,
     Effect.gen(function* () {
       const db = yield* Db;
+      const notifications = yield* Notifications;
 
-      /** Runs `f` in a transaction with the session locked. Missing or blocked sessions fail. */
-      const withSession = <A, E>(
+      /**
+       * Runs `f` in a transaction with the session locked. Missing or blocked
+       * sessions fail. `f` returns the notices to send once it commits.
+       */
+      const withSession = <E>(
         viewer: SessionUser,
         sessionId: string,
-        f: (tx: Tx, session: LockedSession) => Effect.Effect<A, E, never>,
+        f: (
+          tx: Tx,
+          session: LockedSession,
+        ) => Effect.Effect<ReadonlyArray<Notice> | void, E, never>,
       ) =>
         db
           .transaction((tx) =>
@@ -273,19 +313,32 @@ export class SessionJoins extends Context.Service<
               return yield* f(tx, session);
             }),
           )
-          .pipe(dieOnDbError);
+          .pipe(
+            dieOnDbError,
+            Effect.tap((notices) =>
+              Effect.forEach(notices ?? [], (notice) => notifications.notify(notice), {
+                discard: true,
+              }),
+            ),
+          );
 
       /** As `withSession`, for the host only. */
-      const asHost = <A, E>(
+      const asHost = <E>(
         host: SessionUser,
         sessionId: string,
         verb: string,
-        f: (tx: Tx, session: LockedSession) => Effect.Effect<A, E, never>,
+        f: (
+          tx: Tx,
+          session: LockedSession,
+        ) => Effect.Effect<ReadonlyArray<Notice> | void, E, never>,
       ) =>
-        withSession(host, sessionId, (tx, session): Effect.Effect<A, E | NotSessionHost> =>
-          session.hostId === host.id
-            ? f(tx, session)
-            : Effect.fail(new NotSessionHost({ message: `Only the host can ${verb}` })),
+        withSession(
+          host,
+          sessionId,
+          (tx, session): Effect.Effect<ReadonlyArray<Notice> | void, E | NotSessionHost> =>
+            session.hostId === host.id
+              ? f(tx, session)
+              : Effect.fail(new NotSessionHost({ message: `Only the host can ${verb}` })),
         );
 
       const respond = (user: SessionUser, sessionId: string, answer: SessionAnswer) =>
@@ -303,11 +356,22 @@ export class SessionJoins extends Context.Service<
               if (me?.state !== "invited") {
                 return yield* new NotInvited({ message: "You have no invite to decline" });
               }
-              return yield* setState(tx, sessionId, user.id, "declined");
+              yield* setState(tx, sessionId, user.id, "declined");
+              const name = yield* playerName(tx, user.id);
+              return [
+                { to: [session.hostId], from: user.id, ...messages.declinedInvite(session, name) },
+              ];
             }
 
             // The host chose who to invite, so invites skip the level check.
-            if (me?.state === "invited") return yield* takeSpot(tx, session, user.id);
+            if (me?.state === "invited") {
+              const confirmed = yield* takeSpot(tx, session, user.id);
+              if (confirmed) return yield* confirmedNotices(tx, session, user.id, true);
+              const name = yield* playerName(tx, user.id);
+              return [
+                { to: [session.hostId], from: user.id, ...messages.acceptedInvite(session, name) },
+              ];
+            }
             if (answer === "accept") {
               return yield* new NotInvited({ message: "You have no invite to accept" });
             }
@@ -339,6 +403,10 @@ export class SessionJoins extends Context.Service<
                 target: [playSessionParticipant.sessionId, playSessionParticipant.userId],
                 set: { state: "requested" },
               });
+            const name = yield* playerName(tx, user.id);
+            return [
+              { to: [session.hostId], from: user.id, ...messages.askedToJoin(session, name) },
+            ];
           }),
         ).pipe(Effect.asVoid, Effect.withSpan("SessionJoins.respond"));
 
@@ -364,16 +432,24 @@ export class SessionJoins extends Context.Service<
           Effect.gen(function* () {
             yield* requireOpenForChanges(session);
             yield* pendingRequest(tx, session, userId);
-            yield* takeSpot(tx, session, userId);
+            const confirmed = yield* takeSpot(tx, session, userId);
+            const hostName = yield* playerName(tx, host.id);
+            const others = yield* confirmedNotices(tx, session, userId, confirmed);
+            return [
+              { to: [userId], from: host.id, ...messages.approved(session, hostName) },
+              ...others,
+            ];
           }),
         ).pipe(Effect.asVoid, Effect.withSpan("SessionJoins.approve"));
 
       const reject = (host: SessionUser, sessionId: string, userId: string) =>
         asHost(host, sessionId, "turn down players", (tx, session) =>
-          pendingRequest(tx, session, userId).pipe(
-            Effect.andThen(setState(tx, sessionId, userId, "declined")),
-            Effect.asVoid,
-          ),
+          Effect.gen(function* () {
+            yield* pendingRequest(tx, session, userId);
+            yield* setState(tx, sessionId, userId, "declined");
+            const hostName = yield* playerName(tx, host.id);
+            return [{ to: [userId], from: host.id, ...messages.notApproved(session, hostName) }];
+          }),
         ).pipe(Effect.asVoid, Effect.withSpan("SessionJoins.reject"));
 
       const leave = (user: SessionUser, sessionId: string) =>
@@ -396,7 +472,11 @@ export class SessionJoins extends Context.Service<
               return yield* new NotInvited({ message: "You're not in this session" });
             }
             yield* setState(tx, sessionId, user.id, "left");
-            if (me.state === "accepted") yield* reopenIfSpotFree(tx, sessionId);
+            // Withdrawing a request to join is quiet; giving up a spot tells the host.
+            if (me.state !== "accepted") return;
+            yield* reopenIfSpotFree(tx, sessionId);
+            const name = yield* playerName(tx, user.id);
+            return [{ to: [session.hostId], from: user.id, ...messages.left(session, name) }];
           }),
         ).pipe(Effect.asVoid, Effect.withSpan("SessionJoins.leave"));
 
@@ -409,6 +489,15 @@ export class SessionJoins extends Context.Service<
               .update(playSession)
               .set({ status: "cancelled" })
               .where(eq(playSession.id, sessionId));
+            const players = yield* playersIn(tx, sessionId, ["invited", "requested", "accepted"]);
+            const hostName = yield* playerName(tx, host.id);
+            return [
+              {
+                to: players.filter((id) => id !== host.id),
+                from: host.id,
+                ...messages.cancelled(session, hostName),
+              },
+            ];
           }),
         ).pipe(Effect.asVoid, Effect.withSpan("SessionJoins.cancel"));
 
