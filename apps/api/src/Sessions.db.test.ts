@@ -10,8 +10,10 @@ import { describe, expect, it } from "vite-plus/test";
 import { Db } from "./Db";
 import { playSession, playSessionParticipant, user } from "./db/schema";
 import { Profiles } from "./Profiles";
+import { Forum } from "./Forum";
 import { Safety } from "./Safety";
 import { Sessions } from "./Sessions";
+import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 /**
  * Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set.
@@ -19,9 +21,12 @@ import { Sessions } from "./Sessions";
  * Players and courts are near Tromsø, Norway, away from the points other test
  * files use, so parallel test files never show up in each other's lists.
  */
-const TestLayer = Layer.mergeAll(Sessions.layer, Profiles.layer, Safety.layer).pipe(
-  Layer.provideMerge(Db.layer),
-);
+const sent = makeNotificationsMemory();
+const TestLayer = Layer.mergeAll(
+  Sessions.layer,
+  Profiles.layer,
+  Safety.layer.pipe(Layer.provide(Forum.layer)),
+).pipe(Layer.provide(sent.layer), Layer.provideMerge(Db.layer));
 
 const HOME = { lat: 69.65, lng: 18.96 };
 /** About 1.1 km per 0.01 degrees of latitude. */
@@ -159,6 +164,31 @@ describe.skipIf(!process.env.DATABASE_URL)("Sessions.update", () => {
     });
     // With no pin, the distance comes from the host's home point.
     expect(updated.distanceKm).toBe(1);
+  });
+
+  it("sends a new reminder when the start time moves", async () => {
+    const after = await withPlayers([player()], ([host], { db, sessions }) =>
+      Effect.gen(function* () {
+        const session = yield* sessions.create(host!, singles());
+        const sentAt = new Date();
+        yield* db
+          .update(playSession)
+          .set({ reminderSentAt: sentAt })
+          .where(eq(playSession.id, session.id));
+        const reminded = () =>
+          db
+            .select({ at: playSession.reminderSentAt })
+            .from(playSession)
+            .where(eq(playSession.id, session.id))
+            .pipe(Effect.map(([row]) => row?.at ?? null));
+        yield* sessions.update(host!, session.id, { notes: "Bring balls" });
+        const notesOnly = yield* reminded();
+        yield* sessions.update(host!, session.id, { startsAt: inDays(3) });
+        return { notesOnly, moved: yield* reminded() };
+      }),
+    );
+    expect(after.notesOnly).not.toBeNull();
+    expect(after.moved).toBeNull();
   });
 
   it("is host only, and hides sessions the player can't see", async () => {
@@ -442,6 +472,22 @@ describe.skipIf(!process.env.DATABASE_URL)("Sessions.invite", () => {
     );
     expect(result.again.participants.map((p) => p.state)).toEqual(["accepted", "invited"]);
     expect(result.mine.items).toHaveLength(1);
+  });
+
+  it("notifies each newly invited player once", async () => {
+    await withPlayers([player(), player(), player()], ([host, a, b], { sessions }) =>
+      Effect.gen(function* () {
+        const session = yield* sessions.create(host!, singles({ kind: "hitting", spots: 3 }));
+        yield* sessions.invite(host!, session.id, { playerIds: [a!.id] });
+        yield* sessions.invite(host!, session.id, { playerIds: [a!.id, b!.id] });
+        expect(
+          sent.about(`/sessions/${session.id}`).map((n) => ({ to: n.to, from: n.from })),
+        ).toEqual([
+          { to: [a!.id], from: host!.id },
+          { to: [b!.id], from: host!.id },
+        ]);
+      }),
+    );
   });
 
   it("rejects blocked or unknown players, myself, non-hosts and full sessions", async () => {

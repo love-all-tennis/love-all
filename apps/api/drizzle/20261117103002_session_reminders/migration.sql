@@ -1,0 +1,2 @@
+ALTER TABLE "play_session" ADD COLUMN "reminder_sent_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "play_session_reminder_due_idx" ON "play_session" ("starts_at") WHERE "reminder_sent_at" is null and "status" <> 'cancelled';

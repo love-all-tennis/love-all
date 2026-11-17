@@ -14,6 +14,7 @@ import { Context, Effect, Layer, Option } from "effect";
 import { Db } from "./Db";
 import { notBlocked } from "./db/blocks";
 import { loadAvailability } from "./db/availability";
+import { notSuspended } from "./db/suspensions";
 import type { LngLat } from "./db/geo";
 import { metro, profile } from "./db/schema";
 import { decodeCursor, displayKm, encodeCursor } from "./players/cursor";
@@ -52,6 +53,7 @@ export class Players extends Context.Service<
        */
       const visibleTo = (viewer: SessionUser): Array<SQL> => [
         notBlocked(viewer.id, profile.userId),
+        notSuspended(profile.userId),
       ];
 
       const viewerHome = (viewer: SessionUser) =>

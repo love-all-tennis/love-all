@@ -3,9 +3,10 @@ import { StyleSheet, View } from "react-native";
 
 import { Button, Card, Screen, space, Text } from "@/design";
 import { authClient } from "@/lib/auth-client";
+import { signOut } from "@/lib/sign-out";
 
 /**
- * The way into the players list, the Play tab and club reviews, and account actions.
+ * The way into the players list, the Play tab, gear and club reviews, and account actions.
  */
 export default function HomeScreen() {
   const { data: session } = authClient.useSession();
@@ -34,6 +35,16 @@ export default function HomeScreen() {
       </Card>
 
       <Card>
+        <Text variant="subheading">Gear reviews</Text>
+        <Text color="textMuted">
+          See what other players think of rackets, strings and shoes, and rate what you use.
+        </Text>
+        <View style={styles.action}>
+          <Button variant="secondary" label="Browse gear" onPress={() => router.push("/gear")} />
+        </View>
+      </Card>
+
+      <Card>
         <Text variant="subheading">Club reviews</Text>
         <Text color="textMuted">
           See what players say about courts and clubs near you, and review the ones you play at.
@@ -52,7 +63,14 @@ export default function HomeScreen() {
           label="Edit your profile"
           onPress={() => router.push("/profile-setup")}
         />
-        <Button variant="quiet" label="Sign out" onPress={() => void authClient.signOut()} />
+        {session?.user.role === "admin" ? (
+          <Button
+            variant="secondary"
+            label="Review reports"
+            onPress={() => router.push("/moderation")}
+          />
+        ) : null}
+        <Button variant="quiet" label="Sign out" onPress={() => void signOut()} />
       </View>
     </Screen>
   );
