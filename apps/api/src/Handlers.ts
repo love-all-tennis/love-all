@@ -6,6 +6,7 @@ import { Accounts } from "./Accounts";
 import { Db } from "./Db";
 import { Follows } from "./Follows";
 import { Forum } from "./Forum";
+import { Notifications } from "./Notifications";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
@@ -202,6 +203,21 @@ export const ForumHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const DevicesHandlers = HttpApiBuilder.group(
+  Api,
+  "devices",
+  Effect.fn(function* (handlers) {
+    const notifications = yield* Notifications;
+    return handlers
+      .handle("register", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => notifications.register(user, payload)),
+      )
+      .handle("unregister", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => notifications.unregister(user, params.token)),
+      );
+  }),
+);
+
 export const ApiHandlers = Layer.mergeAll(
   SystemHandlers,
   MeHandlers,
@@ -211,4 +227,5 @@ export const ApiHandlers = Layer.mergeAll(
   SessionsHandlers,
   SessionActivityHandlers,
   ForumHandlers,
+  DevicesHandlers,
 );

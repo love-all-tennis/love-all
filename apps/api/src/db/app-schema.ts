@@ -481,3 +481,23 @@ export const forumReaction = pgTable(
     check("forum_reaction_one_target", sql`num_nonnulls(${t.threadId}, ${t.postId}) = 1`),
   ],
 );
+
+export const devicePlatform = pgEnum("device_platform", ["ios", "android"]);
+
+/**
+ * An Expo push token for one phone. A token belongs to one account at a time:
+ * when a phone signs in to another account, the token moves. Tokens that
+ * Expo reports as no longer registered are deleted.
+ */
+export const pushToken = pgTable(
+  "push_token",
+  {
+    token: text("token").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    platform: devicePlatform("platform").notNull(),
+    ...timestamps,
+  },
+  (t) => [index("push_token_user_id_idx").on(t.userId)],
+);

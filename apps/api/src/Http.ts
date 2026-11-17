@@ -10,6 +10,8 @@ import { BetterAuth, TrustedOrigins } from "./BetterAuth";
 import { Db } from "./Db";
 import { Follows } from "./Follows";
 import { Forum } from "./Forum";
+import { Notifications } from "./Notifications";
+import { PushSender } from "./PushSender";
 import { ApiHandlers } from "./Handlers";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
@@ -34,6 +36,7 @@ const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pi
     Accounts.layer,
     Follows.layer,
     Forum.layer,
+    Notifications.layer,
     Players.layer,
     Profiles.layer,
     Safety.layer,
@@ -45,7 +48,7 @@ const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pi
 const DocsRoute = HttpApiScalar.layer(Api, { path: "/docs" });
 
 export const AllRoutes = Layer.mergeAll(ApiRoutes, AuthRoutes, DocsRoute).pipe(
-  Layer.provide([BetterAuth.layer, Db.layer]),
+  Layer.provide([BetterAuth.layer, Db.layer, PushSender.expo]),
 );
 
 export const HttpLive = Layer.unwrap(
