@@ -91,10 +91,25 @@ export const SafetyHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const SessionsHandlers = HttpApiBuilder.group(
+  Api,
+  "sessions",
+  Effect.fn(function* (handlers) {
+    const todo = () => Effect.die("Sessions handlers land with #37");
+    return handlers
+      .handle("create", todo)
+      .handle("list", todo)
+      .handle("get", todo)
+      .handle("update", todo)
+      .handle("invite", todo);
+  }),
+);
+
 export const ApiHandlers = Layer.mergeAll(
   SystemHandlers,
   MeHandlers,
   PlayersHandlers,
   FollowsHandlers,
   SafetyHandlers,
+  SessionsHandlers,
 );
