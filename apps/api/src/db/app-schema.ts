@@ -5,6 +5,7 @@ import {
   geometry,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -293,6 +294,80 @@ export const playSessionParticipant = pgTable(
     check(
       "play_session_participant_host_accepted",
       sql`${t.role} <> 'host' or ${t.state} = 'accepted'`,
+    ),
+  ],
+);
+
+/**
+ * A logistics note on a session ("Court 4, I'll bring balls"). Only the host
+ * and accepted players read and write them. Deleting sets `deleted_at`.
+ */
+export const playSessionComment = pgTable(
+  "play_session_comment",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => playSession.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("play_session_comment_session_created_idx").on(t.sessionId, t.createdAt, t.id),
+    check("play_session_comment_body_length", sql`char_length(${t.body}) between 1 and 1000`),
+  ],
+);
+
+export const playSessionResultStatus = pgEnum("play_session_result_status", [
+  "pending",
+  "confirmed",
+  "disputed",
+]);
+
+export const playSessionResultSide = pgEnum("play_session_result_side", ["a", "b"]);
+
+/**
+ * The score of a singles or doubles session: one per session. A player
+ * records it, and a player on the other side confirms or disputes it. A
+ * disputed result can be recorded again, which replaces it. `sets` is
+ * `[[a, b], ...]` in games (points for a match tiebreak), validated by the
+ * domain `MatchScore`.
+ */
+export const playSessionResult = pgTable(
+  "play_session_result",
+  {
+    sessionId: uuid("session_id")
+      .primaryKey()
+      .references(() => playSession.id, { onDelete: "cascade" }),
+    sideA: text("side_a").array().notNull(),
+    sideB: text("side_b").array().notNull(),
+    sets: jsonb("sets").$type<Array<[number, number]>>().notNull(),
+    winner: playSessionResultSide("winner").notNull(),
+    status: playSessionResultStatus("status").notNull().default("pending"),
+    recordedBy: text("recorded_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).defaultNow().notNull(),
+    respondedBy: text("responded_by").references(() => user.id, { onDelete: "set null" }),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    check(
+      "play_session_result_sides",
+      sql`cardinality(${t.sideA}) between 1 and 2 and cardinality(${t.sideA}) = cardinality(${t.sideB})`,
+    ),
+    check(
+      "play_session_result_sets",
+      sql`jsonb_typeof(${t.sets}) = 'array' and jsonb_array_length(${t.sets}) between 1 and 3`,
+    ),
+    check(
+      "play_session_result_response",
+      sql`(${t.status} = 'pending') = (${t.respondedAt} is null)`,
     ),
   ],
 );

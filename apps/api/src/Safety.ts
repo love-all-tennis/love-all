@@ -10,6 +10,7 @@ import { and, desc, eq, or } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
 import { Db } from "./Db";
 import { block, follow, profile, report, user } from "./db/schema";
+import { removeFromEachOthersSessions } from "./SessionJoins";
 
 /**
  * Blocks and reports. Hiding blocked players from other queries is done in
@@ -57,7 +58,7 @@ export class Safety extends Context.Service<
         block: (viewer, playerId) =>
           requireOtherPlayer(viewer, playerId, "block").pipe(
             Effect.andThen(
-              // Blocking also ends any follow between the two, in both directions.
+              // Blocking also ends any follow between the two, in both directions,
               db
                 .transaction((tx) =>
                   Effect.gen(function* () {
@@ -73,6 +74,8 @@ export class Safety extends Context.Service<
                           and(eq(follow.followerId, playerId), eq(follow.followedId, viewer.id)),
                         ),
                       );
+                    // ...and takes each out of the other's sessions.
+                    yield* removeFromEachOthersSessions(tx, viewer.id, playerId);
                   }),
                 )
                 .pipe(Effect.orDie),

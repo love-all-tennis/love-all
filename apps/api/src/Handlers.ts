@@ -8,7 +8,9 @@ import { Follows } from "./Follows";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
+import { SessionActivity } from "./SessionActivity";
 import { Sessions } from "./Sessions";
+import { SessionJoins } from "./SessionJoins";
 
 export const SystemHandlers = HttpApiBuilder.group(
   Api,
@@ -97,6 +99,7 @@ export const SessionsHandlers = HttpApiBuilder.group(
   "sessions",
   Effect.fn(function* (handlers) {
     const sessions = yield* Sessions;
+    const joins = yield* SessionJoins;
     return handlers
       .handle("create", ({ payload }) =>
         Effect.flatMap(CurrentUser, (viewer) => sessions.create(viewer, payload)),
@@ -112,6 +115,48 @@ export const SessionsHandlers = HttpApiBuilder.group(
       )
       .handle("invite", ({ params, payload }) =>
         Effect.flatMap(CurrentUser, (viewer) => sessions.invite(viewer, params.id, payload)),
+      )
+      .handle("respond", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => joins.respond(user, params.id, payload.answer)),
+      )
+      .handle("approve", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => joins.approve(user, params.id, params.userId)),
+      )
+      .handle("reject", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => joins.reject(user, params.id, params.userId)),
+      )
+      .handle("leave", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => joins.leave(user, params.id)),
+      )
+      .handle("cancel", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => joins.cancel(user, params.id)),
+      );
+  }),
+);
+
+export const SessionActivityHandlers = HttpApiBuilder.group(
+  Api,
+  "sessionActivity",
+  Effect.fn(function* (handlers) {
+    const activity = yield* SessionActivity;
+    return handlers
+      .handle("listComments", ({ params, query }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.listComments(user, params.id, query)),
+      )
+      .handle("addComment", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.addComment(user, params.id, payload)),
+      )
+      .handle("deleteComment", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.deleteComment(user, params.commentId)),
+      )
+      .handle("getResult", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.getResult(user, params.id)),
+      )
+      .handle("recordResult", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.recordResult(user, params.id, payload)),
+      )
+      .handle("respondToResult", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.respondToResult(user, params.id, payload)),
       );
   }),
 );
@@ -123,4 +168,5 @@ export const ApiHandlers = Layer.mergeAll(
   FollowsHandlers,
   SafetyHandlers,
   SessionsHandlers,
+  SessionActivityHandlers,
 );
