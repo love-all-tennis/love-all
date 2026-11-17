@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/http-api";
 import { Authentication } from "./Auth";
+import { NewDevice, PushToken } from "./Device";
 import {
   ForumCategory,
   ForumCategoryNotFound,
@@ -437,6 +438,20 @@ export class ForumApi extends HttpApiGroup.make("forum")
   )
   .middleware(Authentication) {}
 
+/**
+ * This phone's push token, so the API can send it notifications. The app
+ * registers it after signing in and removes it before signing out.
+ */
+export class DevicesApi extends HttpApiGroup.make("devices")
+  /**
+   * Saves the token for me. A token that belonged to another account (the
+   * phone switched accounts) moves to me. Registering again is a no-op.
+   */
+  .add(HttpApiEndpoint.post("register", "/devices", { payload: NewDevice }))
+  /** Stops notifications to this token. Removing a token that isn't mine does nothing. */
+  .add(HttpApiEndpoint.delete("unregister", "/devices/:token", { params: { token: PushToken } }))
+  .middleware(Authentication) {}
+
 /** The whole Love All API. Shared by the server and the mobile client. */
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
@@ -447,4 +462,5 @@ export class Api extends HttpApi.make("love-all")
   .add(SessionsApi)
   .add(SessionActivityApi)
   .add(ForumApi)
+  .add(DevicesApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}

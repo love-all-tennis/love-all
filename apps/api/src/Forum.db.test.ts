@@ -5,9 +5,11 @@ import { describe, expect, it } from "vite-plus/test";
 import { Db } from "./Db";
 import { block, forumCategory, forumPost, forumThread, metro, profile, user } from "./db/schema";
 import { Forum } from "./Forum";
+import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
-const TestLayer = Forum.layer.pipe(Layer.provideMerge(Db.layer));
+const sent = makeNotificationsMemory();
+const TestLayer = Forum.layer.pipe(Layer.provide(sent.layer), Layer.provideMerge(Db.layer));
 
 interface World {
   readonly players: ReadonlyArray<SessionUser>;
@@ -280,6 +282,25 @@ describe.skipIf(!process.env.DATABASE_URL)("Forum replies", () => {
     expect(result.after.lastPostAt).toEqual(result.reply.createdAt);
     expect(result.after.lastPostAt.getTime()).toBeGreaterThanOrEqual(
       result.started.lastPostAt.getTime(),
+    );
+  });
+
+  it("notifies the thread's author of replies by others", async () => {
+    await withForum({ count: 2 }, ({ players: [author, replier], forum, categoryId }) =>
+      Effect.gen(function* () {
+        const started = yield* forum.createThread(author!, thread(categoryId, "Strings"));
+        yield* forum.reply(replier!, started.id, { body: "Poly for spin" });
+        yield* forum.reply(author!, started.id, { body: "Thanks!" });
+        expect(sent.about(`/forum/thread/${started.id}`)).toEqual([
+          {
+            to: [author!.id],
+            from: replier!.id,
+            title: `Player 1 replied to "Strings"`,
+            body: "Poly for spin",
+            url: `/forum/thread/${started.id}`,
+          },
+        ]);
+      }),
     );
   });
 });
