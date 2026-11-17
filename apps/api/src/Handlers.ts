@@ -8,6 +8,7 @@ import { Follows } from "./Follows";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
+import { SessionActivity } from "./SessionActivity";
 import { Sessions } from "./Sessions";
 
 export const SystemHandlers = HttpApiBuilder.group(
@@ -116,6 +117,33 @@ export const SessionsHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const SessionActivityHandlers = HttpApiBuilder.group(
+  Api,
+  "sessionActivity",
+  Effect.fn(function* (handlers) {
+    const activity = yield* SessionActivity;
+    return handlers
+      .handle("listComments", ({ params, query }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.listComments(user, params.id, query)),
+      )
+      .handle("addComment", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.addComment(user, params.id, payload)),
+      )
+      .handle("deleteComment", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.deleteComment(user, params.commentId)),
+      )
+      .handle("getResult", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.getResult(user, params.id)),
+      )
+      .handle("recordResult", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.recordResult(user, params.id, payload)),
+      )
+      .handle("respondToResult", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => activity.respondToResult(user, params.id, payload)),
+      );
+  }),
+);
+
 export const ApiHandlers = Layer.mergeAll(
   SystemHandlers,
   MeHandlers,
@@ -123,4 +151,5 @@ export const ApiHandlers = Layer.mergeAll(
   FollowsHandlers,
   SafetyHandlers,
   SessionsHandlers,
+  SessionActivityHandlers,
 );
