@@ -34,6 +34,7 @@ import {
   SessionsPage,
   SessionsQuery,
 } from "./Session";
+import { JoinRequestNotFound, LevelOutOfRange, NotInvited, SessionResponse } from "./SessionJoin";
 
 export const Health = Schema.Struct({
   status: Schema.Literal("ok"),
@@ -132,9 +133,11 @@ export class SafetyApi extends HttpApiGroup.make("safety")
   .middleware(Authentication) {}
 
 const SessionIdParam = { id: SessionId };
+const SessionPlayerParams = { id: SessionId, userId: PlayerId };
 
 /**
- * Matches and hitting sessions: creating, editing, finding and inviting.
+ * Matches and hitting sessions: creating, editing, finding, inviting, and
+ * joining and leaving.
  * Sessions whose host is blocked either way with the viewer never show up.
  */
 export class SessionsApi extends HttpApiGroup.make("sessions")
@@ -185,6 +188,55 @@ export class SessionsApi extends HttpApiGroup.make("sessions")
         PlayerNotFound,
         InvalidSession,
       ],
+    }),
+  )
+  /**
+   * Answers my invite (`accept` / `decline`), or asks to join an open session
+   * (`request`), which waits on the host. Accepting takes a spot.
+   */
+  .add(
+    HttpApiEndpoint.post("respond", "/sessions/:id/respond", {
+      params: SessionIdParam,
+      payload: SessionResponse,
+      error: [
+        SessionNotFound,
+        SessionClosed,
+        SessionFull,
+        NotInvited,
+        LevelOutOfRange,
+        ProfileRequired,
+      ],
+    }),
+  )
+  /** Host only: lets a player who asked to join take a spot. */
+  .add(
+    HttpApiEndpoint.post("approve", "/sessions/:id/approve/:userId", {
+      params: SessionPlayerParams,
+      error: [SessionNotFound, NotSessionHost, SessionClosed, SessionFull, JoinRequestNotFound],
+    }),
+  )
+  /** Host only: turns down a player who asked to join. */
+  .add(
+    HttpApiEndpoint.post("reject", "/sessions/:id/reject/:userId", {
+      params: SessionPlayerParams,
+      error: [SessionNotFound, NotSessionHost, JoinRequestNotFound],
+    }),
+  )
+  /**
+   * Gives up my spot, or withdraws my request to join. A confirmed session
+   * goes back to open. The host can't leave; they cancel instead.
+   */
+  .add(
+    HttpApiEndpoint.post("leave", "/sessions/:id/leave", {
+      params: SessionIdParam,
+      error: [SessionNotFound, SessionClosed, NotInvited, InvalidSession],
+    }),
+  )
+  /** Host only: calls the session off. Cancelling twice is a no-op. */
+  .add(
+    HttpApiEndpoint.post("cancel", "/sessions/:id/cancel", {
+      params: SessionIdParam,
+      error: [SessionNotFound, NotSessionHost, SessionClosed],
     }),
   )
   .middleware(Authentication) {}

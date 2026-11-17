@@ -9,6 +9,7 @@ import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
 import { Sessions } from "./Sessions";
+import { SessionJoins } from "./SessionJoins";
 
 export const SystemHandlers = HttpApiBuilder.group(
   Api,
@@ -97,6 +98,7 @@ export const SessionsHandlers = HttpApiBuilder.group(
   "sessions",
   Effect.fn(function* (handlers) {
     const sessions = yield* Sessions;
+    const joins = yield* SessionJoins;
     return handlers
       .handle("create", ({ payload }) =>
         Effect.flatMap(CurrentUser, (viewer) => sessions.create(viewer, payload)),
@@ -112,6 +114,21 @@ export const SessionsHandlers = HttpApiBuilder.group(
       )
       .handle("invite", ({ params, payload }) =>
         Effect.flatMap(CurrentUser, (viewer) => sessions.invite(viewer, params.id, payload)),
+      )
+      .handle("respond", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => joins.respond(user, params.id, payload.answer)),
+      )
+      .handle("approve", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => joins.approve(user, params.id, params.userId)),
+      )
+      .handle("reject", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => joins.reject(user, params.id, params.userId)),
+      )
+      .handle("leave", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => joins.leave(user, params.id)),
+      )
+      .handle("cancel", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => joins.cancel(user, params.id)),
       );
   }),
 );
