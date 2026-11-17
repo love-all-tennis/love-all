@@ -1,5 +1,10 @@
+import { eq } from "drizzle-orm";
 import { Config, Context, Effect, Layer, Option, Redacted } from "effect";
+import { SqlClient } from "effect/sql";
 import { type Auth, makeAuth, type SocialProviders } from "./auth";
+import { Db } from "./Db";
+import { effectSqlAdapter } from "./db/better-auth-adapter";
+import { accountSuspension } from "./db/schema";
 
 const list = (name: string) =>
   Config.String(name).pipe(
@@ -49,16 +54,29 @@ export const SocialProvidersConfig: Config.Config<SocialProviders> = Config.all(
   })),
 );
 
-/** The Better Auth instance, built from config. */
+/**
+ * The Better Auth instance, built from config. Its queries go through the
+ * app's Effect SQL client (`effectSqlAdapter`), on the same pool as `Db`.
+ */
 export class BetterAuth extends Context.Service<BetterAuth, Auth>()("love-all/BetterAuth") {
   static readonly layer = Layer.effect(
     BetterAuth,
     Effect.gen(function* () {
-      const databaseUrl = yield* Config.Redacted("DATABASE_URL");
+      const services = yield* Effect.context<SqlClient.SqlClient | Db>();
+      const run = Effect.runPromiseWith(services);
+      const db = yield* Db;
       const trustedOrigins = yield* TrustedOrigins;
       const socialProviders = yield* SocialProvidersConfig;
       return makeAuth({
-        databaseUrl: Redacted.value(databaseUrl),
+        database: effectSqlAdapter(services),
+        isSuspended: (userId) =>
+          run(
+            db
+              .select({ userId: accountSuspension.userId })
+              .from(accountSuspension)
+              .where(eq(accountSuspension.userId, userId))
+              .pipe(Effect.map((rows) => rows.length > 0)),
+          ),
         trustedOrigins,
         socialProviders,
       });

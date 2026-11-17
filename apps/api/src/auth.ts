@@ -1,11 +1,6 @@
-import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { expo } from "@better-auth/expo";
-import { betterAuth } from "better-auth";
+import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { APIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-import * as schema from "./db/schema";
 
 /** Who a user is to the app. Admins can use the moderation endpoints. */
 export const roles = ["player", "admin"] as const;
@@ -31,7 +26,10 @@ export interface SocialProviders {
 }
 
 export interface AuthOptions {
-  readonly databaseUrl: string;
+  /** Where Better Auth keeps users and sessions. The API uses `effectSqlAdapter`. */
+  readonly database: NonNullable<BetterAuthOptions["database"]>;
+  /** Whether a moderator suspended this player (a row in `account_suspension`). */
+  readonly isSuspended: (userId: string) => Promise<boolean>;
   readonly trustedOrigins: ReadonlyArray<string>;
   readonly socialProviders?: SocialProviders;
 }
@@ -40,29 +38,21 @@ export interface AuthOptions {
 const appleOrigin = "https://appleid.apple.com";
 
 /**
- * Better Auth runs inside the API process.
- *
- * Its Drizzle adapter awaits promise-based queries, so it gets its own small
- * node-postgres pool on the same database. App code uses the Effect driver
- * (see `Db.ts`). Both share one Drizzle schema.
+ * Better Auth runs inside the API process. `BetterAuth.ts` builds it on the
+ * app's Effect SQL client, so auth shares the API's pool and transactions.
  *
  * Reads BETTER_AUTH_SECRET and BETTER_AUTH_URL from the environment.
  */
 export const makeAuth = (options: AuthOptions) => {
   const { google, apple } = options.socialProviders ?? {};
-  const db = drizzle({ client: new Pool({ connectionString: options.databaseUrl, max: 5 }) });
   return betterAuth({
-    database: drizzleAdapter(db, { provider: "pg", schema }),
+    database: options.database,
     databaseHooks: {
       session: {
         create: {
           // Suspended players can't sign in. Suspending also deletes their sessions.
           before: async (session) => {
-            const [suspended] = await db
-              .select({ userId: schema.accountSuspension.userId })
-              .from(schema.accountSuspension)
-              .where(eq(schema.accountSuspension.userId, session.userId));
-            if (suspended) {
+            if (await options.isSuspended(session.userId)) {
               throw APIError.from("FORBIDDEN", {
                 message:
                   "This account is suspended. Contact support if you think this is a mistake.",

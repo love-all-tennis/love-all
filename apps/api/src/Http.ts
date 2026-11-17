@@ -60,7 +60,7 @@ const DocsRoute = HttpApiScalar.layer(Api, { path: "/docs" });
 export const AllRoutes = Layer.mergeAll(ApiRoutes, AuthRoutes, DocsRoute, Reminders).pipe(
   // Notifications is shared, so notices from every service go through one sender.
   Layer.provide(Notifications.layer.pipe(Layer.provide(PushSender.expo))),
-  Layer.provide([BetterAuth.layer, Db.layer]),
+  Layer.provide(BetterAuth.layer.pipe(Layer.provideMerge(Db.layer))),
 );
 
 export const HttpLive = Layer.unwrap(
