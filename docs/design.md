@@ -136,7 +136,11 @@ The tab bar uses `NativeTabs` from `expo-router/native-tabs`, so iOS and Android
 | Forum                      | Forum    | `bubble.left.and.bubble.right` / `bubble.left.and.bubble.right.fill` | `forum`          |
 | Messages                   | Messages | `envelope` / `envelope.fill`                                         | `mail`           |
 
-Five tabs at most. Today's app has Home, Players, Play and Forum (`src/components/app-tabs.tsx`, with a matching bar for web in `app-tabs.web.tsx`). Add the others as their features land, rather than as empty tabs.
+Five tabs at most, and the app now has all five (`src/components/app-tabs.tsx`, with a matching bar for web in `app-tabs.web.tsx`). Messages carries a badge with the number of conversations that have unread messages, and shows nothing at zero.
+
+### Messages
+
+Direct messages are async, not live chat: no typing indicators, read receipts or online status. A conversation refreshes when it opens, when the app returns to the foreground, and after a send. My messages sit on the right on `accentSoft` with `onAccentSoft` text, theirs on the left on `surface` with a `border` hairline, so the one green fill stays the Send button. Each bubble shows its time in `caption`, and a `label` heading ("Today", "Yesterday", "Mon, Nov 17") starts each day. A long press on their message offers "Report message", and the player's profile (the header button) has Block.
 
 - Player photos are round (`size.avatar`: 32 in dense lists, 48 in rows, 72 to 112 on a profile). Without a photo, show initials on `surfaceSunken`, as `PlayerAvatar` does.
 - No stock photos, illustrations of tennis players, or mascots. Empty states use type, not pictures.

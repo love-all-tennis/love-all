@@ -94,6 +94,12 @@ export default function RootLayout() {
           <Stack.Screen name="forum/category/[id]" options={{ ...header, title: "" }} />
           <Stack.Screen name="forum/thread/[id]" options={{ ...header, title: "" }} />
           <Stack.Screen name="forum/new" options={{ ...header, title: "New thread" }} />
+          <Stack.Screen name="forum/report" options={{ ...sheet, title: "Report" }} />
+          <Stack.Protected guard={session?.user.role === "admin"}>
+            <Stack.Screen name="moderation" options={{ ...header, title: "Moderation" }} />
+          </Stack.Protected>
+          <Stack.Screen name="messages/[id]" options={{ ...header, title: "" }} />
+          <Stack.Screen name="messages/report" options={{ ...sheet, title: "Report" }} />
           <Stack.Screen name="gear/index" options={{ ...header, title: "Gear reviews" }} />
           <Stack.Screen name="gear/[id]" options={{ ...header, title: "" }} />
           <Stack.Screen name="gear/new" options={{ ...header, title: "Add gear" }} />

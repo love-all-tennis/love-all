@@ -3,6 +3,7 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Linking, Platform, StyleSheet, View } from "react-native";
 
 import { Button, EmptyState, Icon, Loading, Screen, space, Tag, Text } from "@/design";
+import { MessagePlayerButton } from "@/features/messages/message-button";
 import { ParticipantRow, Section } from "@/features/sessions/components";
 import {
   durationLabel,
@@ -91,6 +92,7 @@ function SessionBody({
   const requestsShown = isHost && editable && pendingRequests(session).length > 0;
   const spotsLeft = session.spots - session.acceptedCount;
   const distance = distanceLabel(session.distanceKm);
+  const host = session.participants.find((p) => p.role === "host");
   const participants = [...session.participants]
     .filter((p) => !(requestsShown && p.state === "requested"))
     .sort(
@@ -163,6 +165,13 @@ function SessionBody({
             />
           ))}
         </View>
+        {host && host.player.id !== meId ? (
+          <MessagePlayerButton
+            playerId={host.player.id}
+            name={host.player.displayName}
+            label="Message host"
+          />
+        ) : null}
       </Section>
 
       <SessionScore

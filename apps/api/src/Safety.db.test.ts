@@ -1,19 +1,24 @@
 import { SessionUser } from "@love-all/domain";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { Db } from "./Db";
 import { notBlocked } from "./db/blocks";
-import { profile, report, user } from "./db/schema";
+import { forumCategory, forumPost, forumThread, profile, report, user } from "./db/schema";
 import { Follows } from "./Follows";
+import { Forum } from "./Forum";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
+import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
-const TestLayer = Layer.mergeAll(Safety.layer, Players.layer, Profiles.layer, Follows.layer).pipe(
-  Layer.provideMerge(Db.layer),
-);
+const TestLayer = Layer.mergeAll(
+  Safety.layer.pipe(Layer.provideMerge(Forum.layer)),
+  Players.layer,
+  Profiles.layer,
+  Follows.layer,
+).pipe(Layer.provide(makeNotificationsMemory().layer), Layer.provideMerge(Db.layer));
 
 /** Creates `count` throwaway accounts, runs `f` with them, then deletes them. */
 const withPlayers = <A, E>(
@@ -22,7 +27,7 @@ const withPlayers = <A, E>(
     players: ReadonlyArray<SessionUser>,
     safety: Safety["Service"],
     db: Db["Service"],
-  ) => Effect.Effect<A, E, Players | Profiles | Follows>,
+  ) => Effect.Effect<A, E, Players | Profiles | Follows | Forum>,
 ) =>
   Effect.gen(function* () {
     const db = yield* Db;
@@ -37,7 +42,9 @@ const withPlayers = <A, E>(
       Effect.ensuring(
         Effect.orDie(
           Effect.andThen(
-            db.delete(report).where(inArray(report.targetId, ids)),
+            db
+              .delete(report)
+              .where(or(inArray(report.targetId, ids), inArray(report.subjectId, ids))),
             db.delete(user).where(inArray(user.id, ids)),
           ),
         ),
@@ -125,11 +132,74 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
     expect(saved).toMatchObject({
       reporterId: null,
       targetType: "player",
+      content: null,
       reason: "harassment",
       details: "Rude messages after our match",
       status: "open",
       resolvedAt: null,
     });
+  });
+
+  it("reports a forum thread and a reply with their author and a copy of the text", async () => {
+    const saved = await withPlayers(2, ([sam, alex], safety, db) =>
+      Effect.gen(function* () {
+        const [general] = yield* db
+          .select({ id: forumCategory.id })
+          .from(forumCategory)
+          .where(eq(forumCategory.slug, "general"));
+        const [thread] = yield* db
+          .insert(forumThread)
+          .values({
+            categoryId: general!.id,
+            authorId: alex!.id,
+            title: "Cheap rackets",
+            body: "DM me",
+          })
+          .returning({ id: forumThread.id });
+        const [post] = yield* db
+          .insert(forumPost)
+          .values({ threadId: thread!.id, authorId: alex!.id, body: "Still selling" })
+          .returning({ id: forumPost.id });
+        const onThread = yield* safety.report(sam!, {
+          targetType: "forum_thread",
+          targetId: thread!.id,
+          reason: "spam",
+        });
+        const onPost = yield* safety.report(sam!, {
+          targetType: "forum_post",
+          targetId: post!.id,
+          reason: "spam",
+        });
+        const ownPost = yield* Effect.flip(
+          safety.report(alex!, { targetType: "forum_post", targetId: post!.id, reason: "spam" }),
+        );
+        // Once hidden by a moderator, it can't be reported again.
+        yield* db.update(forumPost).set({ hiddenAt: new Date() }).where(eq(forumPost.id, post!.id));
+        const hidden = yield* Effect.flip(
+          safety.report(sam!, { targetType: "forum_post", targetId: post!.id, reason: "spam" }),
+        );
+        const unknown = yield* Effect.flip(
+          safety.report(sam!, {
+            targetType: "forum_thread",
+            targetId: "not-a-uuid",
+            reason: "spam",
+          }),
+        );
+        const rows = yield* db
+          .select()
+          .from(report)
+          .where(inArray(report.id, [onThread.id, onPost.id]));
+        return { rows, errors: [ownPost._tag, hidden._tag, unknown._tag], alex: alex!.id };
+      }),
+    );
+    expect(saved.errors).toEqual(["CannotTargetSelf", "TargetNotFound", "TargetNotFound"]);
+    expect(saved.rows).toHaveLength(2);
+    const byType = Object.fromEntries(saved.rows.map((row) => [row.targetType, row]));
+    expect(byType.forum_thread).toMatchObject({
+      subjectId: saved.alex,
+      content: "Cheap rackets\n\nDM me",
+    });
+    expect(byType.forum_post).toMatchObject({ subjectId: saved.alex, content: "Still selling" });
   });
 
   it("refuses to report yourself or an unknown player", async () => {
