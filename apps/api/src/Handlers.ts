@@ -5,6 +5,7 @@ import { HttpApiBuilder } from "effect/http-api";
 import { Accounts } from "./Accounts";
 import { Db } from "./Db";
 import { Follows } from "./Follows";
+import { Forum } from "./Forum";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
@@ -161,6 +162,34 @@ export const SessionActivityHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const ForumHandlers = HttpApiBuilder.group(
+  Api,
+  "forum",
+  Effect.fn(function* (handlers) {
+    const forum = yield* Forum;
+    return handlers
+      .handle("listCategories", () => Effect.flatMap(CurrentUser, forum.listCategories))
+      .handle("listThreads", ({ query }) =>
+        Effect.flatMap(CurrentUser, (user) => forum.listThreads(user, query)),
+      )
+      .handle("createThread", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => forum.createThread(user, payload)),
+      )
+      .handle("getThread", ({ params, query }) =>
+        Effect.flatMap(CurrentUser, (user) => forum.getThread(user, params.id, query)),
+      )
+      .handle("reply", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => forum.reply(user, params.id, payload)),
+      )
+      .handle("deleteThread", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => forum.deleteThread(user, params.id)),
+      )
+      .handle("deletePost", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => forum.deletePost(user, params.id)),
+      );
+  }),
+);
+
 export const ApiHandlers = Layer.mergeAll(
   SystemHandlers,
   MeHandlers,
@@ -169,4 +198,5 @@ export const ApiHandlers = Layer.mergeAll(
   SafetyHandlers,
   SessionsHandlers,
   SessionActivityHandlers,
+  ForumHandlers,
 );

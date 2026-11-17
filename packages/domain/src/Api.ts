@@ -1,6 +1,24 @@
 import { Schema } from "effect";
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/http-api";
 import { Authentication } from "./Auth";
+import {
+  ForumCategory,
+  ForumCategoryNotFound,
+  ForumPost,
+  ForumPostId,
+  ForumPostNotFound,
+  ForumRateLimited,
+  ForumRepliesQuery,
+  ForumThread,
+  ForumThreadId,
+  ForumThreadNotFound,
+  ForumThreadPage,
+  ForumThreadsPage,
+  ForumThreadsQuery,
+  NewForumPost,
+  NewForumThread,
+  NotForumAuthor,
+} from "./Forum";
 import { CannotFollowSelf, FollowLimitReached, FollowedPlayers } from "./Follow";
 import {
   HomePointRequired,
@@ -321,6 +339,71 @@ export class SessionActivityApi extends HttpApiGroup.make("sessionActivity")
   )
   .middleware(Authentication) {}
 
+const ForumThreadParam = { id: ForumThreadId };
+const ForumPostParam = { id: ForumPostId };
+
+/**
+ * The forum: global categories plus the Local category for my metro.
+ * Threads and replies by players blocked either way with me are left out,
+ * and so is anything a moderator hid.
+ */
+export class ForumApi extends HttpApiGroup.make("forum")
+  /** The Local category for my metro first (when I have one), then the global ones. */
+  .add(
+    HttpApiEndpoint.get("listCategories", "/forum/categories", {
+      success: Schema.Array(ForumCategory),
+    }),
+  )
+  /** A category's threads, latest activity first, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("listThreads", "/forum/threads", {
+      query: ForumThreadsQuery,
+      success: ForumThreadsPage,
+      error: [ForumCategoryNotFound, InvalidCursor],
+    }),
+  )
+  /** Starts a thread. Local categories only take threads from players in that metro. */
+  .add(
+    HttpApiEndpoint.post("createThread", "/forum/threads", {
+      payload: NewForumThread,
+      success: ForumThread.pipe(HttpApiSchema.status(201)),
+      error: [ForumCategoryNotFound, ForumRateLimited],
+    }),
+  )
+  /** The thread and a page of its replies, oldest first. */
+  .add(
+    HttpApiEndpoint.get("getThread", "/forum/threads/:id", {
+      params: ForumThreadParam,
+      query: ForumRepliesQuery,
+      success: ForumThreadPage,
+      error: [ForumThreadNotFound, InvalidCursor],
+    }),
+  )
+  /** Replies to a thread, which moves it to the top of its category. */
+  .add(
+    HttpApiEndpoint.post("reply", "/forum/threads/:id/posts", {
+      params: ForumThreadParam,
+      payload: NewForumPost,
+      success: ForumPost.pipe(HttpApiSchema.status(201)),
+      error: [ForumThreadNotFound, ForumRateLimited],
+    }),
+  )
+  /** Author only. The thread drops out of lists for everyone. */
+  .add(
+    HttpApiEndpoint.delete("deleteThread", "/forum/threads/:id", {
+      params: ForumThreadParam,
+      error: [ForumThreadNotFound, NotForumAuthor],
+    }),
+  )
+  /** Author only. The reply stays in the thread as "Post deleted". */
+  .add(
+    HttpApiEndpoint.delete("deletePost", "/forum/posts/:id", {
+      params: ForumPostParam,
+      error: [ForumPostNotFound, NotForumAuthor],
+    }),
+  )
+  .middleware(Authentication) {}
+
 /** The whole Love All API. Shared by the server and the mobile client. */
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
@@ -330,4 +413,5 @@ export class Api extends HttpApi.make("love-all")
   .add(SafetyApi)
   .add(SessionsApi)
   .add(SessionActivityApi)
+  .add(ForumApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}
