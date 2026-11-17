@@ -5,7 +5,7 @@ import { Button, Card, Screen, space, Text } from "@/design";
 import { authClient } from "@/lib/auth-client";
 
 /**
- * The way into the players list and the Play tab, and account actions.
+ * The way into the players list, the Play tab and club reviews, and account actions.
  */
 export default function HomeScreen() {
   const { data: session } = authClient.useSession();
@@ -30,6 +30,16 @@ export default function HomeScreen() {
         </Text>
         <View style={styles.action}>
           <Button variant="secondary" label="Go to Play" onPress={() => router.navigate("/play")} />
+        </View>
+      </Card>
+
+      <Card>
+        <Text variant="subheading">Club reviews</Text>
+        <Text color="textMuted">
+          See what players say about courts and clubs near you, and review the ones you play at.
+        </Text>
+        <View style={styles.action}>
+          <Button variant="secondary" label="Browse clubs" onPress={() => router.push("/clubs")} />
         </View>
       </Card>
 
