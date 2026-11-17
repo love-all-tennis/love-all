@@ -21,6 +21,7 @@ import { Db } from "./Db";
 import {
   accountSuspension,
   clubReview,
+  equipmentReview,
   forumPost,
   forumThread,
   profile,
@@ -40,6 +41,7 @@ const hideable = {
   forum_thread: forumThread,
   forum_post: forumPost,
   club_review: clubReview,
+  equipment_review: equipmentReview,
 } as const;
 
 const reporterUser = alias(user, "reporter_user");
@@ -50,14 +52,15 @@ const subjectSuspension = alias(accountSuspension, "subject_suspension");
 const reportedThread = alias(forumThread, "reported_thread");
 const reportedPost = alias(forumPost, "reported_post");
 const reportedClubReview = alias(clubReview, "reported_club_review");
+const reportedEquipmentReview = alias(equipmentReview, "reported_equipment_review");
 
 /**
  * Moderation, for admins: the reports queue, hiding forum posts and club
  * reviews, and suspending players. Every method fails with `NotModerator`
  * for anyone whose `role` isn't "admin".
  *
- * Hiding sets `hidden_at`, which the forum and club reviews already leave
- * out for everyone.
+ * Hiding sets `hidden_at`, which the forum, club reviews and gear reviews
+ * already leave out for everyone.
  * Suspending signs the player out everywhere; `auth.ts` stops them signing
  * in again and player search leaves them out (`notSuspended`).
  *
@@ -227,13 +230,21 @@ export class Moderation extends Context.Service<
                   string | null
                 >`coalesce(${reportedThread.id}, ${reportedPost.threadId})::text`,
                 clubId: sql<string | null>`${reportedClubReview.clubId}::text`,
-                hidden: sql<boolean>`coalesce(${reportedThread.hiddenAt}, ${reportedPost.hiddenAt}, ${reportedClubReview.hiddenAt}) is not null`,
+                equipmentId: sql<string | null>`${reportedEquipmentReview.equipmentId}::text`,
+                hidden: sql<boolean>`coalesce(
+                  ${reportedThread.hiddenAt},
+                  ${reportedPost.hiddenAt},
+                  ${reportedClubReview.hiddenAt},
+                  ${reportedEquipmentReview.hiddenAt}
+                ) is not null`,
                 removed: sql<boolean>`case
                   when ${report.targetType} = 'player' then ${subjectUser.id} is null
                   -- Messages can't be deleted; they go only with the sender's account.
                   when ${report.targetType} = 'direct_message' then ${subjectUser.id} is null
                   -- Club reviews are deleted for good, so a missing row means removed.
                   when ${report.targetType} = 'club_review' then ${reportedClubReview.id} is null
+                  -- Players delete their own gear reviews outright, too.
+                  when ${report.targetType} = 'equipment_review' then ${reportedEquipmentReview.id} is null
                   else ${reportedThread.id} is null and ${reportedPost.id} is null
                     or coalesce(${reportedThread.deletedAt}, ${reportedPost.deletedAt}) is not null
                 end`,
@@ -268,6 +279,13 @@ export class Moderation extends Context.Service<
                 and(
                   eq(report.targetType, "club_review"),
                   sql`${reportedClubReview.id}::text = ${report.targetId}`,
+                ),
+              )
+              .leftJoin(
+                reportedEquipmentReview,
+                and(
+                  eq(report.targetType, "equipment_review"),
+                  sql`${reportedEquipmentReview.id}::text = ${report.targetId}`,
                 ),
               )
               .where(
@@ -311,6 +329,7 @@ export class Moderation extends Context.Service<
                       : null,
                     threadId: row.threadId,
                     clubId: row.clubId,
+                    equipmentId: row.equipmentId,
                     hidden: row.hidden,
                     removed: row.removed,
                     openReportsOnTarget: row.openReportsOnTarget,

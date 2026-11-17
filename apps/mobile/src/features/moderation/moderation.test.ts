@@ -16,6 +16,7 @@ const fields: Fields = {
   subject: { id: "u_alex", displayName: "Alex", suspended: false },
   threadId: "2b9b6d5e-2f4c-4c55-9d8a-0a8f1d1c2b3a",
   clubId: null,
+  equipmentId: null,
   hidden: false,
   removed: false,
   openReportsOnTarget: 1,
@@ -38,6 +39,7 @@ describe("reportActions", () => {
       dismiss: true,
       openThread: true,
       openClub: false,
+      openItem: false,
     });
   });
 
@@ -85,6 +87,25 @@ describe("reportActions", () => {
       hide: false,
       unhide: true,
       openClub: true,
+    });
+  });
+
+  it("offers hiding a gear review and opening its item, even once hidden", () => {
+    const review = {
+      targetType: "equipment_review",
+      threadId: null,
+      equipmentId: "4b9b6d5e-2f4c-4c55-9d8a-0a8f1d1c2b3a",
+    } as const;
+    expect(reportActions(with_(review))).toMatchObject({
+      hide: true,
+      openThread: false,
+      openClub: false,
+      openItem: true,
+    });
+    expect(reportActions(with_({ ...review, hidden: true }))).toMatchObject({
+      hide: false,
+      unhide: true,
+      openItem: true,
     });
   });
 });

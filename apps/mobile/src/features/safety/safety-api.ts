@@ -47,7 +47,9 @@ export const sendReport = (
                 ? "This player is no longer available."
                 : targetType === "direct_message"
                   ? "This message is no longer available."
-                  : "This post is no longer available.",
+                  : targetType === "equipment_review"
+                    ? "This review is no longer available."
+                    : "This post is no longer available.",
             ),
           CannotTargetSelf: () =>
             Effect.succeed<Outcome>("You can't report yourself or your own posts."),

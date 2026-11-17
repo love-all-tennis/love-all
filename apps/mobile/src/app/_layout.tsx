@@ -104,6 +104,7 @@ export default function RootLayout() {
           <Stack.Screen name="gear/[id]" options={{ ...header, title: "" }} />
           <Stack.Screen name="gear/new" options={{ ...header, title: "Add gear" }} />
           <Stack.Screen name="gear/review" options={{ ...header, title: "Write a review" }} />
+          <Stack.Screen name="gear/report" options={{ ...sheet, title: "Report" }} />
           <Stack.Screen name="clubs/index" options={{ ...header, title: "Club reviews" }} />
           <Stack.Screen name="clubs/[id]" options={{ ...header, title: "" }} />
           <Stack.Screen name="clubs/new" options={{ ...header, title: "Add a club" }} />

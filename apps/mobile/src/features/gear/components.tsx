@@ -1,7 +1,19 @@
 import type { EquipmentRatingSummary, EquipmentReview, EquipmentSummary } from "@love-all/domain";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Avatar, Card, Icon, motion, radius, size, space, Tag, Text, useColors } from "@/design";
+import {
+  Avatar,
+  Button,
+  Card,
+  Icon,
+  motion,
+  radius,
+  size,
+  space,
+  Tag,
+  Text,
+  useColors,
+} from "@/design";
 import { timeAgo } from "@/features/session-activity/comments";
 import {
   itemName,
@@ -172,11 +184,14 @@ export function ReviewCard({
   now,
   mine = false,
   onOpenAuthor,
+  onReport,
 }: {
   review: EquipmentReview;
   now: Date;
   mine?: boolean;
   onOpenAuthor?: () => void;
+  /** Offered on other players' reviews. */
+  onReport?: () => void;
 }) {
   const level = reviewerLevel(review.authorNtrp);
   const name = mine ? "You" : review.author.displayName;
@@ -220,6 +235,11 @@ export function ReviewCard({
         </View>
         {review.title && <Text variant="subheading">{review.title}</Text>}
         {review.body && <Text>{review.body}</Text>}
+        {onReport && (
+          <View style={styles.reviewActions}>
+            <Button variant="quiet" size="small" label="Report review" onPress={onReport} />
+          </View>
+        )}
       </View>
     </Card>
   );
@@ -246,6 +266,7 @@ const styles = StyleSheet.create({
   track: { flex: 1, height: space[2], borderRadius: radius.full, overflow: "hidden" },
   fill: { height: "100%", borderRadius: radius.full },
   review: { gap: space[3] },
+  reviewActions: { flexDirection: "row" },
   authorRow: { flexDirection: "row", alignItems: "center", gap: space[3] },
   authorLink: { minHeight: size.minTap, justifyContent: "center" },
 });

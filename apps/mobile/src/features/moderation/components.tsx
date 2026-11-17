@@ -20,6 +20,7 @@ export type ReportAction =
   | "dismiss"
   | "openThread"
   | "openClub"
+  | "openItem"
   | "openPlayer";
 
 /**
@@ -126,6 +127,13 @@ export function ReportCard({
               size="small"
               label="Open thread"
               onPress={() => onAction("openThread")}
+            />
+          ) : actions.openItem ? (
+            <Button
+              variant="quiet"
+              size="small"
+              label="Open gear"
+              onPress={() => onAction("openItem")}
             />
           ) : actions.openClub ? (
             <Button

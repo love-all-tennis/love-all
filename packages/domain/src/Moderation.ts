@@ -27,7 +27,12 @@ export const ReportResolution = Schema.Literals([
 export type ReportResolution = typeof ReportResolution.Type;
 
 /** Report target types that are content a moderator can hide. */
-export const HideableTargetType = Schema.Literals(["forum_thread", "forum_post", "club_review"]);
+export const HideableTargetType = Schema.Literals([
+  "forum_thread",
+  "forum_post",
+  "club_review",
+  "equipment_review",
+]);
 export type HideableTargetType = typeof HideableTargetType.Type;
 
 export const SUSPENSION_REASON_MAX = 500;
@@ -58,6 +63,8 @@ export class ModerationReport extends Schema.Class<ModerationReport>("Moderation
   threadId: Schema.NullOr(Schema.String),
   /** For a club review: its club, to open it. */
   clubId: Schema.NullOr(Schema.String),
+  /** For a gear review: the item it reviews, to open it. */
+  equipmentId: Schema.NullOr(Schema.String),
   /** For content: whether a moderator has hidden it. */
   hidden: Schema.Boolean,
   /** For content: whether its author deleted it (or it's gone). */
