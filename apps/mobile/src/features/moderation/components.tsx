@@ -19,6 +19,7 @@ export type ReportAction =
   | "unsuspend"
   | "dismiss"
   | "openThread"
+  | "openItem"
   | "openPlayer";
 
 /**
@@ -125,6 +126,13 @@ export function ReportCard({
               size="small"
               label="Open thread"
               onPress={() => onAction("openThread")}
+            />
+          ) : actions.openItem ? (
+            <Button
+              variant="quiet"
+              size="small"
+              label="Open gear"
+              onPress={() => onAction("openItem")}
             />
           ) : report.targetType === "player" && report.subject && !report.subject.suspended ? (
             <Button

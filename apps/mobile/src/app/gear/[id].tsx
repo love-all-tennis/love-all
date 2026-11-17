@@ -1,3 +1,4 @@
+import type { EquipmentReview } from "@love-all/domain";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 
@@ -8,6 +9,13 @@ import { useItem } from "@/features/gear/use-gear";
 import { useNow } from "@/features/sessions/use-sessions";
 
 const openPlayer = (id: string) => router.push({ pathname: "/players/[id]", params: { id } });
+
+/** Reports the review itself, so moderators see what was written. */
+const reportReview = (review: EquipmentReview) =>
+  router.push({
+    pathname: "/gear/report",
+    params: { id: review.id, authorId: review.author.id, name: review.author.displayName },
+  });
 
 /** An item: its ratings, my review (or the button to write one), then everyone else's. */
 export default function GearItemScreen() {
@@ -54,7 +62,12 @@ export default function GearItemScreen() {
         data={reviews}
         keyExtractor={(review) => review.id}
         renderItem={({ item: review }) => (
-          <ReviewCard review={review} now={now} onOpenAuthor={() => openPlayer(review.author.id)} />
+          <ReviewCard
+            review={review}
+            now={now}
+            onOpenAuthor={() => openPlayer(review.author.id)}
+            onReport={() => reportReview(review)}
+          />
         )}
         ListHeaderComponent={
           <View style={styles.header}>

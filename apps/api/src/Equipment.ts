@@ -389,3 +389,50 @@ export class Equipment extends Context.Service<
     }),
   );
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * A gear review as a report sees it: who wrote it and a copy of what it
+ * says. None unless the viewer can see it (not hidden, the item not hidden,
+ * and its author not blocked either way).
+ */
+export const reportableEquipmentReview = (
+  db: Db["Service"],
+  viewerId: string,
+  reviewId: string,
+): Effect.Effect<Option.Option<{ readonly authorId: string; readonly content: string }>> =>
+  UUID.test(reviewId)
+    ? db
+        .select({
+          authorId: equipmentReview.authorId,
+          brand: equipment.brand,
+          model: equipment.model,
+          rating: equipmentReview.rating,
+          title: equipmentReview.title,
+          body: equipmentReview.body,
+        })
+        .from(equipmentReview)
+        .innerJoin(equipment, eq(equipment.id, equipmentReview.equipmentId))
+        .where(
+          and(
+            eq(equipmentReview.id, reviewId),
+            isNull(equipmentReview.hiddenAt),
+            isNull(equipment.hiddenAt),
+            notBlocked(viewerId, equipmentReview.authorId),
+          ),
+        )
+        .pipe(
+          Effect.map(([row]) =>
+            Option.fromNullishOr(row).pipe(
+              Option.map((r) => ({
+                authorId: r.authorId,
+                content: [`${r.brand} ${r.model}: ${r.rating} out of 5`, r.title, r.body]
+                  .filter((part): part is string => part !== null)
+                  .join("\n\n"),
+              })),
+            ),
+          ),
+          Effect.orDie,
+        )
+    : Effect.succeed(Option.none());

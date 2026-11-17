@@ -6,6 +6,8 @@ import { makeAuth } from "./auth";
 import { Db } from "./Db";
 import {
   accountSuspension,
+  equipment,
+  equipmentReview,
   forumCategory,
   forumPost,
   forumThread,
@@ -14,6 +16,7 @@ import {
   session,
   user,
 } from "./db/schema";
+import { Equipment } from "./Equipment";
 import { Forum } from "./Forum";
 import { Moderation } from "./Moderation";
 import { Players } from "./Players";
@@ -24,6 +27,7 @@ import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = Layer.mergeAll(
   Moderation.layer,
+  Equipment.layer,
   Safety.layer.pipe(Layer.provideMerge(Forum.layer)),
   Players.layer,
   Profiles.layer,
@@ -42,7 +46,7 @@ interface World {
 /** Creates `count` accounts (the first an admin), runs `f`, then deletes them and their reports. */
 const withWorld = <A, E>(
   count: number,
-  f: (world: World) => Effect.Effect<A, E, Players | Profiles>,
+  f: (world: World) => Effect.Effect<A, E, Players | Profiles | Equipment>,
 ) =>
   Effect.gen(function* () {
     const db = yield* Db;
@@ -170,6 +174,50 @@ describe.skipIf(!process.env.DATABASE_URL)("Moderation", () => {
     expect(result.unhidden.replies).toHaveLength(1);
     expect(result.unhidden.thread.replyCount).toBe(1);
     expect(result.missing._tag).toBe("TargetNotFound");
+  });
+
+  it("lists a reported gear review with its item, then hides it from everyone", async () => {
+    const result = await withWorld(3, ({ players: [admin, sam, alex], moderation, safety, db }) =>
+      Effect.gen(function* () {
+        const gear = yield* Equipment;
+        const [item] = yield* db
+          .insert(equipment)
+          .values({ kind: "racket", brand: `Test${crypto.randomUUID().slice(0, 8)}`, model: "X" })
+          .returning({ id: equipment.id });
+        return yield* Effect.gen(function* () {
+          const [review] = yield* db
+            .insert(equipmentReview)
+            .values({ equipmentId: item!.id, authorId: alex!.id, rating: 1, body: "Spam link" })
+            .returning({ id: equipmentReview.id });
+          const target = { targetType: "equipment_review" as const, targetId: review!.id };
+          const own = yield* Effect.flip(safety.report(alex!, { ...target, reason: "spam" }));
+          yield* safety.report(sam!, { ...target, reason: "spam" });
+          const listed = (yield* moderation.listReports(admin!, { limit: 100 })).items.find(
+            (r) => r.targetId === review!.id,
+          );
+          yield* moderation.hideContent(admin!, "equipment_review", review!.id);
+          const reviews = yield* gear.listReviews(sam!, item!.id, {});
+          const detail = yield* gear.get(sam!, item!.id);
+          const again = yield* Effect.flip(safety.report(admin!, { ...target, reason: "spam" }));
+          return { own, listed, reviews, detail, again, itemId: item!.id, alexId: alex!.id };
+        }).pipe(
+          Effect.ensuring(Effect.orDie(db.delete(equipment).where(eq(equipment.id, item!.id)))),
+        );
+      }),
+    );
+    expect(result.own._tag).toBe("CannotTargetSelf");
+    expect(result.listed).toMatchObject({
+      targetType: "equipment_review",
+      equipmentId: result.itemId,
+      threadId: null,
+      subject: { id: result.alexId },
+      hidden: false,
+      removed: false,
+    });
+    expect(result.listed!.content).toMatch(/: 1 out of 5\n\nSpam link$/);
+    expect(result.reviews.items).toEqual([]);
+    expect(result.detail.rating.count).toBe(0);
+    expect(result.again._tag).toBe("TargetNotFound");
   });
 
   it("dismisses every open report on the same target", async () => {

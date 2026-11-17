@@ -1,0 +1,40 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "5b06c378-2184-4345-8a21-61aff3c16fdb",
+  "prevIds": [
+    "5ba48c00-92bb-4770-8531-8de1ab38d0ef"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "report_target_type"
+      ],
+      "writes": [
+        "s|enum|public.report_target_type"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"report_target_type\"]",
+      "set": {
+        "values": [
+          "player",
+          "forum_thread",
+          "forum_post",
+          "direct_message",
+          "equipment_review"
+        ]
+      }
+    }
+  ]
+}
