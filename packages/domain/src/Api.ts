@@ -2,6 +2,20 @@ import { Schema } from "effect";
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/http-api";
 import { Authentication } from "./Auth";
 import {
+  EquipmentDetail,
+  EquipmentExists,
+  EquipmentId,
+  EquipmentNotFound,
+  EquipmentPage,
+  EquipmentQuery,
+  EquipmentRateLimited,
+  EquipmentReview,
+  EquipmentReviewInput,
+  EquipmentReviewsPage,
+  EquipmentReviewsQuery,
+  NewEquipment,
+} from "./Equipment";
+import {
   ForumCategory,
   ForumCategoryNotFound,
   ForumPost,
@@ -433,6 +447,64 @@ export class ForumApi extends HttpApiGroup.make("forum")
   )
   .middleware(Authentication) {}
 
+const EquipmentIdParam = { id: EquipmentId };
+
+/**
+ * Equipment reviews: a shared catalog of gear that any player can add to,
+ * and one review per player per item. Reviews by players blocked either way
+ * with me are left out, and don't count toward the ratings I see.
+ */
+export class EquipmentApi extends HttpApiGroup.make("equipment")
+  /** The catalog by brand then model, optionally one kind or matching `q`, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("list", "/equipment", {
+      query: EquipmentQuery,
+      success: EquipmentPage,
+      error: InvalidCursor,
+    }),
+  )
+  /** Adds an item to the catalog. Fails with the existing id when it's already there. */
+  .add(
+    HttpApiEndpoint.post("create", "/equipment", {
+      payload: NewEquipment,
+      success: EquipmentDetail.pipe(HttpApiSchema.status(201)),
+      error: [EquipmentExists, EquipmentRateLimited],
+    }),
+  )
+  /** An item with its rating summary and my review. */
+  .add(
+    HttpApiEndpoint.get("get", "/equipment/:id", {
+      params: EquipmentIdParam,
+      success: EquipmentDetail,
+      error: EquipmentNotFound,
+    }),
+  )
+  /** Other players' reviews of an item, newest first, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("listReviews", "/equipment/:id/reviews", {
+      params: EquipmentIdParam,
+      query: EquipmentReviewsQuery,
+      success: EquipmentReviewsPage,
+      error: [EquipmentNotFound, InvalidCursor],
+    }),
+  )
+  /** Writes or replaces my review of an item. */
+  .add(
+    HttpApiEndpoint.put("saveReview", "/equipment/:id/review", {
+      params: EquipmentIdParam,
+      payload: EquipmentReviewInput,
+      success: EquipmentReview,
+      error: EquipmentNotFound,
+    }),
+  )
+  /** Idempotent: deleting a review I haven't written does nothing. */
+  .add(
+    HttpApiEndpoint.delete("deleteReview", "/equipment/:id/review", {
+      params: EquipmentIdParam,
+    }),
+  )
+  .middleware(Authentication) {}
+
 /** The whole Love All API. Shared by the server and the mobile client. */
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
@@ -443,4 +515,5 @@ export class Api extends HttpApi.make("love-all")
   .add(SessionsApi)
   .add(SessionActivityApi)
   .add(ForumApi)
+  .add(EquipmentApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}

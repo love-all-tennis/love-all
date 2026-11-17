@@ -8,6 +8,7 @@ import { Accounts } from "./Accounts";
 import { AuthenticationLive } from "./Authentication";
 import { BetterAuth, TrustedOrigins } from "./BetterAuth";
 import { Db } from "./Db";
+import { Equipment } from "./Equipment";
 import { Follows } from "./Follows";
 import { Forum } from "./Forum";
 import { ApiHandlers } from "./Handlers";
@@ -32,6 +33,7 @@ const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pi
   Layer.provide([
     AuthenticationLive,
     Accounts.layer,
+    Equipment.layer,
     Follows.layer,
     Forum.layer,
     Players.layer,

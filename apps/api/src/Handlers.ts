@@ -4,6 +4,7 @@ import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { Accounts } from "./Accounts";
 import { Db } from "./Db";
+import { Equipment } from "./Equipment";
 import { Follows } from "./Follows";
 import { Forum } from "./Forum";
 import { Players } from "./Players";
@@ -202,6 +203,31 @@ export const ForumHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const EquipmentHandlers = HttpApiBuilder.group(
+  Api,
+  "equipment",
+  Effect.fn(function* (handlers) {
+    const gear = yield* Equipment;
+    return handlers
+      .handle("list", ({ query }) => Effect.flatMap(CurrentUser, (user) => gear.list(user, query)))
+      .handle("create", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => gear.create(user, payload)),
+      )
+      .handle("get", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => gear.get(user, params.id)),
+      )
+      .handle("listReviews", ({ params, query }) =>
+        Effect.flatMap(CurrentUser, (user) => gear.listReviews(user, params.id, query)),
+      )
+      .handle("saveReview", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => gear.saveReview(user, params.id, payload)),
+      )
+      .handle("deleteReview", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => gear.deleteReview(user, params.id)),
+      );
+  }),
+);
+
 export const ApiHandlers = Layer.mergeAll(
   SystemHandlers,
   MeHandlers,
@@ -211,4 +237,5 @@ export const ApiHandlers = Layer.mergeAll(
   SessionsHandlers,
   SessionActivityHandlers,
   ForumHandlers,
+  EquipmentHandlers,
 );
