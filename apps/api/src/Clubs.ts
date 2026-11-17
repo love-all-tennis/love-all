@@ -386,3 +386,39 @@ export class Clubs extends Context.Service<
     }),
   );
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * A club review as a report of it needs it: who wrote it, and its stars,
+ * note and club as moderators will read them. None when the review is gone,
+ * hidden, or by a player blocked either way with the reporter, since they
+ * couldn't have seen it.
+ */
+export const reportableClubReview = (db: Db["Service"], viewerId: string, reviewId: string) =>
+  Effect.gen(function* () {
+    if (!UUID.test(reviewId)) return Option.none<{ authorId: string; content: string }>();
+    const [row] = yield* db
+      .select({
+        authorId: clubReview.authorId,
+        rating: clubReview.rating,
+        body: clubReview.body,
+        clubName: club.name,
+      })
+      .from(clubReview)
+      .innerJoin(club, eq(club.id, clubReview.clubId))
+      .where(
+        and(
+          eq(clubReview.id, reviewId),
+          isNull(clubReview.hiddenAt),
+          notBlocked(viewerId, clubReview.authorId),
+        ),
+      )
+      .pipe(Effect.orDie);
+    if (!row) return Option.none<{ authorId: string; content: string }>();
+    const stars = `${row.rating} ${row.rating === 1 ? "star" : "stars"} for ${row.clubName}`;
+    return Option.some({
+      authorId: row.authorId,
+      content: row.body ? `${stars}\n\n${row.body}` : stars,
+    });
+  });

@@ -9,6 +9,7 @@ import {
 } from "@love-all/domain";
 import { and, desc, eq, or } from "drizzle-orm";
 import { Context, Effect, Layer, Option } from "effect";
+import { reportableClubReview } from "./Clubs";
 import { Db } from "./Db";
 import { Forum } from "./Forum";
 import { reportableMessage } from "./Messages";
@@ -103,6 +104,10 @@ export class Safety extends Context.Service<
           case "direct_message":
             // Still reportable after a block: blocking first and reporting next is common.
             return reportableMessage(db, viewer.id, id).pipe(
+              Effect.flatMap((found) => otherAuthor(viewer, id, found)),
+            );
+          case "club_review":
+            return reportableClubReview(db, viewer.id, id).pipe(
               Effect.flatMap((found) => otherAuthor(viewer, id, found)),
             );
         }
