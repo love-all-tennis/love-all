@@ -14,6 +14,7 @@ import {
   time,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
@@ -448,5 +449,35 @@ export const forumPost = pgTable(
     index("forum_post_thread_created_idx").on(t.threadId, t.createdAt, t.id),
     index("forum_post_author_created_idx").on(t.authorId, t.createdAt),
     check("forum_post_body_length", sql`char_length(${t.body}) between 1 and 5000`),
+  ],
+);
+
+/** Reaction kinds; keep in step with `FORUM_REACTION_KINDS` in the domain. */
+export const forumReactionKind = pgEnum("forum_reaction_kind", ["like", "helpful", "ace"]);
+
+/**
+ * A player's reaction to a thread or a reply: exactly one of `thread_id` and
+ * `post_id` is set. A player reacts with each kind at most once per target.
+ */
+export const forumReaction = pgTable(
+  "forum_reaction",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    threadId: uuid("thread_id").references(() => forumThread.id, { onDelete: "cascade" }),
+    postId: uuid("post_id").references(() => forumPost.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: forumReactionKind("kind").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("forum_reaction_thread_unique")
+      .on(t.threadId, t.userId, t.kind)
+      .where(sql`${t.threadId} is not null`),
+    uniqueIndex("forum_reaction_post_unique")
+      .on(t.postId, t.userId, t.kind)
+      .where(sql`${t.postId} is not null`),
+    check("forum_reaction_one_target", sql`num_nonnulls(${t.threadId}, ${t.postId}) = 1`),
   ],
 );

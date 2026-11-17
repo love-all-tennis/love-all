@@ -43,6 +43,26 @@ export const ForumAuthor = Schema.Struct({
 });
 export type ForumAuthor = typeof ForumAuthor.Type;
 
+/**
+ * What players can react with. Adding a kind is a one-line change here
+ * (plus a migration for the database enum).
+ */
+export const FORUM_REACTION_KINDS = ["like", "helpful", "ace"] as const;
+export const ForumReactionKind = Schema.Literals(FORUM_REACTION_KINDS);
+export type ForumReactionKind = typeof ForumReactionKind.Type;
+
+/**
+ * How many players reacted with a kind, and whether I did. Every kind is
+ * listed, in `FORUM_REACTION_KINDS` order, with a count of 0 when nobody
+ * has. Reactions by players blocked either way with me aren't counted.
+ */
+export const ForumReactionCount = Schema.Struct({
+  kind: ForumReactionKind,
+  count: Schema.Int,
+  mine: Schema.Boolean,
+});
+export type ForumReactionCount = typeof ForumReactionCount.Type;
+
 /** The thread with the latest activity in a category, for the category list. */
 export const ForumLatestThread = Schema.Struct({
   id: ForumThreadId,
@@ -87,6 +107,7 @@ export class ForumThread extends Schema.Class<ForumThread>("ForumThread")({
   replyCount: Schema.Int,
   lastPostAt: Schema.DateFromString,
   createdAt: Schema.DateFromString,
+  reactions: Schema.Array(ForumReactionCount),
 }) {}
 
 /**
@@ -100,6 +121,8 @@ export class ForumPost extends Schema.Class<ForumPost>("ForumPost")({
   body: Schema.NullOr(Schema.String),
   author: Schema.NullOr(ForumAuthor),
   createdAt: Schema.DateFromString,
+  /** All zero on a deleted reply. */
+  reactions: Schema.Array(ForumReactionCount),
 }) {}
 
 export const FORUM_PAGE_DEFAULT = 30;

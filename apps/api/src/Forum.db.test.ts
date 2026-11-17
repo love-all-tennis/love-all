@@ -353,3 +353,100 @@ describe.skipIf(!process.env.DATABASE_URL)("Forum blocks", () => {
     expect(result.otherSees.map((p) => p.body)).toEqual(["From blocked", "From other"]);
   });
 });
+
+const countsOf = (reactions: ReadonlyArray<{ kind: string; count: number; mine: boolean }>) =>
+  Object.fromEntries(reactions.map((r) => [r.kind, [r.count, r.mine]]));
+
+describe.skipIf(!process.env.DATABASE_URL)("Forum reactions", () => {
+  it("adds and removes reactions on threads and replies, idempotently", async () => {
+    const result = await withForum({ count: 2 }, ({ players: [me, sam], forum, categoryId }) =>
+      Effect.gen(function* () {
+        const started = yield* forum.createThread(me!, thread(categoryId, "Q"));
+        const reply = yield* forum.reply(sam!, started.id, { body: "A" });
+        yield* forum.reactToThread(me!, started.id, "like");
+        yield* forum.reactToThread(me!, started.id, "like");
+        yield* forum.reactToThread(sam!, started.id, "like");
+        yield* forum.reactToThread(sam!, started.id, "ace");
+        yield* forum.reactToPost(me!, reply.id, "helpful");
+        yield* forum.reactToPost(me!, reply.id, "helpful");
+        const before = yield* forum.getThread(me!, started.id, {});
+        yield* forum.unreactToThread(sam!, started.id, "ace");
+        yield* forum.unreactToThread(sam!, started.id, "ace");
+        yield* forum.unreactToPost(me!, reply.id, "helpful");
+        const after = yield* forum.getThread(me!, started.id, {});
+        return { before, after, samView: yield* forum.getThread(sam!, started.id, {}) };
+      }),
+    );
+    expect(result.before.thread.reactions.map((r) => r.kind)).toEqual(["like", "helpful", "ace"]);
+    expect(countsOf(result.before.thread.reactions)).toEqual({
+      like: [2, true],
+      helpful: [0, false],
+      ace: [1, false],
+    });
+    expect(countsOf(result.before.replies[0]!.reactions)).toMatchObject({ helpful: [1, true] });
+    expect(countsOf(result.after.thread.reactions)).toMatchObject({ ace: [0, false] });
+    expect(countsOf(result.after.replies[0]!.reactions)).toMatchObject({ helpful: [0, false] });
+    expect(countsOf(result.samView.thread.reactions)).toMatchObject({ like: [2, true] });
+  });
+
+  it("refuses reactions on deleted or hidden content", async () => {
+    const result = await withForum({ count: 2 }, ({ players: [me, sam], forum, db, categoryId }) =>
+      Effect.gen(function* () {
+        const gone = yield* forum.createThread(me!, thread(categoryId, "Gone"));
+        const hidden = yield* forum.createThread(me!, thread(categoryId, "Hidden"));
+        const live = yield* forum.createThread(me!, thread(categoryId, "Live"));
+        const deletedReply = yield* forum.reply(sam!, live.id, { body: "Oops" });
+        const hiddenReply = yield* forum.reply(sam!, live.id, { body: "Rude" });
+        yield* forum.deleteThread(me!, gone.id);
+        yield* forum.deletePost(sam!, deletedReply.id);
+        yield* db
+          .update(forumThread)
+          .set({ hiddenAt: new Date() })
+          .where(eq(forumThread.id, hidden.id));
+        yield* db
+          .update(forumPost)
+          .set({ hiddenAt: new Date() })
+          .where(eq(forumPost.id, hiddenReply.id));
+        return yield* Effect.all([
+          forum.reactToThread(sam!, gone.id, "like").pipe(Effect.flip),
+          forum.reactToThread(sam!, hidden.id, "like").pipe(Effect.flip),
+          forum.reactToPost(me!, deletedReply.id, "like").pipe(Effect.flip),
+          forum.reactToPost(me!, hiddenReply.id, "like").pipe(Effect.flip),
+        ]);
+      }),
+    );
+    expect(result.map((e) => e._tag)).toEqual([
+      "ForumThreadNotFound",
+      "ForumThreadNotFound",
+      "ForumPostNotFound",
+      "ForumPostNotFound",
+    ]);
+  });
+
+  it("leaves blocked players' reactions out of the counts, both ways", async () => {
+    const result = await withForum(
+      { count: 3 },
+      ({ players: [me, blocked, other], forum, db, categoryId }) =>
+        Effect.gen(function* () {
+          const started = yield* forum.createThread(other!, thread(categoryId, "Q"));
+          const reply = yield* forum.reply(other!, started.id, { body: "A" });
+          yield* forum.reactToThread(blocked!, started.id, "like");
+          yield* forum.reactToThread(other!, started.id, "like");
+          yield* forum.reactToPost(blocked!, reply.id, "ace");
+          yield* db.insert(block).values({ blockerId: me!.id, blockedId: blocked!.id });
+          return {
+            mine: yield* forum.getThread(me!, started.id, {}),
+            others: yield* forum.getThread(other!, started.id, {}),
+            blockedCanReact: yield* forum
+              .reactToPost(blocked!, reply.id, "like")
+              .pipe(Effect.as("ok")),
+          };
+        }),
+    );
+    expect(countsOf(result.mine.thread.reactions)).toMatchObject({ like: [1, false] });
+    expect(countsOf(result.mine.replies[0]!.reactions)).toMatchObject({ ace: [0, false] });
+    expect(countsOf(result.others.thread.reactions)).toMatchObject({ like: [2, true] });
+    expect(countsOf(result.others.replies[0]!.reactions)).toMatchObject({ ace: [1, false] });
+    expect(result.blockedCanReact).toBe("ok");
+  });
+});
