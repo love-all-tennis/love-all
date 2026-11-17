@@ -5,8 +5,8 @@ import { typography, useColors } from "@/design";
 /**
  * The native tab bar: iOS and Android draw their own. Icons are SF Symbols on
  * iOS (outline, filled when selected) and Material symbols on Android, per
- * the Tab bar section of docs/design.md. Sessions, Forum and Messages join
- * as their features land.
+ * the Tab bar section of docs/design.md. Forum and Messages join as their
+ * features land.
  */
 export default function AppTabs() {
   const palette = useColors();
@@ -32,6 +32,14 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon
           sf={{ default: "person.2", selected: "person.2.fill" }}
           md="group"
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="play">
+        <NativeTabs.Trigger.Label>Play</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: "calendar", selected: "calendar" }}
+          md="calendar_month"
         />
       </NativeTabs.Trigger>
     </NativeTabs>

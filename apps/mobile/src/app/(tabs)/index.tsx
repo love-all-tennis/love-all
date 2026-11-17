@@ -5,8 +5,7 @@ import { Button, Card, Screen, space, Text } from "@/design";
 import { authClient } from "@/lib/auth-client";
 
 /**
- * A placeholder until upcoming matches and hitting sessions arrive (#13):
- * the way into the players list, and account actions.
+ * The way into the players list and the Play tab, and account actions.
  */
 export default function HomeScreen() {
   const { data: session } = authClient.useSession();
@@ -24,11 +23,14 @@ export default function HomeScreen() {
         </View>
       </Card>
 
-      <Card tone="sunken">
+      <Card>
         <Text variant="subheading">Matches and hitting sessions</Text>
         <Text color="textMuted">
-          Setting up matches and hitting sessions is coming next. They'll show here.
+          Set up a match or hitting session, answer invites, and find open sessions nearby.
         </Text>
+        <View style={styles.action}>
+          <Button variant="secondary" label="Go to Play" onPress={() => router.navigate("/play")} />
+        </View>
       </Card>
 
       <View style={styles.account}>

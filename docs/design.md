@@ -128,15 +128,15 @@ Geist Sans for the interface, Geist Serif for the top of the hierarchy. Both are
 
 The tab bar uses `NativeTabs` from `expo-router/native-tabs`, so iOS and Android draw their own bars. Every tab has an icon and a one-word label. Give each `NativeTabs.Trigger.Icon` an `sf` symbol for iOS (outline by default, filled when selected) and an `md` Material symbol for Android. Don't use PNG tab icons. The bar's ground is `surface`, the selected icon and label are `accent`, and unselected ones are `textMuted`.
 
-| Tab                            | Label    | iOS (`sf`: default / selected)                                       | Android (`md`)   |
-| ------------------------------ | -------- | -------------------------------------------------------------------- | ---------------- |
-| Home                           | Home     | `house` / `house.fill`                                               | `home`           |
-| Players                        | Players  | `person.2` / `person.2.fill`                                         | `group`          |
-| Sessions (matches and hitting) | Sessions | `calendar` / `calendar`                                              | `calendar_month` |
-| Forum                          | Forum    | `bubble.left.and.bubble.right` / `bubble.left.and.bubble.right.fill` | `forum`          |
-| Messages                       | Messages | `envelope` / `envelope.fill`                                         | `mail`           |
+| Tab                        | Label    | iOS (`sf`: default / selected)                                       | Android (`md`)   |
+| -------------------------- | -------- | -------------------------------------------------------------------- | ---------------- |
+| Home                       | Home     | `house` / `house.fill`                                               | `home`           |
+| Players                    | Players  | `person.2` / `person.2.fill`                                         | `group`          |
+| Play (matches and hitting) | Play     | `calendar` / `calendar`                                              | `calendar_month` |
+| Forum                      | Forum    | `bubble.left.and.bubble.right` / `bubble.left.and.bubble.right.fill` | `forum`          |
+| Messages                   | Messages | `envelope` / `envelope.fill`                                         | `mail`           |
 
-Five tabs at most. Today's app has Home and Players (`src/components/app-tabs.tsx`, with a matching bar for web in `app-tabs.web.tsx`). Add the others as their features land, rather than as empty tabs.
+Five tabs at most. Today's app has Home, Players and Play (`src/components/app-tabs.tsx`, with a matching bar for web in `app-tabs.web.tsx`). Add the others as their features land, rather than as empty tabs.
 
 - Player photos are round (`size.avatar`: 32 in dense lists, 48 in rows, 72 to 112 on a profile). Without a photo, show initials on `surfaceSunken`, as `PlayerAvatar` does.
 - No stock photos, illustrations of tennis players, or mascots. Empty states use type, not pictures.
