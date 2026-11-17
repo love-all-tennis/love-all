@@ -3,6 +3,7 @@ export * from "./Auth";
 export * from "./Device";
 export * from "./Follow";
 export * from "./Forum";
+export * from "./Message";
 export * from "./Moderation";
 export * from "./Player";
 export * from "./Profile";

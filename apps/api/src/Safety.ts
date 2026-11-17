@@ -11,6 +11,7 @@ import { and, desc, eq, or } from "drizzle-orm";
 import { Context, Effect, Layer, Option } from "effect";
 import { Db } from "./Db";
 import { Forum } from "./Forum";
+import { reportableMessage } from "./Messages";
 import { block, follow, profile, report, user } from "./db/schema";
 import { removeFromEachOthersSessions } from "./SessionJoins";
 
@@ -99,6 +100,11 @@ export class Safety extends Context.Service<
             return forum
               .findReportable(viewer, "post", id)
               .pipe(Effect.flatMap((found) => otherAuthor(viewer, id, found)));
+          case "direct_message":
+            // Still reportable after a block: blocking first and reporting next is common.
+            return reportableMessage(db, viewer.id, id).pipe(
+              Effect.flatMap((found) => otherAuthor(viewer, id, found)),
+            );
         }
       };
 

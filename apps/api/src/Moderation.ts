@@ -222,6 +222,8 @@ export class Moderation extends Context.Service<
                 hidden: sql<boolean>`coalesce(${reportedThread.hiddenAt}, ${reportedPost.hiddenAt}) is not null`,
                 removed: sql<boolean>`case
                   when ${report.targetType} = 'player' then ${subjectUser.id} is null
+                  -- Messages can't be deleted; they go only with the sender's account.
+                  when ${report.targetType} = 'direct_message' then ${subjectUser.id} is null
                   else ${reportedThread.id} is null and ${reportedPost.id} is null
                     or coalesce(${reportedThread.deletedAt}, ${reportedPost.deletedAt}) is not null
                 end`,

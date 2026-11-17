@@ -40,6 +40,20 @@ import {
   ReportId,
   ReportNotFound,
 } from "./Moderation";
+import {
+  CannotMessageSelf,
+  Conversation,
+  ConversationId,
+  ConversationNotFound,
+  ConversationsPage,
+  ConversationsQuery,
+  DirectMessage,
+  MessagesPage,
+  MessagesQuery,
+  MessagesRateLimited,
+  NewConversation,
+  NewDirectMessage,
+} from "./Message";
 import { Availability, Me, ProfilePatch } from "./Profile";
 import {
   BlockedPlayer,
@@ -517,6 +531,59 @@ export class DevicesApi extends HttpApiGroup.make("devices")
   .add(HttpApiEndpoint.delete("unregister", "/devices/:token", { params: { token: PushToken } }))
   .middleware(Authentication) {}
 
+const ConversationParam = { id: ConversationId };
+
+/**
+ * Direct messages: async one-to-one conversations. Only the two players in a
+ * conversation can see it, and a block either way ends it for both.
+ */
+export class MessagesApi extends HttpApiGroup.make("messages")
+  /** My conversations that have messages, latest message first, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("listConversations", "/conversations", {
+      query: ConversationsQuery,
+      success: ConversationsPage,
+      error: InvalidCursor,
+    }),
+  )
+  /**
+   * Opens my conversation with a player, starting one if we have none.
+   * Starting one needs a profile, and the player must be one I can see.
+   */
+  .add(
+    HttpApiEndpoint.post("openConversation", "/conversations", {
+      payload: NewConversation,
+      success: Conversation,
+      error: [PlayerNotFound, CannotMessageSelf, ProfileRequired, MessagesRateLimited],
+    }),
+  )
+  /** The conversation and a page of its messages, newest first. Doesn't mark anything read. */
+  .add(
+    HttpApiEndpoint.get("listMessages", "/conversations/:id/messages", {
+      params: ConversationParam,
+      query: MessagesQuery,
+      success: MessagesPage,
+      error: [ConversationNotFound, InvalidCursor],
+    }),
+  )
+  /** Sends a message. Everything before it counts as read for me. */
+  .add(
+    HttpApiEndpoint.post("send", "/conversations/:id/messages", {
+      params: ConversationParam,
+      payload: NewDirectMessage,
+      success: DirectMessage.pipe(HttpApiSchema.status(201)),
+      error: [ConversationNotFound, MessagesRateLimited],
+    }),
+  )
+  /** Marks every message in the conversation read for me. */
+  .add(
+    HttpApiEndpoint.post("markRead", "/conversations/:id/read", {
+      params: ConversationParam,
+      error: ConversationNotFound,
+    }),
+  )
+  .middleware(Authentication) {}
+
 /** The whole Love All API. Shared by the server and the mobile client. */
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
@@ -529,4 +596,5 @@ export class Api extends HttpApi.make("love-all")
   .add(ForumApi)
   .add(ModerationApi)
   .add(DevicesApi)
+  .add(MessagesApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}

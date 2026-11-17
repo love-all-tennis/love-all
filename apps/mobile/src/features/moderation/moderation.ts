@@ -14,6 +14,7 @@ export const TARGET_LABELS: Record<ReportTargetType, string> = {
   player: "Player",
   forum_thread: "Thread",
   forum_post: "Reply",
+  direct_message: "Message",
 };
 
 export const REASON_LABELS: Record<ReportReason, string> = {
@@ -36,8 +37,11 @@ export type StateTag = {
   readonly tone: "neutral" | "clay" | "danger";
 };
 
+/** Forum threads and replies can be hidden; players and direct messages can't. */
 export const hideableType = (report: ModerationReport): HideableTargetType | null =>
-  report.targetType === "player" ? null : report.targetType;
+  report.targetType === "forum_thread" || report.targetType === "forum_post"
+    ? report.targetType
+    : null;
 
 /** "3 reports" when others have reported the same thing; nothing for just this one. */
 export const reportCountLabel = (open: number): string | null =>

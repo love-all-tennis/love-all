@@ -18,7 +18,12 @@ export class BlockedPlayer extends Schema.Class<BlockedPlayer>("BlockedPlayer")(
  * (messages, reviews), add it here and to the enum, and teach
  * `Safety.report` in the API who wrote it.
  */
-export const REPORT_TARGET_TYPES = ["player", "forum_thread", "forum_post"] as const;
+export const REPORT_TARGET_TYPES = [
+  "player",
+  "forum_thread",
+  "forum_post",
+  "direct_message",
+] as const;
 export const ReportTargetType = Schema.Literals(REPORT_TARGET_TYPES);
 export type ReportTargetType = typeof ReportTargetType.Type;
 
@@ -36,8 +41,9 @@ export type ReportReason = typeof ReportReason.Type;
 export const REPORT_DETAILS_MAX = 1000;
 
 /**
- * `POST /reports` body. `targetId` is the account id for a player, and the
- * thread or reply id for forum content.
+ * `POST /reports` body. `targetId` is the account id for a player, the
+ * thread or reply id for forum content, and the message id for a direct
+ * message (one the other player sent me).
  */
 export const NewReport = Schema.Struct({
   targetType: ReportTargetType,
