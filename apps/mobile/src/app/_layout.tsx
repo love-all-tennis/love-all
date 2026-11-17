@@ -94,6 +94,10 @@ export default function RootLayout() {
           <Stack.Screen name="forum/category/[id]" options={{ ...header, title: "" }} />
           <Stack.Screen name="forum/thread/[id]" options={{ ...header, title: "" }} />
           <Stack.Screen name="forum/new" options={{ ...header, title: "New thread" }} />
+          <Stack.Screen name="gear/index" options={{ ...header, title: "Gear reviews" }} />
+          <Stack.Screen name="gear/[id]" options={{ ...header, title: "" }} />
+          <Stack.Screen name="gear/new" options={{ ...header, title: "Add gear" }} />
+          <Stack.Screen name="gear/review" options={{ ...header, title: "Write a review" }} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && !confirmedAdult}>
           <Stack.Screen name="confirm-age" />
