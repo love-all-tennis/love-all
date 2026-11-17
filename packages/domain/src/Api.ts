@@ -19,6 +19,21 @@ import {
   ReportCreated,
   TargetNotFound,
 } from "./Safety";
+import {
+  InvalidSession,
+  NewSession,
+  NotSessionHost,
+  ProfileRequired,
+  Session,
+  SessionClosed,
+  SessionFull,
+  SessionId,
+  SessionInvites,
+  SessionNotFound,
+  SessionPatch,
+  SessionsPage,
+  SessionsQuery,
+} from "./Session";
 
 export const Health = Schema.Struct({
   status: Schema.Literal("ok"),
@@ -116,6 +131,64 @@ export class SafetyApi extends HttpApiGroup.make("safety")
   )
   .middleware(Authentication) {}
 
+const SessionIdParam = { id: SessionId };
+
+/**
+ * Matches and hitting sessions: creating, editing, finding and inviting.
+ * Sessions whose host is blocked either way with the viewer never show up.
+ */
+export class SessionsApi extends HttpApiGroup.make("sessions")
+  /** Creates a session with me as host (and its first accepted player). */
+  .add(
+    HttpApiEndpoint.post("create", "/sessions", {
+      payload: NewSession,
+      success: Session.pipe(HttpApiSchema.status(201)),
+      error: [InvalidSession, ProfileRequired],
+    }),
+  )
+  /** `scope=mine` or `scope=nearby`, cursor-paginated. */
+  .add(
+    HttpApiEndpoint.get("list", "/sessions", {
+      query: SessionsQuery,
+      success: SessionsPage,
+      error: [HomePointRequired, InvalidCursor],
+    }),
+  )
+  /** Visible to its players, and to others while it is open to them and in their level range. */
+  .add(
+    HttpApiEndpoint.get("get", "/sessions/:id", {
+      params: SessionIdParam,
+      success: Session,
+      error: SessionNotFound,
+    }),
+  )
+  /** Host only: time, court, level range, spots (hitting), visibility and notes. */
+  .add(
+    HttpApiEndpoint.patch("update", "/sessions/:id", {
+      params: SessionIdParam,
+      payload: SessionPatch,
+      success: Session,
+      error: [SessionNotFound, NotSessionHost, SessionClosed, InvalidSession],
+    }),
+  )
+  /** Host only: invites players. Anyone already in the session is skipped. */
+  .add(
+    HttpApiEndpoint.post("invite", "/sessions/:id/invites", {
+      params: SessionIdParam,
+      payload: SessionInvites,
+      success: Session,
+      error: [
+        SessionNotFound,
+        NotSessionHost,
+        SessionClosed,
+        SessionFull,
+        PlayerNotFound,
+        InvalidSession,
+      ],
+    }),
+  )
+  .middleware(Authentication) {}
+
 /** The whole Love All API. Shared by the server and the mobile client. */
 export class Api extends HttpApi.make("love-all")
   .add(SystemApi)
@@ -123,4 +196,5 @@ export class Api extends HttpApi.make("love-all")
   .add(PlayersApi)
   .add(FollowsApi)
   .add(SafetyApi)
+  .add(SessionsApi)
   .annotateMerge(OpenApi.annotations({ title: "Love All API" })) {}

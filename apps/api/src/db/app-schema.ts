@@ -199,3 +199,100 @@ export const report = pgTable(
     check("report_details_length", sql`char_length(${t.details}) <= 1000`),
   ],
 );
+
+export const playSessionKind = pgEnum("play_session_kind", ["singles", "doubles", "hitting"]);
+
+/** `invite_only`: only invited players can join. `open`: nearby players in range can find it too. */
+export const playSessionVisibility = pgEnum("play_session_visibility", ["invite_only", "open"]);
+
+/** `confirmed` once every spot is taken; back to `open` when someone leaves. */
+export const playSessionStatus = pgEnum("play_session_status", ["open", "confirmed", "cancelled"]);
+
+export const playSessionRole = pgEnum("play_session_role", ["host", "player"]);
+
+/**
+ * Where a player stands with a session. `invited` and `requested` wait on the
+ * player and the host respectively; only `accepted` players take a spot.
+ */
+export const playSessionParticipantState = pgEnum("play_session_participant_state", [
+  "invited",
+  "requested",
+  "accepted",
+  "declined",
+  "left",
+]);
+
+/**
+ * A singles or doubles match, or a hitting session. The court is free text
+ * with an optional map pin. A court is a public place, so the pin is stored
+ * as given (unlike home points). With no pin, distance falls back to the
+ * host's home point. A null level bound means "any".
+ */
+export const playSession = pgTable(
+  "play_session",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    hostId: text("host_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: playSessionKind("kind").notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    durationMinutes: smallint("duration_minutes").notNull(),
+    courtName: text("court_name").notNull(),
+    courtPoint: point("court_point"),
+    levelMin: ntrpLevel("level_min"),
+    levelMax: ntrpLevel("level_max"),
+    spots: smallint("spots").notNull(),
+    visibility: playSessionVisibility("visibility").notNull(),
+    status: playSessionStatus("status").notNull().default("open"),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => [
+    index("play_session_host_id_idx").on(t.hostId),
+    index("play_session_court_point_idx").using("gist", t.courtPoint),
+    index("play_session_open_starts_at_idx")
+      .on(t.startsAt)
+      .where(sql`${t.visibility} = 'open' and ${t.status} = 'open'`),
+    check(
+      "play_session_spots_match_kind",
+      sql`(${t.kind} = 'singles' and ${t.spots} = 2)
+        or (${t.kind} = 'doubles' and ${t.spots} = 4)
+        or (${t.kind} = 'hitting' and ${t.spots} between 2 and 4)`,
+    ),
+    check(
+      "play_session_level_range",
+      sql`${t.levelMin} is null or ${t.levelMax} is null or ${t.levelMin} <= ${t.levelMax}`,
+    ),
+    check("play_session_duration_range", sql`${t.durationMinutes} between 15 and 480`),
+    check("play_session_court_name_length", sql`char_length(${t.courtName}) between 1 and 100`),
+    check("play_session_notes_length", sql`char_length(${t.notes}) <= 500`),
+  ],
+);
+
+/**
+ * A player's place in a session. The host has a row too, as `host` /
+ * `accepted`, so "accepted players" always includes them.
+ */
+export const playSessionParticipant = pgTable(
+  "play_session_participant",
+  {
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => playSession.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: playSessionRole("role").notNull().default("player"),
+    state: playSessionParticipantState("state").notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    primaryKey({ columns: [t.sessionId, t.userId] }),
+    index("play_session_participant_user_id_idx").on(t.userId),
+    check(
+      "play_session_participant_host_accepted",
+      sql`${t.role} <> 'host' or ${t.state} = 'accepted'`,
+    ),
+  ],
+);

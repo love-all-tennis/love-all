@@ -1,0 +1,954 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "95f45e8d-7eab-44e5-a30d-67ccc8752433",
+  "prevIds": [
+    "10b984e2-443d-4690-802d-e2e494f49e53"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "play_session_kind"
+      ],
+      "writes": [
+        "s|enum|public.play_session_kind",
+        "n|enum|public.play_session_kind",
+        "e|enum|public.play_session_kind",
+        "n|type|public.play_session_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "play_session_participant_state"
+      ],
+      "writes": [
+        "s|enum|public.play_session_participant_state",
+        "n|enum|public.play_session_participant_state",
+        "e|enum|public.play_session_participant_state",
+        "n|type|public.play_session_participant_state"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "play_session_role"
+      ],
+      "writes": [
+        "s|enum|public.play_session_role",
+        "n|enum|public.play_session_role",
+        "e|enum|public.play_session_role",
+        "n|type|public.play_session_role"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "play_session_status"
+      ],
+      "writes": [
+        "s|enum|public.play_session_status",
+        "n|enum|public.play_session_status",
+        "e|enum|public.play_session_status",
+        "n|type|public.play_session_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "play_session_visibility"
+      ],
+      "writes": [
+        "s|enum|public.play_session_visibility",
+        "n|enum|public.play_session_visibility",
+        "e|enum|public.play_session_visibility",
+        "n|type|public.play_session_visibility"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session"
+      ],
+      "writes": [
+        "s|tbl|public.play_session",
+        "n|tbl|public.play_session",
+        "e|tbl|public.play_session",
+        "n|rel|public.play_session",
+        "n|type|public.play_session",
+        "n|rel|public.play_session_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.play_session_kind",
+        "n|enum|public.ntrp_level",
+        "n|enum|public.ntrp_level",
+        "n|enum|public.play_session_visibility",
+        "n|enum|public.play_session_status"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_participant"
+      ],
+      "writes": [
+        "s|tbl|public.play_session_participant",
+        "n|tbl|public.play_session_participant",
+        "e|tbl|public.play_session_participant",
+        "n|rel|public.play_session_participant",
+        "n|type|public.play_session_participant",
+        "n|rel|public.play_session_participant_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.play_session_role",
+        "n|enum|public.play_session_participant_state"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "play_session",
+        "play_session_host_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.play_session_host_id_idx",
+        "n|idx|public.play_session_host_id_idx",
+        "e|idx|public.play_session_host_id_idx",
+        "n|rel|public.play_session_host_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.play_session",
+        "n|sch|public",
+        "n|col|public.play_session.host_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "play_session",
+        "play_session_court_point_idx"
+      ],
+      "writes": [
+        "s|idx|public.play_session_court_point_idx",
+        "n|idx|public.play_session_court_point_idx",
+        "e|idx|public.play_session_court_point_idx",
+        "n|rel|public.play_session_court_point_idx"
+      ],
+      "reads": [
+        "n|tbl|public.play_session",
+        "n|sch|public",
+        "n|col|public.play_session.court_point"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "play_session",
+        "play_session_open_starts_at_idx"
+      ],
+      "writes": [
+        "s|idx|public.play_session_open_starts_at_idx",
+        "n|idx|public.play_session_open_starts_at_idx",
+        "e|idx|public.play_session_open_starts_at_idx",
+        "n|rel|public.play_session_open_starts_at_idx"
+      ],
+      "reads": [
+        "n|tbl|public.play_session",
+        "n|sch|public",
+        "n|col|public.play_session.starts_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "play_session_participant",
+        "play_session_participant_user_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.play_session_participant_user_id_idx",
+        "n|idx|public.play_session_participant_user_id_idx",
+        "e|idx|public.play_session_participant_user_id_idx",
+        "n|rel|public.play_session_participant_user_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_participant",
+        "n|sch|public",
+        "n|col|public.play_session_participant.user_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session"
+      ],
+      "writes": [
+        "s|fk|public.play_session.play_session_host_id_user_id_fkey",
+        "n|fk|public.play_session.play_session_host_id_user_id_fkey",
+        "e|fk|public.play_session.play_session_host_id_user_id_fkey",
+        "n|con|public.play_session.play_session_host_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.play_session",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.play_session.host_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_participant"
+      ],
+      "writes": [
+        "s|fk|public.play_session_participant.play_session_participant_session_id_play_session_id_fkey",
+        "n|fk|public.play_session_participant.play_session_participant_session_id_play_session_id_fkey",
+        "e|fk|public.play_session_participant.play_session_participant_session_id_play_session_id_fkey",
+        "n|con|public.play_session_participant.play_session_participant_session_id_play_session_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_participant",
+        "n|sch|public",
+        "n|tbl|public.play_session",
+        "n|sch|public",
+        "n|col|public.play_session_participant.session_id",
+        "n|col|public.play_session.id",
+        "e|uniqueness|public.play_session.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_participant"
+      ],
+      "writes": [
+        "s|fk|public.play_session_participant.play_session_participant_user_id_user_id_fkey",
+        "n|fk|public.play_session_participant.play_session_participant_user_id_user_id_fkey",
+        "e|fk|public.play_session_participant.play_session_participant_user_id_user_id_fkey",
+        "n|con|public.play_session_participant.play_session_participant_user_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_participant",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.play_session_participant.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session_participant",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session_kind",
+        "values": [
+          "singles",
+          "doubles",
+          "hitting"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session_participant_state",
+        "values": [
+          "invited",
+          "requested",
+          "accepted",
+          "declined",
+          "left"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session_role",
+        "values": [
+          "host",
+          "player"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session_status",
+        "values": [
+          "open",
+          "confirmed",
+          "cancelled"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "play_session_visibility",
+        "values": [
+          "invite_only",
+          "open"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "host_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "kind",
+        "type": "play_session_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "starts_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "duration_minutes",
+        "type": "smallint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "court_name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "court_point",
+        "type": "geometry(point,4326)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "level_min",
+        "type": "ntrp_level",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "level_max",
+        "type": "ntrp_level",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "spots",
+        "type": "smallint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "visibility",
+        "type": "play_session_visibility",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "status",
+        "type": "play_session_status",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'open'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "notes",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "session_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "role",
+        "type": "play_session_role",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'player'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "state",
+        "type": "play_session_participant_state",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_host_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "host_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_court_point_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "court_point",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "gist",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_open_starts_at_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "starts_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"visibility\" = 'open' and \"status\" = 'open'",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "play_session_participant_user_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_host_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "host_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "play_session_participant_session_id_play_session_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "session_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "play_session",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "play_session_participant_user_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "play_session_participant_pkey",
+        "columns": [
+          "session_id",
+          "user_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_spots_match_kind",
+        "value": "(\"kind\" = 'singles' and \"spots\" = 2)\n        or (\"kind\" = 'doubles' and \"spots\" = 4)\n        or (\"kind\" = 'hitting' and \"spots\" between 2 and 4)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_level_range",
+        "value": "\"level_min\" is null or \"level_max\" is null or \"level_min\" <= \"level_max\"",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_duration_range",
+        "value": "\"duration_minutes\" between 15 and 480",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_court_name_length",
+        "value": "char_length(\"court_name\") between 1 and 100",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_notes_length",
+        "value": "char_length(\"notes\") <= 500",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session_participant",
+        "name": "play_session_participant_host_accepted",
+        "value": "\"role\" <> 'host' or \"state\" = 'accepted'",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

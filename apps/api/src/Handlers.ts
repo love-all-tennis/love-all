@@ -8,6 +8,7 @@ import { Follows } from "./Follows";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
+import { Sessions } from "./Sessions";
 
 export const SystemHandlers = HttpApiBuilder.group(
   Api,
@@ -91,10 +92,35 @@ export const SafetyHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const SessionsHandlers = HttpApiBuilder.group(
+  Api,
+  "sessions",
+  Effect.fn(function* (handlers) {
+    const sessions = yield* Sessions;
+    return handlers
+      .handle("create", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (viewer) => sessions.create(viewer, payload)),
+      )
+      .handle("list", ({ query }) =>
+        Effect.flatMap(CurrentUser, (viewer) => sessions.list(viewer, query)),
+      )
+      .handle("get", ({ params }) =>
+        Effect.flatMap(CurrentUser, (viewer) => sessions.get(viewer, params.id)),
+      )
+      .handle("update", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (viewer) => sessions.update(viewer, params.id, payload)),
+      )
+      .handle("invite", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (viewer) => sessions.invite(viewer, params.id, payload)),
+      );
+  }),
+);
+
 export const ApiHandlers = Layer.mergeAll(
   SystemHandlers,
   MeHandlers,
   PlayersHandlers,
   FollowsHandlers,
   SafetyHandlers,
+  SessionsHandlers,
 );
