@@ -6,7 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import { signOut } from "@/lib/sign-out";
 
 /**
- * The way into the players list, the Play tab and gear reviews, and account actions.
+ * The way into the players list, the Play tab, gear and club reviews, and account actions.
  */
 export default function HomeScreen() {
   const { data: session } = authClient.useSession();
@@ -41,6 +41,16 @@ export default function HomeScreen() {
         </Text>
         <View style={styles.action}>
           <Button variant="secondary" label="Browse gear" onPress={() => router.push("/gear")} />
+        </View>
+      </Card>
+
+      <Card>
+        <Text variant="subheading">Club reviews</Text>
+        <Text color="textMuted">
+          See what players say about courts and clubs near you, and review the ones you play at.
+        </Text>
+        <View style={styles.action}>
+          <Button variant="secondary" label="Browse clubs" onPress={() => router.push("/clubs")} />
         </View>
       </Card>
 
