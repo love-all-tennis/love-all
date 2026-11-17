@@ -15,6 +15,7 @@ const fields: Fields = {
   reporter: { id: "u_sam", displayName: "Sam", suspended: false },
   subject: { id: "u_alex", displayName: "Alex", suspended: false },
   threadId: "2b9b6d5e-2f4c-4c55-9d8a-0a8f1d1c2b3a",
+  clubId: null,
   hidden: false,
   removed: false,
   openReportsOnTarget: 1,
@@ -36,6 +37,7 @@ describe("reportActions", () => {
       unsuspend: false,
       dismiss: true,
       openThread: true,
+      openClub: false,
     });
   });
 
@@ -65,6 +67,24 @@ describe("reportActions", () => {
     expect(reportActions(with_({ subject: null }))).toMatchObject({
       suspend: false,
       unsuspend: false,
+    });
+  });
+
+  it("offers hiding a club review and opening its club", () => {
+    const review = {
+      targetType: "club_review",
+      threadId: null,
+      clubId: "3b9b6d5e-2f4c-4c55-9d8a-0a8f1d1c2b3a",
+    } as const;
+    expect(reportActions(with_(review))).toMatchObject({
+      hide: true,
+      openThread: false,
+      openClub: true,
+    });
+    expect(reportActions(with_({ ...review, hidden: true }))).toMatchObject({
+      hide: false,
+      unhide: true,
+      openClub: true,
     });
   });
 });

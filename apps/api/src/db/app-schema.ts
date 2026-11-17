@@ -167,6 +167,7 @@ export const reportTargetType = pgEnum("report_target_type", [
   "forum_thread",
   "forum_post",
   "direct_message",
+  "club_review",
 ]);
 
 export const reportReason = pgEnum("report_reason", [

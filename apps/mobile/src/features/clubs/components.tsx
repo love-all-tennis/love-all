@@ -185,17 +185,19 @@ export function StarPicker({
   );
 }
 
-/** A review: who wrote it, their stars, when, and the note. My own gets an Edit button. */
+/** A review: who wrote it, their stars, when, and the note. Mine gets Edit, others' get Report. */
 export function ReviewCard({
   review,
   now,
   onOpenAuthor,
   onEdit,
+  onReport,
 }: {
   review: ClubReview;
   now: Date;
   onOpenAuthor: () => void;
   onEdit?: () => void;
+  onReport?: () => void;
 }) {
   const when = `${timeAgo(review.createdAt, now)}${wasEdited(review) ? " · Edited" : ""}`;
   return (
@@ -219,6 +221,15 @@ export function ReviewCard({
           </View>
         </Pressable>
         {onEdit ? <Button label="Edit" variant="quiet" size="small" onPress={onEdit} /> : null}
+        {onReport ? (
+          <Button
+            label="Report"
+            variant="quiet"
+            size="small"
+            accessibilityHint={`Report ${review.author.displayName}'s review to the moderators`}
+            onPress={onReport}
+          />
+        ) : null}
       </View>
       <View
         style={styles.ratingLine}

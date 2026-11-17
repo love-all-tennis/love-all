@@ -6,6 +6,8 @@ import { makeAuth } from "./auth";
 import { Db } from "./Db";
 import {
   accountSuspension,
+  club,
+  clubReview,
   forumCategory,
   forumPost,
   forumThread,
@@ -170,6 +172,75 @@ describe.skipIf(!process.env.DATABASE_URL)("Moderation", () => {
     expect(result.unhidden.replies).toHaveLength(1);
     expect(result.unhidden.thread.replyCount).toBe(1);
     expect(result.missing._tag).toBe("TargetNotFound");
+  });
+
+  it("reports a club review, lists it with its club, hides it and sees it deleted", async () => {
+    const result = await withWorld(3, ({ players, moderation, safety, db }) =>
+      Effect.gen(function* () {
+        const [admin, sam, alex] = players;
+        const [made] = yield* db
+          .insert(club)
+          .values({
+            name: "Report Test Courts",
+            point: { x: 170.5, y: -45.87 },
+            access: "free",
+            createdBy: sam!.id,
+          })
+          .returning({ id: club.id });
+        return yield* Effect.gen(function* () {
+          const [review] = yield* db
+            .insert(clubReview)
+            .values({ clubId: made!.id, authorId: alex!.id, rating: 1, body: "Call 555-0100" })
+            .returning({ id: clubReview.id });
+          const target = { targetType: "club_review" as const, targetId: review!.id };
+          const own = yield* Effect.flip(safety.report(alex!, { ...target, reason: "spam" }));
+          yield* safety.report(sam!, { ...target, reason: "spam" });
+          const listed = (yield* moderation.listReports(admin!, { limit: 100 })).items.find(
+            (r) => r.targetId === review!.id,
+          );
+          yield* moderation.hideContent(admin!, "club_review", review!.id);
+          const [hiddenRow] = yield* db
+            .select({ hiddenAt: clubReview.hiddenAt })
+            .from(clubReview)
+            .where(eq(clubReview.id, review!.id));
+          const hiddenAgain = yield* Effect.flip(
+            safety.report(admin!, { ...target, reason: "spam" }),
+          );
+          yield* db.delete(clubReview).where(eq(clubReview.id, review!.id));
+          const afterDelete = (yield* moderation.listReports(admin!, {
+            status: "resolved",
+            limit: 100,
+          })).items.find((r) => r.targetId === review!.id);
+          return {
+            own,
+            listed,
+            hiddenRow,
+            hiddenAgain,
+            afterDelete,
+            clubId: made!.id,
+            alexId: alex!.id,
+          };
+        }).pipe(Effect.ensuring(Effect.orDie(db.delete(club).where(eq(club.id, made!.id)))));
+      }),
+    );
+    expect(result.own._tag).toBe("CannotTargetSelf");
+    expect(result.listed).toMatchObject({
+      targetType: "club_review",
+      content: "1 star for Report Test Courts\n\nCall 555-0100",
+      subject: { id: result.alexId },
+      clubId: result.clubId,
+      threadId: null,
+      hidden: false,
+      removed: false,
+    });
+    expect(result.hiddenRow?.hiddenAt).not.toBeNull();
+    // Hidden reviews aren't anyone's to see, so they can't be reported again.
+    expect(result.hiddenAgain._tag).toBe("TargetNotFound");
+    expect(result.afterDelete).toMatchObject({
+      resolution: "content_hidden",
+      removed: true,
+      clubId: null,
+    });
   });
 
   it("dismisses every open report on the same target", async () => {

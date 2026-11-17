@@ -123,7 +123,22 @@ export default function ClubScreen() {
         data={others}
         keyExtractor={(review) => review.id}
         renderItem={({ item }) => (
-          <ReviewCard review={item} now={now} onOpenAuthor={() => openPlayer(item.author.id)} />
+          <ReviewCard
+            review={item}
+            now={now}
+            onOpenAuthor={() => openPlayer(item.author.id)}
+            onReport={() =>
+              router.push({
+                pathname: "/clubs/report",
+                params: {
+                  id: item.id,
+                  clubId: item.clubId,
+                  authorId: item.author.id,
+                  name: item.author.displayName,
+                },
+              })
+            }
+          />
         )}
         ListHeaderComponent={
           <View style={styles.sections}>
