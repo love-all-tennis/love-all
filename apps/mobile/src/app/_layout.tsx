@@ -90,6 +90,7 @@ export default function RootLayout() {
           <Stack.Screen name="sessions/edit" options={{ ...header, title: "Edit session" }} />
           <Stack.Screen name="sessions/invite" options={{ ...sheet, title: "Invite players" }} />
           <Stack.Screen name="sessions/invite-to" options={{ ...sheet, title: "Invite to play" }} />
+          <Stack.Screen name="sessions/score" options={{ ...sheet, title: "Record score" }} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && !confirmedAdult}>
           <Stack.Screen name="confirm-age" />

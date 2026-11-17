@@ -35,12 +35,15 @@ export function SessionCard({
   now,
   showHost,
   onPress,
+  footer,
 }: {
   session: SessionSummary;
   now: Date;
   /** Nearby lists show who's hosting; my own list mostly doesn't need it. */
   showHost: boolean;
   onPress: () => void;
+  /** A last line, such as a past session's score. */
+  footer?: ReactNode;
 }) {
   const tags = sessionTags(session, now);
   const when = whenLabel(session.startsAt);
@@ -97,6 +100,7 @@ export function SessionCard({
           </Text>
         </View>
       ) : null}
+      {footer}
     </Card>
   );
 }
