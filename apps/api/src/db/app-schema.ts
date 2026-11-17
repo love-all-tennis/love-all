@@ -161,8 +161,13 @@ export const block = pgTable(
   ],
 );
 
-/** What a report is about: a player (by user id) or a direct message (by message id). */
-export const reportTargetType = pgEnum("report_target_type", ["player", "direct_message"]);
+/** What a report is about. Keep in step with `REPORT_TARGET_TYPES` in the domain. */
+export const reportTargetType = pgEnum("report_target_type", [
+  "player",
+  "forum_thread",
+  "forum_post",
+  "direct_message",
+]);
 
 export const reportReason = pgEnum("report_reason", [
   "spam",
@@ -175,9 +180,20 @@ export const reportReason = pgEnum("report_reason", [
 
 export const reportStatus = pgEnum("report_status", ["open", "resolved"]);
 
+/** How a report was closed. Keep in step with `ReportResolution` in the domain. */
+export const reportResolution = pgEnum("report_resolution", [
+  "dismissed",
+  "content_hidden",
+  "player_suspended",
+]);
+
 /**
  * A report for moderators. `target_id` is the reported thing's id (a user id
- * for a player), with no foreign key, so one table covers every target type.
+ * for a player, a thread or reply id for forum content), with no foreign key,
+ * so one table covers every target type. `subject_id` is the player
+ * responsible: the reported player, or whoever wrote the content.
+ * `content` is a copy of reported text as it was when reported, so
+ * moderators can still read it if the author edits or deletes it.
  * The report outlives the reporter's account, so moderation history stays.
  */
 export const report = pgTable(
@@ -187,19 +203,43 @@ export const report = pgTable(
     reporterId: text("reporter_id").references(() => user.id, { onDelete: "set null" }),
     targetType: reportTargetType("target_type").notNull(),
     targetId: text("target_id").notNull(),
+    subjectId: text("subject_id").references(() => user.id, { onDelete: "set null" }),
+    content: text("content"),
     reason: reportReason("reason").notNull(),
     details: text("details"),
     status: reportStatus("status").notNull().default("open"),
+    resolution: reportResolution("resolution"),
+    /** The moderator who closed it. Kept as null if their account goes. */
+    resolvedById: text("resolved_by_id").references(() => user.id, { onDelete: "set null" }),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => [
     index("report_target_idx").on(t.targetType, t.targetId),
+    index("report_subject_idx").on(t.subjectId),
     index("report_open_idx")
       .on(t.createdAt)
       .where(sql`${t.status} = 'open'`),
     check("report_details_length", sql`char_length(${t.details}) <= 1000`),
   ],
+);
+
+/**
+ * A suspended player: one row while the suspension lasts, deleted when it's
+ * lifted. Suspended players can't sign in (see `auth.ts`) and drop out of
+ * player search; filter other lists with `notSuspended` from `./suspensions`.
+ */
+export const accountSuspension = pgTable(
+  "account_suspension",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => user.id, { onDelete: "cascade" }),
+    suspendedById: text("suspended_by_id").references(() => user.id, { onDelete: "set null" }),
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [check("account_suspension_reason_length", sql`char_length(${t.reason}) <= 500`)],
 );
 
 export const playSessionKind = pgEnum("play_session_kind", ["singles", "doubles", "hitting"]);
@@ -248,11 +288,16 @@ export const playSession = pgTable(
     visibility: playSessionVisibility("visibility").notNull(),
     status: playSessionStatus("status").notNull().default("open"),
     notes: text("notes"),
+    /** When the "starting soon" push went out. Cleared when the start time changes. */
+    reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => [
     index("play_session_host_id_idx").on(t.hostId),
     index("play_session_court_point_idx").using("gist", t.courtPoint),
+    index("play_session_reminder_due_idx")
+      .on(t.startsAt)
+      .where(sql`${t.reminderSentAt} is null and ${t.status} <> 'cancelled'`),
     index("play_session_open_starts_at_idx")
       .on(t.startsAt)
       .where(sql`${t.visibility} = 'open' and ${t.status} = 'open'`),
@@ -480,6 +525,26 @@ export const forumReaction = pgTable(
       .where(sql`${t.postId} is not null`),
     check("forum_reaction_one_target", sql`num_nonnulls(${t.threadId}, ${t.postId}) = 1`),
   ],
+);
+
+export const devicePlatform = pgEnum("device_platform", ["ios", "android"]);
+
+/**
+ * An Expo push token for one phone. A token belongs to one account at a time:
+ * when a phone signs in to another account, the token moves. Tokens that
+ * Expo reports as no longer registered are deleted.
+ */
+export const pushToken = pgTable(
+  "push_token",
+  {
+    token: text("token").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    platform: devicePlatform("platform").notNull(),
+    ...timestamps,
+  },
+  (t) => [index("push_token_user_id_idx").on(t.userId)],
 );
 
 /**

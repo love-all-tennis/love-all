@@ -4,11 +4,16 @@ import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { Db } from "./Db";
 import { conversation, profile, report, user } from "./db/schema";
+import { Forum } from "./Forum";
 import { Messages } from "./Messages";
 import { Safety } from "./Safety";
+import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
-const TestLayer = Layer.mergeAll(Messages.layer, Safety.layer).pipe(Layer.provideMerge(Db.layer));
+const TestLayer = Layer.mergeAll(
+  Messages.layer,
+  Safety.layer.pipe(Layer.provide(Forum.layer)),
+).pipe(Layer.provide(makeNotificationsMemory().layer), Layer.provideMerge(Db.layer));
 
 interface World {
   readonly players: ReadonlyArray<SessionUser>;
@@ -285,6 +290,8 @@ describe.skipIf(!process.env.DATABASE_URL)("Blocking and reporting", () => {
     expect(result.row).toMatchObject({
       targetType: "direct_message",
       targetId: result.theirs.id,
+      subjectId: result.theirs.senderId,
+      content: "rude message",
       reason: "harassment",
       status: "open",
     });

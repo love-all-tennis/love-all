@@ -2,9 +2,9 @@
   "type": "diff",
   "version": "9",
   "dialect": "postgres",
-  "id": "3f65db4d-dcbf-4985-b489-9d873086c3c3",
+  "id": "12685be2-77e7-4f46-804c-ad02f41bd52f",
   "prevIds": [
-    "7c0539a0-ac34-44fe-8926-c0aadcf3fbd4"
+    "a88be701-6b9e-4adb-88ce-dab4bbf90cf6"
   ],
   "footprints": [
     {
@@ -998,6 +998,8 @@
       "set": {
         "values": [
           "player",
+          "forum_thread",
+          "forum_post",
           "direct_message"
         ]
       }
