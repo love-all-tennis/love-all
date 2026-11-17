@@ -4,16 +4,17 @@ import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { Db } from "./Db";
 import { block, playSession, playSessionParticipant, profile, user } from "./db/schema";
+import { Forum } from "./Forum";
 import { Safety } from "./Safety";
 import { SessionJoins } from "./SessionJoins";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 /** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const sent = makeNotificationsMemory();
-const TestLayer = Layer.mergeAll(SessionJoins.layer, Safety.layer).pipe(
-  Layer.provide(sent.layer),
-  Layer.provideMerge(Db.layer),
-);
+const TestLayer = Layer.mergeAll(
+  SessionJoins.layer,
+  Safety.layer.pipe(Layer.provide(Forum.layer)),
+).pipe(Layer.provide(sent.layer), Layer.provideMerge(Db.layer));
 
 type Services = { db: Db["Service"]; joins: SessionJoins["Service"]; safety: Safety["Service"] };
 

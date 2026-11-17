@@ -12,8 +12,14 @@ export class BlockedPlayer extends Schema.Class<BlockedPlayer>("BlockedPlayer")(
   blockedAt: Schema.DateFromString,
 }) {}
 
-/** What can be reported. Forum posts and direct messages join when those features ship. */
-export const ReportTargetType = Schema.Literals(["player"]);
+/**
+ * What can be reported: a player, or something a player wrote. Keep in step
+ * with the `report_target_type` enum. To make something new reportable
+ * (messages, reviews), add it here and to the enum, and teach
+ * `Safety.report` in the API who wrote it.
+ */
+export const REPORT_TARGET_TYPES = ["player", "forum_thread", "forum_post"] as const;
+export const ReportTargetType = Schema.Literals(REPORT_TARGET_TYPES);
 export type ReportTargetType = typeof ReportTargetType.Type;
 
 /** Same values as the `report_reason` enum. */
@@ -29,7 +35,10 @@ export type ReportReason = typeof ReportReason.Type;
 
 export const REPORT_DETAILS_MAX = 1000;
 
-/** `POST /reports` body. `targetId` is the account id when `targetType` is "player". */
+/**
+ * `POST /reports` body. `targetId` is the account id for a player, and the
+ * thread or reply id for forum content.
+ */
 export const NewReport = Schema.Struct({
   targetType: ReportTargetType,
   targetId: AccountId,
@@ -45,14 +54,14 @@ export class ReportCreated extends Schema.Class<ReportCreated>("ReportCreated")(
   id: Schema.String,
 }) {}
 
-/** The player (or other report target) doesn't exist. */
+/** The player, or the content being reported, doesn't exist or isn't visible to me. */
 export class TargetNotFound extends Schema.TaggedError<TargetNotFound>()(
   "TargetNotFound",
   { id: Schema.String },
   { httpApiStatus: 404 },
 ) {}
 
-/** Players can't block or report themselves. */
+/** Players can't block or report themselves, or report what they wrote. */
 export class CannotTargetSelf extends Schema.TaggedError<CannotTargetSelf>()(
   "CannotTargetSelf",
   { message: Schema.String },

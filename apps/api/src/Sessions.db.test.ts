@@ -10,6 +10,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { Db } from "./Db";
 import { playSession, playSessionParticipant, user } from "./db/schema";
 import { Profiles } from "./Profiles";
+import { Forum } from "./Forum";
 import { Safety } from "./Safety";
 import { Sessions } from "./Sessions";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
@@ -21,10 +22,11 @@ import { makeNotificationsMemory } from "./testing/NotificationsMemory";
  * files use, so parallel test files never show up in each other's lists.
  */
 const sent = makeNotificationsMemory();
-const TestLayer = Layer.mergeAll(Sessions.layer, Profiles.layer, Safety.layer).pipe(
-  Layer.provide(sent.layer),
-  Layer.provideMerge(Db.layer),
-);
+const TestLayer = Layer.mergeAll(
+  Sessions.layer,
+  Profiles.layer,
+  Safety.layer.pipe(Layer.provide(Forum.layer)),
+).pipe(Layer.provide(sent.layer), Layer.provideMerge(Db.layer));
 
 const HOME = { lat: 69.65, lng: 18.96 };
 /** About 1.1 km per 0.01 degrees of latitude. */
