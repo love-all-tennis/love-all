@@ -1,25 +1,40 @@
 import type { SessionScope } from "@love-all/domain";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 
 import { Button, Chip, EmptyState, Icon, Loading, Screen, size, space, useColors } from "@/design";
+import { PastScore } from "@/features/session-activity/components";
+import { isPastSession } from "@/features/session-activity/score";
 import { SessionCard } from "@/features/sessions/components";
 import { useNow, useSessionList } from "@/features/sessions/use-sessions";
+import { authClient } from "@/lib/auth-client";
 
 const openSession = (id: string) => router.push({ pathname: "/sessions/[id]", params: { id } });
 const newSession = () => router.push("/sessions/new");
 
-/** Matches and hitting sessions: mine (hosting, invited, playing) and open ones nearby. */
+/** My sessions is split by time: still to come, and Past (started, with their scores). */
+type Segment = "mine" | "past" | "nearby";
+
+/** Matches and hitting sessions: mine (hosting, invited, playing), past ones, and open ones nearby. */
 export default function PlayScreen() {
-  const [scope, setScope] = useState<SessionScope>("mine");
+  const [segment, setSegment] = useState<Segment>("mine");
 
   return (
     <Screen title="Play" scroll={false} edges={["top", "left", "right"]}>
       <View style={styles.bar}>
         <View style={styles.switcher}>
-          <Chip label="My sessions" selected={scope === "mine"} onPress={() => setScope("mine")} />
-          <Chip label="Nearby" selected={scope === "nearby"} onPress={() => setScope("nearby")} />
+          <Chip
+            label="My sessions"
+            selected={segment === "mine"}
+            onPress={() => setSegment("mine")}
+          />
+          <Chip label="Past" selected={segment === "past"} onPress={() => setSegment("past")} />
+          <Chip
+            label="Nearby"
+            selected={segment === "nearby"}
+            onPress={() => setSegment("nearby")}
+          />
         </View>
         <Button
           variant="quiet"
@@ -30,16 +45,31 @@ export default function PlayScreen() {
           onPress={newSession}
         />
       </View>
-      {/* Keyed, so each scope keeps its own list and reloads when it's shown. */}
-      <SessionList key={scope} scope={scope} />
+      {/* Keyed, so each segment keeps its own list and reloads when it's shown. */}
+      <SessionList key={segment} segment={segment} />
     </Screen>
   );
 }
 
-function SessionList({ scope }: { scope: SessionScope }) {
+function SessionList({ segment }: { segment: Segment }) {
   const palette = useColors();
+  const scope: SessionScope = segment === "nearby" ? "nearby" : "mine";
   const list = useSessionList(scope);
   const now = useNow();
+  const { data: auth } = authClient.useSession();
+  const meId = auth?.user.id ?? null;
+  // `mine` comes upcoming first, then past: each segment shows its half.
+  const sessions =
+    segment === "nearby"
+      ? list.sessions
+      : list.sessions.filter((s) => isPastSession(s, now) === (segment === "past"));
+  // Past sessions sit after every upcoming one, so page on until some show up.
+  const { status, hasMore, loadingMore, loadMore } = list;
+  const needsMore =
+    segment === "past" && status === "ready" && sessions.length === 0 && hasMore && !loadingMore;
+  useEffect(() => {
+    if (needsMore) loadMore();
+  }, [needsMore, loadMore]);
 
   if (list.status === "needsHomePoint") {
     return (
@@ -55,7 +85,7 @@ function SessionList({ scope }: { scope: SessionScope }) {
     <FlatList
       style={styles.fill}
       contentContainerStyle={styles.list}
-      data={list.sessions}
+      data={sessions}
       keyExtractor={(session) => session.id}
       renderItem={({ item }) => (
         <SessionCard
@@ -63,10 +93,11 @@ function SessionList({ scope }: { scope: SessionScope }) {
           now={now}
           showHost={scope === "nearby" || item.me?.role !== "host"}
           onPress={() => openSession(item.id)}
+          footer={segment === "past" ? <PastScore session={item} meId={meId} /> : undefined}
         />
       )}
       ListEmptyComponent={
-        list.status === "loading" ? (
+        list.status === "loading" || needsMore || (segment === "past" && list.loadingMore) ? (
           <Loading label="Loading sessions" />
         ) : list.status === "error" ? (
           <EmptyState
@@ -74,7 +105,12 @@ function SessionList({ scope }: { scope: SessionScope }) {
             body="Check your connection and try again."
             action={{ label: "Try again", onPress: list.refresh }}
           />
-        ) : scope === "mine" ? (
+        ) : segment === "past" ? (
+          <EmptyState
+            title="No past sessions yet"
+            body="Sessions you've played show here once they start, with their scores."
+          />
+        ) : segment === "mine" ? (
           <EmptyState
             title="No sessions yet"
             body="Set up a match or hitting session and invite players, or open it to players nearby."

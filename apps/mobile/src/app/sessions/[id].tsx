@@ -15,8 +15,11 @@ import {
   visibilityLabel,
   whenLabel,
 } from "@/features/sessions/format";
+import { SessionComments, SessionScore } from "@/features/session-activity/components";
+import { canUseComments } from "@/features/session-activity/score";
 import { PlayerActions } from "@/features/sessions/player-actions";
 import { useNow, useSessionDetail } from "@/features/sessions/use-sessions";
+import { authClient } from "@/lib/auth-client";
 import { distanceLabel } from "@/lib/distance";
 
 const openPlayer = (id: string) => router.push({ pathname: "/players/[id]", params: { id } });
@@ -67,6 +70,8 @@ function SessionBody({
   onReplaced: (session: Session) => void;
 }) {
   const now = useNow();
+  const { data: auth } = authClient.useSession();
+  const meId = auth?.user.id ?? null;
   const tags = sessionTags(session, now);
   const isHost = session.me?.role === "host";
   const editable = isEditable(session, now);
@@ -142,6 +147,21 @@ function SessionBody({
           ))}
         </View>
       </Section>
+
+      <SessionScore
+        session={session}
+        meId={meId}
+        now={now}
+        onRecord={() => router.push({ pathname: "/sessions/score", params: { id: session.id } })}
+      />
+
+      {canUseComments(session.me) ? (
+        <SessionComments
+          sessionId={session.id}
+          meId={meId}
+          closed={session.status === "cancelled"}
+        />
+      ) : null}
 
       {isHost && editable ? (
         <View style={styles.actions}>

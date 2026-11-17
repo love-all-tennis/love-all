@@ -1,4 +1,4 @@
-import type { Session, SessionComment, SessionResult } from "@love-all/domain";
+import type { Session, SessionComment, SessionResult, SessionSummary } from "@love-all/domain";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Platform, StyleSheet, View } from "react-native";
@@ -18,11 +18,12 @@ import {
   deleteComment,
   fetchComments,
   fetchResult,
+  onResultChanged,
   postComment,
   respondToResult,
 } from "./activity-api";
 import { commentError, mergeComments, timeAgo } from "./comments";
-import { canRecordScore, resultView } from "./score";
+import { canRecordScore, pastScoreLine, resultView } from "./score";
 
 const NETWORK = "Check your connection and try again.";
 
@@ -284,7 +285,14 @@ export function useSessionResult(sessionId: string, enabled: boolean) {
     };
   }, [sessionId, enabled]);
   useFocusEffect(reload);
-  return { state, setState, reload };
+  useEffect(
+    () =>
+      onResultChanged((id, result) => {
+        if (id === sessionId) setState({ status: "ready", result });
+      }),
+    [sessionId],
+  );
+  return { state, reload };
 }
 
 /**
@@ -294,18 +302,20 @@ export function useSessionResult(sessionId: string, enabled: boolean) {
 export function SessionScore({
   session,
   meId,
+  now,
   onRecord,
 }: {
   session: Session;
   meId: string | null;
+  now: Date;
   /** Opens score entry. */
   onRecord: () => void;
 }) {
   const enabled = session.kind !== "hitting" && session.me?.state === "accepted";
-  const { state, setState, reload } = useSessionResult(session.id, enabled);
+  // A confirm or dispute lands through onResultChanged.
+  const { state, reload } = useSessionResult(session.id, enabled);
   const [busy, setBusy] = useState<"confirm" | "dispute" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const [now] = useState(() => new Date());
 
   if (!enabled) return null;
   const recordable = canRecordScore(session, now);
@@ -345,8 +355,11 @@ export function SessionScore({
     setProblem(null);
     try {
       const outcome = await respondToResult(session.id, response);
-      if ("refusal" in outcome) setProblem(outcome.refusal);
-      else setState({ status: "ready", result: outcome.ok });
+      if ("refusal" in outcome) {
+        setProblem(outcome.refusal);
+        // It changed under me: show what's there now.
+        reload();
+      }
     } catch {
       setProblem(`Couldn't send your answer. ${NETWORK}`);
     } finally {
@@ -361,9 +374,12 @@ export function SessionScore({
       </Text>
       <Card style={styles.group}>
         <View style={styles.scoreHead}>
-          <Text variant="subheading" tabular style={styles.flex}>
-            {view.headline}
-          </Text>
+          <View style={styles.flex} accessible accessibilityLabel={view.headline}>
+            <Text variant="bodyStrong">{view.winners}</Text>
+            <Text variant="heading" tabular>
+              {view.score}
+            </Text>
+          </View>
           <Tag label={tag.label} tone={tag.tone} />
         </View>
         <Text variant="caption" color="textMuted">
@@ -371,7 +387,7 @@ export function SessionScore({
         </Text>
         {view.canRespond && (
           <View style={styles.row}>
-            <View style={styles.flex}>
+            <View>
               <Button
                 label="Confirm score"
                 size="small"
@@ -379,7 +395,7 @@ export function SessionScore({
                 onPress={() => void respond("confirm")}
               />
             </View>
-            <View style={styles.flex}>
+            <View>
               <Button
                 label="Dispute"
                 variant="secondary"
@@ -417,7 +433,33 @@ const styles = StyleSheet.create({
   comment: { flexDirection: "row", gap: space[3], alignItems: "flex-start" },
   commentText: { flex: 1, gap: space[1] },
   commentAction: { alignSelf: "flex-start" },
-  scoreHead: { flexDirection: "row", alignItems: "center", gap: space[2] },
+  scoreHead: { flexDirection: "row", alignItems: "flex-start", gap: space[2] },
   row: { flexDirection: "row", gap: space[2] },
   flex: { flex: 1 },
+  pastTag: { flexDirection: "row" },
 });
+
+/**
+ * The score line on a past session's card: "Won 6–4, 6–4" once confirmed,
+ * or "Score to confirm" when it waits on me. Nothing for hitting sessions.
+ */
+export function PastScore({ session, meId }: { session: SessionSummary; meId: string | null }) {
+  const enabled =
+    session.kind !== "hitting" &&
+    session.status !== "cancelled" &&
+    session.me?.state === "accepted";
+  const { state } = useSessionResult(session.id, enabled);
+  if (!enabled || state.status !== "ready") return null;
+  const line = pastScoreLine(state.result, meId);
+  if (!line) return null;
+  const toConfirm = state.result?.status === "pending";
+  return toConfirm ? (
+    <View style={styles.pastTag}>
+      <Tag label={line} tone="clay" />
+    </View>
+  ) : (
+    <Text variant="bodyStrong" tabular>
+      {line}
+    </Text>
+  );
+}

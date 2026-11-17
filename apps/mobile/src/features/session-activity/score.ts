@@ -168,6 +168,9 @@ export const sideNames = (
 export type ResultView = {
   /** "Sam and Alex won 6–4, 3–6, 10–7", with the winners' games first. */
   readonly headline: string;
+  /** The headline in two parts, for a layout that keeps the score on one line. */
+  readonly winners: string;
+  readonly score: string;
   readonly status: SessionResult["status"];
   /** "Recorded by Sam · waiting for the other side" and similar. */
   readonly detail: string;
@@ -187,7 +190,8 @@ export const resultView = (
 ): ResultView => {
   const winners = result.winner === "a" ? result.sideA : result.sideB;
   const winnerNames = sideNames(winners, players, meId);
-  const headline = `${winnerNames} won ${formatSets(result.sets, result.winner)}`;
+  const score = formatSets(result.sets, result.winner);
+  const headline = `${winnerNames} won ${score}`;
   const recorder = sideNames([result.recordedBy], players, meId);
   const responder = result.respondedBy ? sideNames([result.respondedBy], players, meId) : null;
   const recorderSide = sideOf(result, result.recordedBy);
@@ -203,6 +207,8 @@ export const resultView = (
         : `Disputed by ${responder ?? "the other side"}. Record the right score.`;
   return {
     headline,
+    winners: `${winnerNames} won`,
+    score,
     status: result.status,
     detail,
     canRespond: result.status === "pending" && onOtherSide,
@@ -228,3 +234,25 @@ export const canRecordScore = (session: RecordableSession, now: Date): boolean =
 /** Whether a player can see and write a session's comments: the host and accepted players. */
 export const canUseComments = (me: { readonly state: string } | null): boolean =>
   me?.state === "accepted";
+
+/** Whether a session has started, so it belongs under Past rather than My sessions. */
+export const isPastSession = (session: { readonly startsAt: Date }, now: Date): boolean =>
+  session.startsAt.getTime() <= now.getTime();
+
+/**
+ * The line a past session's card shows about its score, from my side: "Won
+ * 6–4, 6–4" or "Lost 4–6, 4–6" once confirmed, "Score to confirm" when it
+ * waits on me, otherwise null.
+ */
+export const pastScoreLine = (result: SessionResult | null, meId: string | null): string | null => {
+  if (!result || !meId) return null;
+  const mine = sideOf(result, meId);
+  if (!mine) return null;
+  if (result.status === "confirmed") {
+    return `${result.winner === mine ? "Won" : "Lost"} ${formatSets(result.sets, mine)}`;
+  }
+  if (result.status === "pending" && sideOf(result, result.recordedBy) !== mine) {
+    return "Score to confirm";
+  }
+  return null;
+};

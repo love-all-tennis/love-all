@@ -16,6 +16,23 @@ import { callApi } from "@/lib/api";
  */
 export type Outcome<A> = { readonly ok: A } | { readonly refusal: string };
 
+type ResultListener = (sessionId: string, result: SessionResult) => void;
+const resultListeners = new Set<ResultListener>();
+
+/**
+ * Hears every score this app records or answers, so a session screen under
+ * the Record score sheet updates when the sheet closes.
+ */
+export const onResultChanged = (listener: ResultListener): (() => void) => {
+  resultListeners.add(listener);
+  return () => resultListeners.delete(listener);
+};
+
+const announce = (sessionId: string) => (result: SessionResult) => {
+  for (const listener of resultListeners) listener(sessionId, result);
+  return { ok: result };
+};
+
 const refuse = (refusal: string) => Effect.succeed<{ refusal: string }>({ refusal });
 
 /** The session, or null when it's gone or hidden from me. */
@@ -73,7 +90,7 @@ export const recordResult = (
 ): Promise<Outcome<SessionResult>> =>
   callApi((api) =>
     api.sessionActivity.recordResult({ params: { id }, payload: result }).pipe(
-      Effect.map((ok) => ({ ok })),
+      Effect.map(announce(id)),
       Effect.catchTags({
         ResultConflict: () =>
           refuse("Someone already recorded this score. Close this and check the session."),
@@ -91,11 +108,11 @@ export const respondToResult = (
 ): Promise<Outcome<SessionResult>> =>
   callApi((api) =>
     api.sessionActivity.respondToResult({ params: { id }, payload: { response } }).pipe(
-      Effect.map((ok) => ({ ok })),
+      Effect.map(announce(id)),
       Effect.catchTags({
-        ResultConflict: () => refuse("This score was already answered. Pull to refresh."),
+        ResultConflict: () => refuse("Someone already answered this score."),
         NotOnOtherSide: () => refuse("Only the other side can confirm or dispute this score."),
-        ResultNotFound: () => refuse("This score is no longer there. Pull to refresh."),
+        ResultNotFound: () => refuse("This score is no longer there."),
         NotSessionPlayer: () => refuse("Only players in this session can answer its score."),
         SessionNotFound: () => refuse("This session is no longer available."),
       }),

@@ -8,6 +8,8 @@ import {
   cleanGames,
   emptyScoreDraft,
   formatSets,
+  isPastSession,
+  pastScoreLine,
   removeLastSet,
   resultView,
   setGames,
@@ -362,5 +364,47 @@ describe("who can do what", () => {
     expect(canUseComments({ state: "accepted" })).toBe(true);
     expect(canUseComments({ state: "requested" })).toBe(false);
     expect(canUseComments(null)).toBe(false);
+  });
+});
+
+describe("past sessions", () => {
+  const now = new Date("2026-11-20T18:00:00Z");
+  it("counts a session as past once it starts", () => {
+    expect(isPastSession({ startsAt: new Date("2026-11-20T17:59:00Z") }, now)).toBe(true);
+    expect(isPastSession({ startsAt: now }, now)).toBe(true);
+    expect(isPastSession({ startsAt: new Date("2026-11-20T18:01:00Z") }, now)).toBe(false);
+  });
+
+  it("shows a confirmed score, or that mine is to confirm", () => {
+    const base = {
+      sideA: [SAM],
+      sideB: [ME],
+      sets: [
+        [6, 4],
+        [6, 4],
+      ] as const,
+      winner: "a" as const,
+      recordedBy: SAM,
+      recordedAt: now,
+    };
+    const confirmed = new SessionResult({
+      ...base,
+      sets: [...base.sets],
+      status: "confirmed",
+      respondedBy: ME,
+      respondedAt: now,
+    });
+    const pending = new SessionResult({
+      ...base,
+      sets: [...base.sets],
+      status: "pending",
+      respondedBy: null,
+      respondedAt: null,
+    });
+    expect(pastScoreLine(confirmed, ME)).toBe("Lost 4–6, 4–6");
+    expect(pastScoreLine(confirmed, SAM)).toBe("Won 6–4, 6–4");
+    expect(pastScoreLine(pending, ME)).toBe("Score to confirm");
+    expect(pastScoreLine(pending, SAM)).toBeNull();
+    expect(pastScoreLine(null, ME)).toBeNull();
   });
 });
