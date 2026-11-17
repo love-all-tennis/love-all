@@ -18,11 +18,14 @@ import {
 } from "@/design";
 import { levelLabel } from "@/features/players/components";
 import { availabilityLines } from "@/features/players/filters";
+import { openConversation } from "@/features/messages/messages-api";
 import { fetchFollows, fetchPlayer, setFollowing } from "@/features/players/players-api";
 import { confirmBlock } from "@/features/safety/confirm-block";
 import { blockPlayer } from "@/features/safety/safety-api";
 import { authClient } from "@/lib/auth-client";
 import { distanceLabel } from "@/lib/distance";
+
+type Saving = "follow" | "block" | "message" | null;
 
 type Loaded =
   | { readonly kind: "loading" }
@@ -30,7 +33,7 @@ type Loaded =
   | { readonly kind: "error" }
   | { readonly kind: "ready"; readonly player: PlayerProfile; readonly following: boolean };
 
-/** Another player's profile, with invite, follow-for-later, report and block. */
+/** Another player's profile, with invite, message, follow-for-later, report and block. */
 export default function PlayerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: session } = authClient.useSession();
@@ -40,7 +43,7 @@ export default function PlayerScreen() {
   const [loaded, setLoaded] = useState<{ key: string; state: Loaded } | null>(null);
   const state: Loaded = loaded?.key === key ? loaded.state : { kind: "loading" };
   const setState = (next: Loaded) => setLoaded({ key, state: next });
-  const [saving, setSaving] = useState<"follow" | "block" | null>(null);
+  const [saving, setSaving] = useState<Saving>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -69,6 +72,24 @@ export default function PlayerScreen() {
       else setState({ ...state, following: next });
     } catch {
       setNotice("Couldn't save that. Check your connection and try again.");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const message = async (player: PlayerProfile) => {
+    setSaving("message");
+    setNotice(null);
+    try {
+      const outcome = await openConversation(player.id);
+      if ("refusal" in outcome) setNotice(outcome.refusal);
+      else
+        router.push({
+          pathname: "/messages/[id]",
+          params: { id: outcome.ok.id, name: player.displayName },
+        });
+    } catch {
+      setNotice("Couldn't open your messages. Check your connection and try again.");
     } finally {
       setSaving(null);
     }
@@ -118,6 +139,7 @@ export default function PlayerScreen() {
           saving={saving}
           notice={notice}
           onToggleFollow={() => void toggleFollow()}
+          onMessage={() => void message(state.player)}
           onReport={() =>
             router.push({
               pathname: "/players/report",
@@ -138,15 +160,17 @@ function ProfileBody({
   saving,
   notice,
   onToggleFollow,
+  onMessage,
   onReport,
   onBlock,
 }: {
   player: PlayerProfile;
   isMe: boolean;
   following: boolean;
-  saving: "follow" | "block" | null;
+  saving: Saving;
   notice: string | null;
   onToggleFollow: () => void;
+  onMessage: () => void;
   onReport: () => void;
   onBlock: () => void;
 }) {
@@ -191,6 +215,13 @@ function ProfileBody({
                 params: { playerId: player.id, name: player.displayName },
               })
             }
+          />
+          <Button
+            variant="secondary"
+            label="Send message"
+            icon={<Icon ios="envelope" md="mail" color="text" size="sm" />}
+            onPress={onMessage}
+            loading={saving === "message"}
           />
           <Button
             variant="secondary"

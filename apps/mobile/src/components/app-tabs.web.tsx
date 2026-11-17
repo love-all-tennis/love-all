@@ -2,10 +2,13 @@ import { Tabs, TabList, TabTrigger, TabSlot, type TabTriggerSlotProps } from "ex
 import { Pressable, StyleSheet, View, type PressableProps } from "react-native";
 
 import { Icon, motion, radius, size, space, Text, useColors, type IconProps } from "@/design";
+import { unreadBadge } from "@/features/messages/messages";
+import { useUnreadBadgeSync } from "@/features/messages/use-inbox";
+import { useUnreadConversations } from "@/features/messages/unread-store";
 
 const TABS: ReadonlyArray<{
   name: string;
-  href: "/" | "/players" | "/play" | "/forum";
+  href: "/" | "/players" | "/play" | "/forum" | "/messages";
   label: string;
   icon: Pick<IconProps, "ios" | "md">;
 }> = [
@@ -18,11 +21,14 @@ const TABS: ReadonlyArray<{
     label: "Forum",
     icon: { ios: "bubble.left.and.bubble.right", md: "forum" },
   },
+  { name: "messages", href: "/messages", label: "Messages", icon: { ios: "envelope", md: "mail" } },
 ];
 
 /** The web tab bar: a bottom bar on `surface`, matching the native tabs. */
 export default function AppTabs() {
   const palette = useColors();
+  useUnreadBadgeSync();
+  const badge = unreadBadge(useUnreadConversations());
   return (
     <Tabs>
       <TabSlot style={styles.slot} />
@@ -31,7 +37,11 @@ export default function AppTabs() {
       >
         {TABS.map((tab) => (
           <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>
-            <TabButton label={tab.label} icon={tab.icon} />
+            <TabButton
+              label={tab.label}
+              icon={tab.icon}
+              badge={tab.name === "messages" ? badge : null}
+            />
           </TabTrigger>
         ))}
       </TabList>
@@ -42,9 +52,14 @@ export default function AppTabs() {
 function TabButton({
   label,
   icon,
+  badge,
   isFocused,
   ...props
-}: TabTriggerSlotProps & { label: string; icon: Pick<IconProps, "ios" | "md"> }) {
+}: TabTriggerSlotProps & {
+  label: string;
+  icon: Pick<IconProps, "ios" | "md">;
+  badge: string | null;
+}) {
   const palette = useColors();
   const color = isFocused ? "accent" : "textMuted";
   return (
@@ -52,7 +67,7 @@ function TabButton({
       {...(props as PressableProps)}
       accessibilityRole="tab"
       accessibilityState={{ selected: isFocused }}
-      accessibilityLabel={label}
+      accessibilityLabel={badge ? `${label}, ${badge} unread` : label}
       style={({ pressed }) => [styles.tab, pressed && { opacity: motion.pressOpacity }]}
     >
       <View
@@ -60,6 +75,13 @@ function TabButton({
         accessibilityElementsHidden
       >
         <Icon {...icon} color={isFocused ? "onAccentSoft" : "textMuted"} />
+        {badge ? (
+          <View style={[styles.badge, { backgroundColor: palette.danger }]}>
+            <Text variant="label" color="onDanger" tabular>
+              {badge}
+            </Text>
+          </View>
+        ) : null}
       </View>
       <Text variant="label" color={color}>
         {label}
@@ -78,10 +100,19 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    maxWidth: size.maxContentWidth / 4,
+    maxWidth: size.maxContentWidth / TABS.length,
     minHeight: size.minTap,
     alignItems: "center",
     gap: space[1],
+  },
+  badge: {
+    position: "absolute",
+    top: -space[1],
+    right: space[1],
+    minWidth: size.icon.md,
+    paddingHorizontal: space[1],
+    borderRadius: radius.full,
+    alignItems: "center",
   },
   pill: {
     paddingHorizontal: space[4],

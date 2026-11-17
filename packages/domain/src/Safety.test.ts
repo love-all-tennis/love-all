@@ -13,6 +13,12 @@ describe("NewReport", () => {
     ).toBe("Success");
   });
 
+  it("accepts forum threads and replies", () => {
+    const base = { targetId: "0b9b6d5e-2f4c-4c55-9d8a-0a8f1d1c2b3a", reason: "spam" };
+    expect(decode({ ...base, targetType: "forum_thread" })._tag).toBe("Success");
+    expect(decode({ ...base, targetType: "forum_post" })._tag).toBe("Success");
+  });
+
   it("rejects unknown targets and reasons, empty ids and long details", () => {
     const base = { targetType: "player", targetId: "u_1", reason: "spam" };
     expect(decode({ ...base, targetType: "post" })._tag).toBe("Failure");

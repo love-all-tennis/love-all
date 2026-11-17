@@ -7,6 +7,9 @@ import { Db } from "./Db";
 import { Equipment } from "./Equipment";
 import { Follows } from "./Follows";
 import { Forum } from "./Forum";
+import { Messages } from "./Messages";
+import { Moderation } from "./Moderation";
+import { Notifications } from "./Notifications";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
@@ -203,6 +206,74 @@ export const ForumHandlers = HttpApiBuilder.group(
   }),
 );
 
+export const ModerationHandlers = HttpApiBuilder.group(
+  Api,
+  "moderation",
+  Effect.fn(function* (handlers) {
+    const moderation = yield* Moderation;
+    return handlers
+      .handle("listReports", ({ query }) =>
+        Effect.flatMap(CurrentUser, (user) => moderation.listReports(user, query)),
+      )
+      .handle("dismissReport", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => moderation.dismissReport(user, params.id)),
+      )
+      .handle("hideContent", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => moderation.hideContent(user, params.type, params.id)),
+      )
+      .handle("unhideContent", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) =>
+          moderation.unhideContent(user, params.type, params.id),
+        ),
+      )
+      .handle("suspend", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => moderation.suspend(user, params.id, payload)),
+      )
+      .handle("unsuspend", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => moderation.unsuspend(user, params.id)),
+      );
+  }),
+);
+
+export const DevicesHandlers = HttpApiBuilder.group(
+  Api,
+  "devices",
+  Effect.fn(function* (handlers) {
+    const notifications = yield* Notifications;
+    return handlers
+      .handle("register", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => notifications.register(user, payload)),
+      )
+      .handle("unregister", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => notifications.unregister(user, params.token)),
+      );
+  }),
+);
+
+export const MessagesHandlers = HttpApiBuilder.group(
+  Api,
+  "messages",
+  Effect.fn(function* (handlers) {
+    const messages = yield* Messages;
+    return handlers
+      .handle("listConversations", ({ query }) =>
+        Effect.flatMap(CurrentUser, (user) => messages.listConversations(user, query)),
+      )
+      .handle("openConversation", ({ payload }) =>
+        Effect.flatMap(CurrentUser, (user) => messages.openConversation(user, payload.playerId)),
+      )
+      .handle("listMessages", ({ params, query }) =>
+        Effect.flatMap(CurrentUser, (user) => messages.listMessages(user, params.id, query)),
+      )
+      .handle("send", ({ params, payload }) =>
+        Effect.flatMap(CurrentUser, (user) => messages.send(user, params.id, payload)),
+      )
+      .handle("markRead", ({ params }) =>
+        Effect.flatMap(CurrentUser, (user) => messages.markRead(user, params.id)),
+      );
+  }),
+);
+
 export const EquipmentHandlers = HttpApiBuilder.group(
   Api,
   "equipment",
@@ -237,5 +308,8 @@ export const ApiHandlers = Layer.mergeAll(
   SessionsHandlers,
   SessionActivityHandlers,
   ForumHandlers,
+  ModerationHandlers,
+  DevicesHandlers,
+  MessagesHandlers,
   EquipmentHandlers,
 );

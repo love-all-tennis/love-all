@@ -1,0 +1,91 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "66f2346e-0d7d-46c3-a9ff-a84bd826eecf",
+  "prevIds": [
+    "a2613b0e-7e3d-4fc3-9ad9-bd617b340b75"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "play_session",
+        "reminder_sent_at"
+      ],
+      "writes": [
+        "s|col|public.play_session.reminder_sent_at",
+        "n|col|public.play_session.reminder_sent_at",
+        "e|col|public.play_session.reminder_sent_at"
+      ],
+      "reads": [
+        "n|tbl|public.play_session",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "play_session",
+        "play_session_reminder_due_idx"
+      ],
+      "writes": [
+        "s|idx|public.play_session_reminder_due_idx",
+        "n|idx|public.play_session_reminder_due_idx",
+        "e|idx|public.play_session_reminder_due_idx",
+        "n|rel|public.play_session_reminder_due_idx"
+      ],
+      "reads": [
+        "n|tbl|public.play_session",
+        "n|sch|public",
+        "n|col|public.play_session.starts_at"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "reminder_sent_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "play_session",
+        "name": "play_session_reminder_due_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "starts_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"reminder_sent_at\" is null and \"status\" <> 'cancelled'",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}
