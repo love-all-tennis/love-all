@@ -15,7 +15,6 @@ export default function AppTabs() {
   const palette = useColors();
   useUnreadBadgeSync();
   const badge = unreadBadge(useUnreadConversations());
-
   return (
     <NativeTabs
       backgroundColor={palette.surface}

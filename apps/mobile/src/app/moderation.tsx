@@ -44,15 +44,12 @@ export default function ModerationScreen() {
   const onAction = (report: ModerationReport, action: ReportAction) => {
     const type = hideableType(report);
     const subject = report.subject;
-
     switch (action) {
       case "hide":
         if (type) run(report, action, () => setHidden(type, report.targetId, true));
-
         return;
       case "unhide":
         if (type) run(report, action, () => setHidden(type, report.targetId, false));
-
         return;
       case "suspend":
         if (subject) {
@@ -63,37 +60,30 @@ export default function ModerationScreen() {
             () => run(report, action, () => setSuspended(subject.id, true)),
           );
         }
-
         return;
       case "unsuspend":
         if (subject) run(report, action, () => setSuspended(subject.id, false));
-
         return;
       case "dismiss":
         run(report, action, () => dismissReport(report.id));
-
         return;
       case "openThread":
         if (report.threadId) {
           router.push({ pathname: "/forum/thread/[id]", params: { id: report.threadId } });
         }
-
         return;
       case "openItem":
         if (report.equipmentId) {
           router.push({ pathname: "/gear/[id]", params: { id: report.equipmentId } });
         }
-
         return;
       case "openClub":
         if (report.clubId) {
           router.push({ pathname: "/clubs/[id]", params: { id: report.clubId } });
         }
-
         return;
       case "openPlayer":
         if (subject) router.push({ pathname: "/players/[id]", params: { id: subject.id } });
-
         return;
     }
   };

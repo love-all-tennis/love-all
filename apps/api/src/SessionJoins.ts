@@ -12,7 +12,7 @@ import {
   type SessionUser,
 } from "@love-all/domain";
 import { and, count, eq, inArray, ne, or, sql } from "drizzle-orm";
-import { Context, Effect, Layer, Option, Predicate } from "effect";
+import { Context, Effect, Layer, Option } from "effect";
 import { Db } from "./Db";
 import { notBlocked } from "./db/blocks";
 import { playSession, playSessionParticipant, profile } from "./db/schema";
@@ -25,16 +25,20 @@ export type Tx = Parameters<Parameters<Db["Service"]["transaction"]>[0]>[0];
 
 type DbError = { readonly _tag: "SqlError" | "EffectDrizzleQueryError" };
 
+/** Database failures become defects (a 500); the domain errors stay typed. */
 const dieOnDbError = <A, E, R>(self: Effect.Effect<A, E, R>) =>
   self.pipe(
     Effect.catchIf(
       (error): error is Extract<E, DbError> =>
-        Predicate.isTagged(error, "SqlError") ||
-        Predicate.isTagged(error, "EffectDrizzleQueryError"),
+        typeof error === "object" &&
+        error !== null &&
+        "_tag" in error &&
+        (error._tag === "SqlError" || error._tag === "EffectDrizzleQueryError"),
       (error) => Effect.die(error),
     ),
   );
 
+/** Players in `accepted`, host included: the spots taken. */
 const acceptedCount = (tx: Tx, sessionId: string) =>
   tx
     .select({ total: count() })
@@ -47,6 +51,11 @@ const acceptedCount = (tx: Tx, sessionId: string) =>
     )
     .pipe(Effect.map(([row]) => row?.total ?? 0));
 
+/**
+ * Locks the session row for the rest of the transaction, so two players
+ * can't both take the last spot. Every change to who is accepted goes
+ * through here first.
+ */
 const lockSession = (tx: Tx, sessionId: string) =>
   tx
     .select({
@@ -72,6 +81,7 @@ const lockSession = (tx: Tx, sessionId: string) =>
 
 type LockedSession = Option.Option.Value<Effect.Success<ReturnType<typeof lockSession>>>;
 
+/** Cancelled and started sessions take no more answers or changes. */
 const requireOpenForChanges = (session: LockedSession) =>
   session.status === "cancelled"
     ? Effect.fail(new SessionClosed({ message: "This session was cancelled" }))
@@ -107,16 +117,18 @@ const setState = (
       ),
     );
 
+/**
+ * Gives `userId` a spot on a locked session. When that fills the last spot,
+ * the session becomes `confirmed` and every other pending request is
+ * declined. Succeeds with whether it did.
+ */
 const takeSpot = (tx: Tx, session: LockedSession, userId: string) =>
   Effect.gen(function* () {
     const taken = yield* acceptedCount(tx, session.id);
-
     if (taken >= session.spots) {
       return yield* new SessionFull({ message: "Every spot is taken" });
     }
-
     yield* setState(tx, session.id, userId, "accepted");
-
     if (taken + 1 < session.spots) return false;
     yield* tx
       .update(playSession)
@@ -131,10 +143,10 @@ const takeSpot = (tx: Tx, session: LockedSession, userId: string) =>
           eq(playSessionParticipant.state, "requested"),
         ),
       );
-
     return true;
   });
 
+/** Players whose rows are in one of `states`, host included when accepted. */
 const playersIn = (
   tx: Tx,
   sessionId: string,
@@ -151,18 +163,17 @@ const playersIn = (
     )
     .pipe(Effect.map((rows) => rows.map((row) => row.userId)));
 
+/** The notices for a spot taken by `userId`: "confirmed" to everyone else once it fills. */
 const confirmedNotices = (tx: Tx, session: LockedSession, userId: string, confirmed: boolean) =>
   confirmed
     ? playersIn(tx, session.id, ["accepted"]).pipe(
-        Effect.map(
-          (ids) =>
-            [
-              { to: ids.filter((id) => id !== userId), ...messages.confirmed(session) },
-            ] satisfies ReadonlyArray<Notice>,
-        ),
+        Effect.map((ids): ReadonlyArray<Notice> => [
+          { to: ids.filter((id) => id !== userId), ...messages.confirmed(session) },
+        ]),
       )
     : Effect.succeed<ReadonlyArray<Notice>>([]);
 
+/** A confirmed session with a spot free again goes back to `open`. */
 const reopenIfSpotFree = (tx: Tx, sessionId: string) =>
   tx
     .update(playSession)
@@ -204,12 +215,12 @@ export const removeFromEachOthersSessions = (tx: Tx, a: string, b: string) =>
         ),
       )
       .returning({ sessionId: playSessionParticipant.sessionId });
-
     for (const { sessionId } of removed) {
       yield* reopenIfSpotFree(tx, sessionId);
     }
   });
 
+/** The player's profile NTRP, or undefined when they have no profile. */
 const ntrpOf = (tx: Tx, userId: string) =>
   tx
     .select({ ntrp: profile.ntrp })
@@ -217,6 +228,11 @@ const ntrpOf = (tx: Tx, userId: string) =>
     .where(eq(profile.userId, userId))
     .pipe(Effect.map(([row]) => row));
 
+/**
+ * Whether a player with no place in the session can see it: the `canSee`
+ * rule in `Sessions` (open to nearby players, not cancelled, level in range).
+ * The host block check is done separately, for everyone.
+ */
 const strangerCanSee = (session: LockedSession, ntrp: string | null) =>
   session.visibility === "open" && session.status !== "cancelled" && inLevelRange(session, ntrp);
 
@@ -272,6 +288,10 @@ export class SessionJoins extends Context.Service<
       const db = yield* Db;
       const notifications = yield* Notifications;
 
+      /**
+       * Runs `f` in a transaction with the session locked. Missing or blocked
+       * sessions fail. `f` returns the notices to send once it commits.
+       */
       const withSession = <E>(
         viewer: SessionUser,
         sessionId: string,
@@ -284,10 +304,8 @@ export class SessionJoins extends Context.Service<
           .transaction((tx) =>
             Effect.gen(function* () {
               const locked = yield* lockSession(tx, sessionId);
-
               if (Option.isNone(locked)) return yield* new SessionNotFound({ id: sessionId });
               const session = locked.value;
-
               if (session.hostId !== viewer.id) {
                 const [visible] = yield* tx
                   .select({ ok: sql<boolean>`true` })
@@ -295,10 +313,8 @@ export class SessionJoins extends Context.Service<
                   .where(
                     and(eq(playSession.id, sessionId), notBlocked(viewer.id, playSession.hostId)),
                   );
-
                 if (!visible) return yield* new SessionNotFound({ id: sessionId });
               }
-
               return yield* f(tx, session);
             }),
           )
@@ -311,6 +327,7 @@ export class SessionJoins extends Context.Service<
             ),
           );
 
+      /** As `withSession`, for the host only. */
       const asHost = <E>(
         host: SessionUser,
         sessionId: string,
@@ -320,83 +337,70 @@ export class SessionJoins extends Context.Service<
           session: LockedSession,
         ) => Effect.Effect<ReadonlyArray<Notice> | void, E, never>,
       ) =>
-        withSession(host, sessionId, (tx, session) => {
-          const step: Effect.Effect<ReadonlyArray<Notice> | void, E | NotSessionHost> =
+        withSession(
+          host,
+          sessionId,
+          (tx, session): Effect.Effect<ReadonlyArray<Notice> | void, E | NotSessionHost> =>
             session.hostId === host.id
               ? f(tx, session)
-              : Effect.fail(new NotSessionHost({ message: `Only the host can ${verb}` }));
-
-          return step;
-        });
+              : Effect.fail(new NotSessionHost({ message: `Only the host can ${verb}` })),
+        );
 
       const respond = (user: SessionUser, sessionId: string, answer: SessionAnswer) =>
         withSession(user, sessionId, (tx, session) =>
           Effect.gen(function* () {
             const me = yield* participantOf(tx, sessionId, user.id);
             const mine = yield* ntrpOf(tx, user.id);
-
             if (!me && !strangerCanSee(session, mine?.ntrp ?? null)) {
               return yield* new SessionNotFound({ id: sessionId });
             }
-
             yield* requireOpenForChanges(session);
-
             if (me?.state === "accepted") return;
 
             if (answer === "decline") {
               if (me?.state !== "invited") {
                 return yield* new NotInvited({ message: "You have no invite to decline" });
               }
-
               yield* setState(tx, sessionId, user.id, "declined");
               const name = yield* playerName(tx, user.id);
-
               return [
                 { to: [session.hostId], from: user.id, ...messages.declinedInvite(session, name) },
               ];
             }
 
+            // The host chose who to invite, so invites skip the level check.
             if (me?.state === "invited") {
               const confirmed = yield* takeSpot(tx, session, user.id);
-
               if (confirmed) return yield* confirmedNotices(tx, session, user.id, true);
               const name = yield* playerName(tx, user.id);
-
               return [
                 { to: [session.hostId], from: user.id, ...messages.acceptedInvite(session, name) },
               ];
             }
-
             if (answer === "accept") {
               return yield* new NotInvited({ message: "You have no invite to accept" });
             }
 
             if (me?.state === "requested") return;
-
             if (session.visibility === "invite_only") {
               return yield* new NotInvited({ message: "This session is invite only" });
             }
-
             if (me?.state === "declined") {
               return yield* new NotInvited({ message: "You can't ask to join this session again" });
             }
-
             if (session.status === "confirmed") {
               return yield* new SessionFull({ message: "Every spot is taken" });
             }
-
             if (!mine) {
               return yield* new ProfileRequired({
                 message: "Set up your profile so the host can see who is asking",
               });
             }
-
             if (!inLevelRange(session, mine.ntrp)) {
               return yield* new LevelOutOfRange({
                 message: "Your level is outside this session's range",
               });
             }
-
             yield* tx
               .insert(playSessionParticipant)
               .values({ sessionId, userId: user.id, role: "player", state: "requested" })
@@ -405,13 +409,13 @@ export class SessionJoins extends Context.Service<
                 set: { state: "requested" },
               });
             const name = yield* playerName(tx, user.id);
-
             return [
               { to: [session.hostId], from: user.id, ...messages.askedToJoin(session, name) },
             ];
           }),
         ).pipe(Effect.asVoid, Effect.withSpan("SessionJoins.respond"));
 
+      /** The player's pending request, if they're still not blocked with the host. */
       const pendingRequest = (tx: Tx, session: LockedSession, userId: string) =>
         Effect.gen(function* () {
           const [row] = yield* tx
@@ -425,7 +429,6 @@ export class SessionJoins extends Context.Service<
                 notBlocked(session.hostId, playSessionParticipant.userId),
               ),
             );
-
           if (!row) return yield* new JoinRequestNotFound({ userId });
         });
 
@@ -437,7 +440,6 @@ export class SessionJoins extends Context.Service<
             const confirmed = yield* takeSpot(tx, session, userId);
             const hostName = yield* playerName(tx, host.id);
             const others = yield* confirmedNotices(tx, session, userId, confirmed);
-
             return [
               { to: [userId], from: host.id, ...messages.approved(session, hostName) },
               ...others,
@@ -451,7 +453,6 @@ export class SessionJoins extends Context.Service<
             yield* pendingRequest(tx, session, userId);
             yield* setState(tx, sessionId, userId, "declined");
             const hostName = yield* playerName(tx, host.id);
-
             return [{ to: [userId], from: host.id, ...messages.notApproved(session, hostName) }];
           }),
         ).pipe(Effect.asVoid, Effect.withSpan("SessionJoins.reject"));
@@ -464,29 +465,22 @@ export class SessionJoins extends Context.Service<
                 message: "The host can't leave; cancel the session instead",
               });
             }
-
             const me = yield* participantOf(tx, sessionId, user.id);
-
             if (!me) {
               const mine = yield* ntrpOf(tx, user.id);
-
               if (!strangerCanSee(session, mine?.ntrp ?? null)) {
                 return yield* new SessionNotFound({ id: sessionId });
               }
             }
-
             yield* requireOpenForChanges(session);
-
             if (me?.state !== "accepted" && me?.state !== "requested") {
               return yield* new NotInvited({ message: "You're not in this session" });
             }
-
             yield* setState(tx, sessionId, user.id, "left");
-
+            // Withdrawing a request to join is quiet; giving up a spot tells the host.
             if (me.state !== "accepted") return;
             yield* reopenIfSpotFree(tx, sessionId);
             const name = yield* playerName(tx, user.id);
-
             return [{ to: [session.hostId], from: user.id, ...messages.left(session, name) }];
           }),
         ).pipe(Effect.asVoid, Effect.withSpan("SessionJoins.leave"));
@@ -502,7 +496,6 @@ export class SessionJoins extends Context.Service<
               .where(eq(playSession.id, sessionId));
             const players = yield* playersIn(tx, sessionId, ["invited", "requested", "accepted"]);
             const hostName = yield* playerName(tx, host.id);
-
             return [
               {
                 to: players.filter((id) => id !== host.id),

@@ -9,9 +9,10 @@ import { fetchMe } from "./profile-api";
  * Signed out, still loading, or the API unreachable all count as false, so
  * the app never traps someone in setup because of a network blip.
  */
-export function useNeedsProfileSetup() {
+export function useNeedsProfileSetup(): boolean {
   const { data: session } = authClient.useSession();
   const userId = session?.user.id;
+  // Keyed by user, so a result for one account never applies to the next.
   const [checked, setChecked] = useState<{ userId: string; needs: boolean } | null>(null);
 
   useEffect(() => {
@@ -20,7 +21,6 @@ export function useNeedsProfileSetup() {
     fetchMe()
       .then((me) => live && setChecked({ userId, needs: needsSetup(me) }))
       .catch(() => live && setChecked({ userId, needs: false }));
-
     return () => {
       live = false;
     };

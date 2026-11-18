@@ -17,6 +17,7 @@ import { reportableMessage } from "./Messages";
 import { block, follow, profile, report, user } from "./db/schema";
 import { removeFromEachOthersSessions } from "./SessionJoins";
 
+/** Who a report is about, and a copy of the reported text when it is content. */
 interface ReportSubject {
   readonly subjectId: string | null;
   readonly content: string | null;
@@ -53,28 +54,28 @@ export class Safety extends Context.Service<
       const db = yield* Db;
       const forum = yield* Forum;
 
+      /** Fails unless `id` is another player's existing account. */
       const requireOtherPlayer = (viewer: SessionUser, id: string, verb: string) =>
         Effect.gen(function* () {
           if (id === viewer.id) {
             return yield* new CannotTargetSelf({ message: `You can't ${verb} yourself` });
           }
-
           const [row] = yield* db
             .select({ id: user.id })
             .from(user)
             .where(eq(user.id, id))
             .pipe(Effect.orDie);
-
           if (!row) {
             return yield* new TargetNotFound({ id });
           }
         });
 
-      const otherAuthor: (
+      /** Content the reporter can see, written by someone else. */
+      const otherAuthor = (
         viewer: SessionUser,
         id: string,
         found: Option.Option<{ readonly authorId: string | null; readonly content: string }>,
-      ) => Effect.Effect<ReportSubject, TargetNotFound | CannotTargetSelf> = (viewer, id, found) =>
+      ): Effect.Effect<ReportSubject, TargetNotFound | CannotTargetSelf> =>
         Option.match(found, {
           onNone: () => Effect.fail(new TargetNotFound({ id })),
           onSome: ({ authorId, content }) =>
@@ -83,15 +84,11 @@ export class Safety extends Context.Service<
               : Effect.succeed({ subjectId: authorId, content }),
         });
 
-      const subjectOf: (
+      const subjectOf = (
         viewer: SessionUser,
         targetType: ReportTargetType,
         id: string,
-      ) => Effect.Effect<ReportSubject, TargetNotFound | CannotTargetSelf> = (
-        viewer,
-        targetType,
-        id,
-      ) => {
+      ): Effect.Effect<ReportSubject, TargetNotFound | CannotTargetSelf> => {
         switch (targetType) {
           case "player":
             return requireOtherPlayer(viewer, id, "report").pipe(
@@ -106,6 +103,7 @@ export class Safety extends Context.Service<
               .findReportable(viewer, "post", id)
               .pipe(Effect.flatMap((found) => otherAuthor(viewer, id, found)));
           case "direct_message":
+            // Still reportable after a block: blocking first and reporting next is common.
             return reportableMessage(db, viewer.id, id).pipe(
               Effect.flatMap((found) => otherAuthor(viewer, id, found)),
             );
@@ -124,6 +122,7 @@ export class Safety extends Context.Service<
         block: (viewer, playerId) =>
           requireOtherPlayer(viewer, playerId, "block").pipe(
             Effect.andThen(
+              // Blocking also ends any follow between the two, in both directions,
               db
                 .transaction((tx) =>
                   Effect.gen(function* () {
@@ -139,6 +138,7 @@ export class Safety extends Context.Service<
                           and(eq(follow.followerId, playerId), eq(follow.followedId, viewer.id)),
                         ),
                       );
+                    // ...and takes each out of the other's sessions.
                     yield* removeFromEachOthersSessions(tx, viewer.id, playerId);
                   }),
                 )

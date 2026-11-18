@@ -35,18 +35,15 @@ export default function InviteToScreen() {
       .then((result) => {
         if (!live) return;
         const now = new Date();
-
         const hosting =
           result.kind === "page"
             ? result.page.items.filter(
                 (s) => s.me?.role === "host" && isEditable(s, now) && s.acceptedCount < s.spots,
               )
             : [];
-
         setLoaded({ kind: "ready", sessions: hosting });
       })
       .catch(() => live && setLoaded({ kind: "error" }));
-
     return () => {
       live = false;
     };
@@ -55,10 +52,8 @@ export default function InviteToScreen() {
   const inviteTo = async (session: SessionSummary) => {
     setSending(session.id);
     setNotice(null);
-
     try {
       const result = await invitePlayers(session.id, [playerId]);
-
       if (result.kind === "refused") return setNotice(result.message);
       router.replace({ pathname: "/sessions/[id]", params: { id: session.id } });
     } catch {
@@ -75,7 +70,6 @@ export default function InviteToScreen() {
       </Screen>
     );
   }
-
   if (loaded.kind === "error") {
     return (
       <Screen edges={["left", "right"]}>

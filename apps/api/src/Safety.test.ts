@@ -28,21 +28,20 @@ const signedOut = Layer.succeed(
   Authentication.of(() => Effect.fail(new Unauthorized({ message: "Sign in to continue" }))),
 );
 
+/** An in-memory `Safety` that knows two other players. `Safety.db.test.ts` covers the real one. */
 const makeSafety = () => {
   const known = new Set(["u_alex", "u_jo"]);
   const blocks = new Map<string, Date>();
   const reports: Array<unknown> = [];
-
-  const check: (
+  const check = (
     id: string,
     verb: string,
-  ) => Effect.Effect<void, CannotTargetSelf | TargetNotFound> = (id, verb) =>
+  ): Effect.Effect<void, CannotTargetSelf | TargetNotFound> =>
     id === sam.id
       ? Effect.fail(new CannotTargetSelf({ message: `You can't ${verb} yourself` }))
       : known.has(id)
         ? Effect.void
         : Effect.fail(new TargetNotFound({ id }));
-
   const layer = Layer.succeed(
     Safety,
     Safety.of({
@@ -62,13 +61,11 @@ const makeSafety = () => {
         check(input.targetId, "report").pipe(
           Effect.map(() => {
             reports.push(input);
-
             return new ReportCreated({ id: `r_${reports.length}` });
           }),
         ),
     }),
   );
-
   return { blocks, reports, layer };
 };
 
@@ -96,11 +93,9 @@ describe("POST /players/:id/block", () => {
     const listed = await run(signedIn, (client) =>
       Effect.gen(function* () {
         yield* client.safety.block({ params: { id: "u_alex" } });
-
         return yield* client.safety.listBlocks();
       }),
     );
-
     expect(listed).toEqual([
       new BlockedPlayer({
         id: "u_alex",
@@ -118,7 +113,6 @@ describe("POST /players/:id/block", () => {
         Effect.flip(client.safety.block({ params: { id: sam.id } })),
       ]),
     );
-
     expect(errors.map((e) => e._tag)).toEqual(["TargetNotFound", "CannotTargetSelf"]);
   });
 
@@ -126,7 +120,6 @@ describe("POST /players/:id/block", () => {
     const error = await run(signedOut, (client) =>
       Effect.flip(client.safety.block({ params: { id: "u_alex" } })),
     );
-
     expect(error._tag).toBe("Unauthorized");
   });
 });
@@ -137,11 +130,9 @@ describe("DELETE /players/:id/block", () => {
       Effect.gen(function* () {
         yield* client.safety.block({ params: { id: "u_alex" } });
         yield* client.safety.unblock({ params: { id: "u_alex" } });
-
         return yield* client.safety.listBlocks();
       }),
     );
-
     expect(listed).toEqual([]);
   });
 });
@@ -149,7 +140,6 @@ describe("DELETE /players/:id/block", () => {
 describe("POST /reports", () => {
   it("files the report and returns its id", async () => {
     const safety = makeSafety();
-
     const created = await run(
       signedIn,
       (client) =>
@@ -158,7 +148,6 @@ describe("POST /reports", () => {
         }),
       safety,
     );
-
     expect(created.id).toBe("r_1");
     expect(safety.reports).toEqual([
       { targetType: "player", targetId: "u_jo", reason: "fake_profile" },
@@ -173,7 +162,6 @@ describe("POST /reports", () => {
         }),
       ),
     );
-
     expect(error._tag).toBe("Unauthorized");
   });
 });

@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { Config, Context, Effect, Layer, Option, Redacted } from "effect";
 import { SqlClient } from "effect/sql";
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- BetterAuth is the Layer that owns makeAuth.
 import { type Auth, type IpAddress, makeAuth, type SocialProviders } from "./auth";
 import { AccountDeletion } from "./AccountDeletion";
 import { Db } from "./Db";
@@ -17,6 +16,7 @@ export const IpAddressConfig: Config.Config<IpAddress> = Config.all({
   trustedProxies: list("TRUSTED_PROXIES").pipe(Config.withDefault([])),
 });
 
+/** Google is on when GOOGLE_CLIENT_ID (comma-separated) and GOOGLE_CLIENT_SECRET are set. */
 const GoogleConfig = Config.all({
   clientIds: list("GOOGLE_CLIENT_ID"),
   clientSecret: Config.Redacted("GOOGLE_CLIENT_SECRET"),
@@ -54,7 +54,6 @@ export class BetterAuth extends Context.Service<BetterAuth, Auth>()("love-all/Be
       const trustedOrigins = yield* TrustedOrigins;
       const socialProviders = yield* SocialProvidersConfig;
       const ipAddress = yield* IpAddressConfig;
-
       return makeAuth({
         database: effectSqlAdapter(services),
         isSuspended: (userId) =>

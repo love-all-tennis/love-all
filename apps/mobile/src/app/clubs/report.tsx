@@ -11,7 +11,6 @@ export default function ReportClubReviewSheet() {
     authorId: string;
     name: string;
   }>();
-
   return (
     <ReportSheet
       targetType="club_review"
@@ -19,6 +18,7 @@ export default function ReportClubReviewSheet() {
       author={{ id: authorId, name }}
       title="Report review"
       subject={`${name}'s review`}
+      // Their reviews are hidden from me now: back to the club, which reloads without them.
       afterBlock={() => {
         announce(clubId);
         router.back();

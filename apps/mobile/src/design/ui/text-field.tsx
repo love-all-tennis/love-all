@@ -18,7 +18,6 @@ export function TextField({ label, hint, error, onFocus, onBlur, ...input }: Tex
   const palette = useColors();
   const [focused, setFocused] = useState(false);
   const borderColor = error ? palette.danger : focused ? palette.accent : palette.borderStrong;
-
   return (
     <View style={styles.field}>
       <Text variant="label">{label}</Text>

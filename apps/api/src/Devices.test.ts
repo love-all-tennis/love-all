@@ -25,9 +25,9 @@ const signedOut = Layer.succeed(
   Authentication.of(() => Effect.fail(new Unauthorized({ message: "Sign in to continue" }))),
 );
 
+/** An in-memory `Notifications` that keeps tokens by owner. `Notifications.db.test.ts` covers the real one. */
 const makeNotifications = () => {
   const tokens = new Map<string, NewDevice & { userId: string }>();
-
   const layer = Layer.succeed(
     Notifications,
     Notifications.of({
@@ -41,7 +41,6 @@ const makeNotifications = () => {
       flush: Effect.void,
     }),
   );
-
   return { tokens, layer };
 };
 
@@ -81,7 +80,6 @@ describe("POST /devices", () => {
 
   it("rejects a token that isn't an Expo push token", async () => {
     const notifications = makeNotifications();
-
     const error = await run(
       signedIn,
       (client) =>
@@ -90,7 +88,6 @@ describe("POST /devices", () => {
         ),
       notifications,
     );
-
     expect(error._tag).not.toBe("Unauthorized");
     expect(notifications.tokens.size).toBe(0);
   });
@@ -99,7 +96,6 @@ describe("POST /devices", () => {
     const error = await run(signedOut, (client) =>
       Effect.flip(client.devices.register({ payload: { token, platform: "android" } })),
     );
-
     expect(error._tag).toBe("Unauthorized");
   });
 });

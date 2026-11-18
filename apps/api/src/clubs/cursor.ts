@@ -16,13 +16,12 @@ const CursorJson = Schema.fromJsonString(Schema.Tuple([Schema.Finite, Schema.Str
 const decodeJson = Schema.decodeUnknownOption(CursorJson);
 
 /** An opaque, URL-safe token. Clients pass it back unchanged. */
-export const encodeReviewsCursor = (cursor: ReviewsCursor) =>
+export const encodeReviewsCursor = (cursor: ReviewsCursor): string =>
   Buffer.from(JSON.stringify([cursor.createdAt, cursor.id])).toString("base64url");
 
 /** None when the token wasn't made by `encodeReviewsCursor`. */
-export const decodeReviewsCursor = (token: string) => {
+export const decodeReviewsCursor = (token: string): Option.Option<ReviewsCursor> => {
   if (!/^[A-Za-z0-9_-]+$/.test(token)) return Option.none();
-
   return decodeJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([ms, id]) => Number.isInteger(ms) && UUID.test(id)),
     Option.map(([createdAt, id]) => ({ createdAt, id })),
@@ -30,4 +29,5 @@ export const decodeReviewsCursor = (token: string) => {
 };
 
 /** `%`, `_` and `\` matched literally in an `ilike` pattern. */
-export const likeContains = (text: string) => `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+export const likeContains = (text: string): string =>
+  `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;

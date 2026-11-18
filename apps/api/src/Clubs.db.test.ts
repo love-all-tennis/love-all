@@ -1,4 +1,4 @@
-import { ClubAlreadyExists, type LatLng, SessionUser } from "@love-all/domain";
+import { type LatLng, SessionUser } from "@love-all/domain";
 import { eq, inArray } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
@@ -6,38 +6,41 @@ import { Clubs } from "./Clubs";
 import { Db } from "./Db";
 import { block, club, clubReview, metro, profile, user } from "./db/schema";
 
+/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = Clubs.layer.pipe(Layer.provideMerge(Db.layer));
 
 interface World {
   readonly players: ReadonlyArray<SessionUser>;
   readonly clubs: Clubs["Service"];
   readonly db: Db["Service"];
+  /** Where this test's players live: a random spot in the South Pacific nobody else uses. */
   readonly home: LatLng;
+  /** A point `km` east of home. */
   readonly near: (km: number) => LatLng;
 }
 
+/**
+ * Creates `count` players living at a random spot in the open ocean (so club
+ * lists don't mix between tests), runs `f`, then deletes the players and
+ * every club near that spot.
+ */
 const withClubs = <A, E>(count: number, f: (world: World) => Effect.Effect<A, E>) =>
   Effect.gen(function* () {
     const db = yield* Db;
     const clubs = yield* Clubs;
-
     const home = {
       lat: Math.round((-55 + Math.random() * 10) * 100) / 100,
       lng: Math.round((-140 + Math.random() * 20) * 100) / 100,
     };
-
+    // One degree of longitude is about 111 km × cos(latitude).
     const kmPerLng = 111.32 * Math.cos((home.lat * Math.PI) / 180);
     const near = (km: number) => ({ lat: home.lat, lng: home.lng + km / kmPerLng });
-
     const players = Array.from({ length: count }, (_, i) => {
       const id = `test_${crypto.randomUUID()}`;
-
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
-
     const ids = players.map((p) => p.id);
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
-
     return yield* Effect.gen(function* () {
       yield* db.insert(profile).values(
         players.map((p, i) => ({
@@ -46,7 +49,6 @@ const withClubs = <A, E>(count: number, f: (world: World) => Effect.Effect<A, E>
           homePoint: { x: home.lng, y: home.lat },
         })),
       );
-
       return yield* f({ players, clubs, db, home, near });
     }).pipe(
       Effect.ensuring(
@@ -56,7 +58,6 @@ const withClubs = <A, E>(count: number, f: (world: World) => Effect.Effect<A, E>
               .select({ id: club.id })
               .from(club)
               .where(inArray(club.createdBy, ids));
-
             if (made.length > 0) {
               yield* db.delete(club).where(
                 inArray(
@@ -65,7 +66,6 @@ const withClubs = <A, E>(count: number, f: (world: World) => Effect.Effect<A, E>
                 ),
               );
             }
-
             yield* db.delete(user).where(inArray(user.id, ids));
           }),
         ),
@@ -81,23 +81,19 @@ describe.skipIf(!process.env.DATABASE_URL)("Clubs", () => {
       Effect.gen(function* () {
         const me = players[0]!;
         const far = yield* clubs.create(me, newClub("Far Courts", near(30)));
-
         const close = yield* clubs.create(me, {
           ...newClub("Close Courts", near(2)),
           address: "1 Harbour Rd",
           access: "members_only",
           indoorCourts: true,
         });
-
         yield* clubs.create(me, newClub("Too Far", near(60)));
         const list = yield* clubs.list(me, {});
         const search = yield* clubs.list(me, { q: "harbour" });
         const small = yield* clubs.list(me, { radiusKm: 10 });
-
         return { far, close, list, search, small };
       }),
     );
-
     expect(result.close).toMatchObject({
       name: "Close Courts",
       address: "1 Harbour Rd",
@@ -121,11 +117,9 @@ describe.skipIf(!process.env.DATABASE_URL)("Clubs", () => {
           .update(profile)
           .set({ homePoint: null })
           .where(eq(profile.userId, players[0]!.id));
-
         return yield* Effect.flip(clubs.list(players[0]!, {}));
       }),
     );
-
     expect(error._tag).toBe("HomePointRequired");
   });
 
@@ -133,19 +127,14 @@ describe.skipIf(!process.env.DATABASE_URL)("Clubs", () => {
     const result = await withClubs(2, ({ players, clubs, near }) =>
       Effect.gen(function* () {
         const first = yield* clubs.create(players[0]!, newClub("Lakeside Tennis", near(1)));
-
         const again = yield* Effect.flip(
           clubs.create(players[1]!, newClub("lakeside tennis", near(1.3))),
         );
-
         const elsewhere = yield* clubs.create(players[1]!, newClub("Lakeside Tennis", near(8)));
-
         return { first, again, elsewhere };
       }),
     );
-
-    expect(result.again).toBeInstanceOf(ClubAlreadyExists);
-    expect(result.again).toMatchObject({ id: result.first.id });
+    expect(result.again).toMatchObject({ _tag: "ClubAlreadyExists", id: result.first.id });
     expect(result.elsewhere.id).not.toBe(result.first.id);
   });
 
@@ -155,11 +144,9 @@ describe.skipIf(!process.env.DATABASE_URL)("Clubs", () => {
         for (let i = 0; i < 5; i++) {
           yield* clubs.create(players[0]!, newClub(`Club ${i}`, near(i * 3)));
         }
-
         return yield* Effect.flip(clubs.create(players[0]!, newClub("One more", near(20))));
       }),
     );
-
     expect(error._tag).toBe("ClubRateLimited");
   });
 
@@ -173,17 +160,14 @@ describe.skipIf(!process.env.DATABASE_URL)("Clubs", () => {
             lng: -83.14,
           }),
         );
-
         const [row] = yield* db
           .select({ slug: metro.slug })
           .from(club)
           .innerJoin(metro, eq(metro.id, club.metroId))
           .where(eq(club.id, made.id));
-
         return row?.slug;
       }),
     );
-
     expect(result).toBe("detroit");
   });
 
@@ -191,7 +175,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Clubs", () => {
     const error = await withClubs(1, ({ players, clubs }) =>
       Effect.flip(clubs.get(players[0]!, crypto.randomUUID())),
     );
-
     expect(error._tag).toBe("ClubNotFound");
   });
 });
@@ -208,11 +191,9 @@ describe.skipIf(!process.env.DATABASE_URL)("Club reviews", () => {
         yield* clubs.deleteReview(me, made.id);
         yield* clubs.deleteReview(me, made.id);
         const afterDelete = yield* clubs.get(me, made.id);
-
         return { first, changed, afterSave, afterDelete };
       }),
     );
-
     expect(result.first).toMatchObject({ rating: 3, body: "Cracks on 2.", mine: true });
     expect(result.changed).toMatchObject({ id: result.first.id, rating: 5, body: null });
     expect(result.changed.updatedAt.getTime()).toBeGreaterThanOrEqual(
@@ -229,24 +210,19 @@ describe.skipIf(!process.env.DATABASE_URL)("Club reviews", () => {
     const result = await withClubs(4, ({ players, clubs, near }) =>
       Effect.gen(function* () {
         const made = yield* clubs.create(players[0]!, newClub("Busy Courts", near(1)));
-
         for (const [i, rating] of [4, 5, 4, 2].entries()) {
           yield* clubs.saveReview(players[i]!, made.id, { rating, body: `Review ${i}` });
         }
-
         const detail = yield* clubs.get(players[0]!, made.id);
         const [listed] = yield* clubs.list(players[0]!, { q: "Busy" });
         const page1 = yield* clubs.listReviews(players[0]!, made.id, { limit: 3 });
-
         const page2 = yield* clubs.listReviews(players[0]!, made.id, {
           limit: 3,
           cursor: page1.nextCursor!,
         });
-
         return { detail, listed, page1, page2 };
       }),
     );
-
     expect(result.detail.rating).toEqual({ average: 3.8, count: 4 });
     expect(result.detail.ratingCounts).toEqual([0, 1, 0, 2, 1]);
     expect(result.listed?.rating).toEqual({ average: 3.8, count: 4 });
@@ -260,9 +236,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Club reviews", () => {
   it("leaves out reviews by blocked players and hidden reviews, from lists and stars", async () => {
     const result = await withClubs(3, ({ players, clubs, db, near }) =>
       Effect.gen(function* () {
-        const me = players[0]!;
-        const blocked = players[1]!;
-        const hidden = players[2]!;
+        const [me, blocked, hidden] = players as [SessionUser, SessionUser, SessionUser];
         const made = yield* clubs.create(me, newClub("Quiet Courts", near(1)));
         yield* clubs.saveReview(blocked, made.id, { rating: 1 });
         yield* clubs.saveReview(hidden, made.id, { rating: 1 });
@@ -272,7 +246,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Club reviews", () => {
           .update(clubReview)
           .set({ hiddenAt: new Date() })
           .where(eq(clubReview.authorId, hidden.id));
-
         return {
           mine: yield* clubs.get(me, made.id),
           reviews: yield* clubs.listReviews(me, made.id, {}),
@@ -280,7 +253,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Club reviews", () => {
         };
       }),
     );
-
     expect(result.mine.rating).toEqual({ average: 5, count: 1 });
     expect(result.reviews.items.map((r) => r.rating)).toEqual([5]);
     expect(result.blockedView.items.map((r) => r.rating)).toEqual([1]);
@@ -290,7 +262,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Club reviews", () => {
     const result = await withClubs(1, ({ players, clubs, near }) =>
       Effect.gen(function* () {
         const made = yield* clubs.create(players[0]!, newClub("Cursor Courts", near(1)));
-
         return {
           save: yield* Effect.flip(
             clubs.saveReview(players[0]!, crypto.randomUUID(), { rating: 4 }),
@@ -300,7 +271,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Club reviews", () => {
         };
       }),
     );
-
     expect(result.save._tag).toBe("ClubNotFound");
     expect(result.list._tag).toBe("ClubNotFound");
     expect(result.cursor._tag).toBe("InvalidCursor");

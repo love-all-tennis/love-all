@@ -29,14 +29,12 @@ export function useCatalog(kind: EquipmentKind | null, q: string) {
     items: [],
     cursor: null,
   });
-
   const [loadingMore, setLoadingMore] = useState(false);
   const [query, setQuery] = useState(q);
   const generation = useRef(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setQuery(q), SEARCH_DELAY_MS);
-
     return () => clearTimeout(timer);
   }, [q]);
 
@@ -49,6 +47,7 @@ export function useCatalog(kind: EquipmentKind | null, q: string) {
       })
       .catch(() => {
         if (mine !== generation.current) return;
+        // Keep what's up; only show the error when there's nothing to show.
         setState((s) => (s.items.length > 0 ? s : { status: "error", items: [], cursor: null }));
       });
   }, [kind, query]);
@@ -64,6 +63,7 @@ export function useCatalog(kind: EquipmentKind | null, q: string) {
         if (mine !== generation.current) return;
         setState((s) => ({ ...s, items: mergeById(s.items, page.items), cursor: page.nextCursor }));
       })
+      // A failed next page leaves the list as it was; scrolling again retries.
       .catch(() => undefined)
       .finally(() => setLoadingMore(false));
   }, [kind, query, state, loadingMore]);

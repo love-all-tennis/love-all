@@ -1,4 +1,3 @@
-import { Match } from "effect";
 import type { PlayerProfile } from "@love-all/domain";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
@@ -40,6 +39,7 @@ export default function PlayerScreen() {
   const { data: session } = authClient.useSession();
   const [attempt, setAttempt] = useState(0);
   const key = `${id}:${attempt}`;
+  // Tagged with the request it answers, so a new id or a retry shows loading.
   const [loaded, setLoaded] = useState<{ key: string; state: Loaded } | null>(null);
   const state: Loaded = loaded?.key === key ? loaded.state : { kind: "loading" };
   const setState = (next: Loaded) => setLoaded({ key, state: next });
@@ -56,7 +56,6 @@ export default function PlayerScreen() {
         settle({ kind: "ready", player, following });
       })
       .catch(() => settle({ kind: "error" }));
-
     return () => {
       live = false;
     };
@@ -67,10 +66,8 @@ export default function PlayerScreen() {
     const next = !state.following;
     setSaving("follow");
     setNotice(null);
-
     try {
       const refusal = await setFollowing(state.player.id, next);
-
       if (refusal) setNotice(refusal);
       else setState({ ...state, following: next });
     } catch {
@@ -83,10 +80,8 @@ export default function PlayerScreen() {
   const message = async (player: PlayerProfile) => {
     setSaving("message");
     setNotice(null);
-
     try {
       const outcome = await openConversation(player.id);
-
       if ("refusal" in outcome) setNotice(outcome.refusal);
       else
         router.push({
@@ -103,11 +98,10 @@ export default function PlayerScreen() {
   const block = async (player: PlayerProfile) => {
     setSaving("block");
     setNotice(null);
-
     try {
       const refusal = await blockPlayer(player.id);
-
       if (refusal) setNotice(refusal);
+      // They're hidden from me now, so leave their profile.
       else router.back();
     } catch {
       setNotice("Couldn't block them. Check your connection and try again.");
@@ -119,6 +113,7 @@ export default function PlayerScreen() {
   const title = state.kind === "ready" ? state.player.displayName : "";
 
   return (
+    // The stack's native header sits above, so only pad the other edges.
     <Screen edges={["left", "right", "bottom"]}>
       <Stack.Screen options={{ title }} />
       {state.kind === "loading" ? <Loading label="Loading profile" /> : null}
@@ -180,21 +175,17 @@ function ProfileBody({
   onBlock: () => void;
 }) {
   const where = [player.metro?.name, distanceLabel(player.distanceKm)].filter(Boolean).join(" · ");
-
-  const hand = Match.value(player.handedness).pipe(
-    Match.when("left", () => "Left-handed"),
-    Match.when("right", () => "Right-handed"),
-    Match.orElse(() => null),
-  );
-
-  const formats = (
-    [
-      [player.playsSingles, "Singles"],
-      [player.playsDoubles, "Doubles"],
-      [player.playsHitting, "Hitting"],
-    ] as const
-  ).flatMap(([plays, label]) => (plays ? [label] : []));
-
+  const hand =
+    player.handedness === "left"
+      ? "Left-handed"
+      : player.handedness === "right"
+        ? "Right-handed"
+        : null;
+  const formats = [
+    player.playsSingles && "Singles",
+    player.playsDoubles && "Doubles",
+    player.playsHitting && "Hitting",
+  ].filter((f): f is string => typeof f === "string");
   const schedule = availabilityLines(player.availability);
 
   return (

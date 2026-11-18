@@ -31,14 +31,16 @@ import {
 
 const HOUR_MS = 3_600_000;
 
-const noRatings = () => ({
+const noRatings = (): EquipmentRatingSummary => ({
   count: 0,
   average: null,
   stars: [0, 0, 0, 0, 0],
 });
 
+/** How an author is shown: their profile name, or their account name before they have a profile. */
 const authorName = sql<string>`coalesce(${profile.displayName}, ${user.name})`;
 
+/** `q` as `name_key` ILIKE patterns, one per word, with LIKE's wildcards escaped. */
 const searchPatterns = (q: string) =>
   q
     .toLowerCase()
@@ -99,6 +101,7 @@ export class Equipment extends Context.Service<
             Effect.orDie,
           );
 
+      /** Rating summaries (and my stars) for each item in `ids`, as the viewer sees them. */
       const ratingsFor = (viewer: SessionUser, ids: ReadonlyArray<string>) =>
         ids.length === 0
           ? Effect.succeed(
@@ -195,7 +198,6 @@ export class Equipment extends Context.Service<
         Effect.gen(function* () {
           const ratings = yield* ratingsFor(viewer, [item.id]);
           const mine = yield* myReview(viewer, item.id);
-
           return new EquipmentDetail({
             id: item.id,
             kind: item.kind,
@@ -211,17 +213,13 @@ export class Equipment extends Context.Service<
         list: (viewer, query) =>
           Effect.gen(function* () {
             const limit = query.limit ?? EQUIPMENT_PAGE_DEFAULT;
-
             const cursor =
               query.cursor === undefined ? undefined : decodeCatalogCursor(query.cursor);
-
             if (cursor !== undefined && Option.isNone(cursor)) {
               return yield* new InvalidCursor({ message: "Unknown cursor" });
             }
-
             const after = cursor?.pipe(Option.getOrUndefined);
             const patterns = query.q === undefined ? [] : searchPatterns(query.q);
-
             const rows = yield* db
               .select()
               .from(equipment)
@@ -238,19 +236,15 @@ export class Equipment extends Context.Service<
               .orderBy(asc(equipment.nameKey), asc(equipment.id))
               .limit(limit + 1)
               .pipe(Effect.orDie);
-
             const page = rows.slice(0, limit);
             const last = page.at(-1);
-
             const ratings = yield* ratingsFor(
               viewer,
               page.map((row) => row.id),
             );
-
             return new EquipmentPage({
               items: page.map((row) => {
                 const rating = ratings.get(row.id);
-
                 return new EquipmentSummary({
                   id: row.id,
                   kind: row.kind,
@@ -279,13 +273,11 @@ export class Equipment extends Context.Service<
                 ),
               )
               .pipe(Effect.orDie);
-
             if ((recent?.total ?? 0) >= EQUIPMENT_ADDED_PER_HOUR) {
               return yield* new EquipmentRateLimited({
                 message: `You can add ${EQUIPMENT_ADDED_PER_HOUR} items an hour. Try again a bit later.`,
               });
             }
-
             const [inserted] = yield* db
               .insert(equipment)
               .values({
@@ -297,9 +289,8 @@ export class Equipment extends Context.Service<
               .onConflictDoNothing()
               .returning()
               .pipe(Effect.orDie);
-
             if (inserted) return yield* detail(viewer, inserted);
-
+            // Already in the catalog: point at the existing item (even if hidden, it's the same thing).
             const [existing] = yield* db
               .select({ id: equipment.id })
               .from(equipment)
@@ -313,35 +304,27 @@ export class Equipment extends Context.Service<
                 ),
               )
               .pipe(Effect.orDie);
-
             return yield* new EquipmentExists({ id: existing!.id });
           }).pipe(Effect.withSpan("Equipment.create")),
 
         get: (viewer, id) =>
           Effect.gen(function* () {
             const item = yield* findItem(id);
-
             if (!item) return yield* new EquipmentNotFound({ id });
-
             return yield* detail(viewer, item);
           }).pipe(Effect.withSpan("Equipment.get")),
 
         listReviews: (viewer, id, query) =>
           Effect.gen(function* () {
             const limit = query.limit ?? EQUIPMENT_PAGE_DEFAULT;
-
             const cursor =
               query.cursor === undefined ? undefined : decodeReviewsCursor(query.cursor);
-
             if (cursor !== undefined && Option.isNone(cursor)) {
               return yield* new InvalidCursor({ message: "Unknown cursor" });
             }
-
             const item = yield* findItem(id);
-
             if (!item) return yield* new EquipmentNotFound({ id });
             const after = cursor?.pipe(Option.getOrUndefined);
-
             const rows = yield* selectReviews()
               .where(
                 and(
@@ -357,10 +340,8 @@ export class Equipment extends Context.Service<
               .orderBy(desc(equipmentReview.createdAt), desc(equipmentReview.id))
               .limit(limit + 1)
               .pipe(Effect.orDie);
-
             const page = rows.slice(0, limit);
             const last = page.at(-1);
-
             return new EquipmentReviewsPage({
               items: page.map(toReview),
               nextCursor:
@@ -373,22 +354,18 @@ export class Equipment extends Context.Service<
         saveReview: (viewer, id, input) =>
           Effect.gen(function* () {
             const item = yield* findItem(id);
-
             if (!item) return yield* new EquipmentNotFound({ id });
-
             const [me] = yield* db
               .select({ ntrp: profile.ntrp })
               .from(profile)
               .where(eq(profile.userId, viewer.id))
               .pipe(Effect.orDie);
-
             const fields = {
               rating: input.rating,
               title: input.title ?? null,
               body: input.body ?? null,
               authorNtrp: me?.ntrp ?? null,
             };
-
             yield* db
               .insert(equipmentReview)
               .values({ equipmentId: id, authorId: viewer.id, createdAt: new Date(), ...fields })
@@ -398,7 +375,6 @@ export class Equipment extends Context.Service<
               })
               .pipe(Effect.orDie);
             const review = yield* myReview(viewer, id);
-
             return review!;
           }).pipe(Effect.withSpan("Equipment.saveReview")),
 
@@ -421,7 +397,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * says. None unless the viewer can see it (not hidden, the item not hidden,
  * and its author not blocked either way).
  */
-export const reportableEquipmentReview = (db: Db["Service"], viewerId: string, reviewId: string) =>
+export const reportableEquipmentReview = (
+  db: Db["Service"],
+  viewerId: string,
+  reviewId: string,
+): Effect.Effect<Option.Option<{ readonly authorId: string; readonly content: string }>> =>
   UUID.test(reviewId)
     ? db
         .select({

@@ -3,6 +3,11 @@ import { describe, expect, it } from "vite-plus/test";
 import { contrastRatio } from "./contrast";
 import { colors, type ColorRole, type ColorScheme } from "./tokens";
 
+/**
+ * Every text-on-fill pair the app uses, with the WCAG AA minimum it must meet:
+ * 4.5 for text, 3 for controls and outlines a player has to see.
+ * Add a row here when you add a colour role.
+ */
 const pairs: ReadonlyArray<readonly [fg: ColorRole, bg: ColorRole, min: number]> = [
   ["text", "background", 7],
   ["text", "surface", 7],
@@ -29,7 +34,6 @@ const pairs: ReadonlyArray<readonly [fg: ColorRole, bg: ColorRole, min: number]>
   ["borderStrong", "background", 3],
 ];
 
-// WARNING: colors is keyed by ColorScheme, so every key is a ColorScheme.
 describe.each(Object.keys(colors) as ColorScheme[])("%s colours", (scheme) => {
   it.each(pairs)("%s on %s meets %d:1", (fg, bg, min) => {
     expect(contrastRatio(colors[scheme][fg], colors[scheme][bg])).toBeGreaterThanOrEqual(min);

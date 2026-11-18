@@ -61,6 +61,7 @@ export default function ThreadScreen() {
   const [posting, setPosting] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  // "5 min ago" is measured from when the thread opened; a new reply reads "Just now".
   const [now] = useState(() => new Date());
 
   useEffect(() => {
@@ -80,7 +81,6 @@ export default function ThreadScreen() {
         );
       })
       .catch(() => live && setState({ status: "error" }));
-
     return () => {
       live = false;
     };
@@ -111,20 +111,15 @@ export default function ThreadScreen() {
 
   const send = async () => {
     setTried(true);
-
     if (bodyError(draft, "reply")) return;
     setPosting(true);
     setProblem(null);
-
     try {
       const outcome = await reply(id, draft.trim());
-
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
-
         return;
       }
-
       setDraft("");
       setTried(false);
       setState((s) =>
@@ -143,25 +138,21 @@ export default function ThreadScreen() {
     }
   };
 
+  /** Updates my reaction straight away, and puts it back if the server says no. */
   const react = (target: "thread" | "post", targetId: string, kind: ForumReactionKind) => {
     if (state.status !== "ready") return;
-
     const before =
       target === "thread"
         ? state.thread.reactions
         : state.replies.find((p) => p.id === targetId)?.reactions;
-
     if (!before) return;
     const { reactions, on } = toggleReaction(before, kind);
-
     const put = (next: typeof before) =>
       setState((s) => {
         if (s.status !== "ready") return s;
-
         if (target === "thread") {
           return { ...s, thread: patchThread(s.thread, { reactions: next }) };
         }
-
         return {
           ...s,
           replies: s.replies.map((p) =>
@@ -169,7 +160,6 @@ export default function ThreadScreen() {
           ),
         };
       });
-
     put(reactions);
     setProblem(null);
     setReaction(target, targetId, kind, on)
@@ -215,10 +205,8 @@ export default function ThreadScreen() {
           .then((outcome) => {
             if ("refusal" in outcome) {
               setProblem(outcome.refusal);
-
               return;
             }
-
             setState((s) =>
               s.status === "ready"
                 ? {
@@ -236,6 +224,7 @@ export default function ThreadScreen() {
       },
     );
 
+  /** Reports the thread or reply itself, so moderators see what was written. */
   const report = (type: "thread" | "post", postId: string, author: ForumAuthor) =>
     router.push({
       pathname: "/forum/report",
@@ -270,7 +259,6 @@ export default function ThreadScreen() {
   const { thread } = state;
   const threadAuthor = thread.author;
   const threadMine = threadAuthor?.id === meId;
-
   const onAction = (
     action: PostMenuAction,
     target: { type: "thread" | "post"; id: string; author: ForumAuthor },

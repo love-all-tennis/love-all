@@ -30,14 +30,12 @@ export function Screen({
   edges = ["top", "left", "right"],
 }: ScreenProps) {
   const palette = useColors();
-
   const header = title ? (
     <View style={styles.header}>
       <Text variant="title">{title}</Text>
       {subtitle && <Text color="textMuted">{subtitle}</Text>}
     </View>
   ) : null;
-
   return (
     <SafeAreaView edges={edges} style={[styles.fill, { backgroundColor: palette.background }]}>
       <KeyboardAvoidingView

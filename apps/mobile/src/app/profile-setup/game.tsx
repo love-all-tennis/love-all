@@ -33,7 +33,6 @@ export default function GameScreen() {
       actionLabel="Next"
       onAction={() => {
         setTried(true);
-
         if (!error) router.push("/profile-setup/availability");
       }}
     >

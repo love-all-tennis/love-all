@@ -20,7 +20,6 @@ export function ConversationRow({
   const unread = unreadCount > 0;
   const when = lastMessage ? timeAgo(lastMessage.createdAt, now) : "";
   const preview = previewLine(conversation);
-
   return (
     <Card
       onPress={onPress}
@@ -87,7 +86,6 @@ export function MessageBubble({
   const palette = useColors();
   const mine = message.mine;
   const time = timeOfDay(message.createdAt);
-
   return (
     <View style={[styles.bubbleRow, mine ? styles.end : styles.start]}>
       <Pressable

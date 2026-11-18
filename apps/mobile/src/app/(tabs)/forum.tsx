@@ -13,7 +13,6 @@ const openCategory = (category: ForumCategory) =>
     pathname: "/forum/category/[id]",
     params: { id: category.id, name: category.name },
   });
-
 const newThread = () => router.push("/forum/new");
 
 /** The forum: my metro's Local category first, then the ones every player sees. */
@@ -22,7 +21,6 @@ export default function ForumScreen() {
   const { state, refresh } = useCategories();
   const now = useNow();
   const { local, global } = splitCategories(state.status === "ready" ? state.value : []);
-
   const sections = [
     ...local.map((c) => ({ title: localHeading(c), data: [c] })),
     ...(global.length > 0 ? [{ title: local.length > 0 ? "Everyone" : null, data: global }] : []),

@@ -50,18 +50,16 @@ export default function ConversationScreen() {
   const [now] = useState(() => new Date());
   const generation = useRef(0);
 
+  /** Loads the newest page and merges it in, then marks the conversation read. */
   const refresh = useCallback(() => {
     const mine = ++generation.current;
     fetchMessages(id)
       .then((page) => {
         if (mine !== generation.current) return;
-
         if (!page) {
           setState({ status: "missing" });
-
           return;
         }
-
         setState((s) =>
           s.status === "ready"
             ? {
@@ -76,7 +74,6 @@ export default function ConversationScreen() {
                 cursor: page.nextCursor,
               },
         );
-
         if (page.conversation.unreadCount > 0) {
           void markRead(id)
             .then(takeOneUnread)
@@ -95,7 +92,6 @@ export default function ConversationScreen() {
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") refresh();
     });
-
     return () => sub.remove();
   }, [refresh]);
 
@@ -124,25 +120,21 @@ export default function ConversationScreen() {
 
   const send = async () => {
     setTried(true);
-
     if (messageError(draft)) return;
     setSending(true);
     setProblem(null);
-
     try {
       const outcome = await sendMessage(id, draft.trim());
-
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
-
         return;
       }
-
       setDraft("");
       setTried(false);
       setState((s) =>
         s.status === "ready" ? { ...s, messages: mergeMessages(s.messages, [outcome.ok]) } : s,
       );
+      // Picks up anything they sent meanwhile.
       refresh();
     } catch {
       setProblem(`Couldn't send your message. ${NETWORK}`);
@@ -153,27 +145,22 @@ export default function ConversationScreen() {
 
   const title =
     state.status === "ready" ? state.conversation.otherPlayer.displayName : (name ?? "");
-
   const other = state.status === "ready" ? state.conversation.otherPlayer : null;
-
   const openProfile = () =>
     other && router.push({ pathname: "/players/[id]", params: { id: other.id } });
 
+  /** Their messages can be reported: it goes to the moderators with the message attached. */
   const offerReport = (message: DirectMessage) => {
     if (!other) return;
-
     const report = () =>
       router.push({
         pathname: "/messages/report",
         params: { id: message.id, authorId: other.id, name: other.displayName },
       });
-
     if (Platform.OS === "web") {
       report();
-
       return;
     }
-
     Alert.alert("Report this message?", "It goes to the Love All moderators.", [
       { text: "Cancel", style: "cancel" },
       { text: "Report message", style: "destructive", onPress: report },

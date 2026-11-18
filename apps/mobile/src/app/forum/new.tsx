@@ -39,7 +39,6 @@ export default function NewThreadScreen() {
     fetchCategories()
       .then((list) => live && setCategories(list))
       .catch(() => live && setCategories("error"));
-
     return () => {
       live = false;
     };
@@ -53,24 +52,19 @@ export default function NewThreadScreen() {
 
   const post = async () => {
     setTried(true);
-
     if (!categoryId || errors.title || errors.body) return;
     setPosting(true);
     setProblem(null);
-
     try {
       const outcome = await createThread({
         categoryId,
         title: title.trim(),
         body: body.trim(),
       });
-
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
-
         return;
       }
-
       router.replace({ pathname: "/forum/thread/[id]", params: { id: outcome.ok.id } });
     } catch {
       setProblem(`Couldn't post your thread. ${NETWORK}`);
@@ -86,7 +80,6 @@ export default function NewThreadScreen() {
       </Screen>
     );
   }
-
   if (categories === "error") {
     return (
       <Screen edges={["left", "right", "bottom"]}>

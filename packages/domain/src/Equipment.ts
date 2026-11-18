@@ -12,17 +12,14 @@ import { Ntrp } from "./Profile";
  */
 
 export const EquipmentId = Schema.String.check(Schema.isUUID());
-
 export type EquipmentId = typeof EquipmentId.Type;
 
 export const EquipmentReviewId = Schema.String.check(Schema.isUUID());
-
 export type EquipmentReviewId = typeof EquipmentReviewId.Type;
 
 /** Kinds of gear, in the order the app lists them. Adding one needs a migration for the enum. */
 export const EQUIPMENT_KINDS = ["racket", "strings", "shoes", "balls", "bag", "other"] as const;
 export const EquipmentKind = Schema.Literals(EQUIPMENT_KINDS);
-
 export type EquipmentKind = typeof EquipmentKind.Type;
 
 export const EQUIPMENT_BRAND_MAX = 40;
@@ -34,17 +31,14 @@ export const EquipmentBrand = Schema.String.check(
   Schema.isTrimmed(),
   Schema.isBetweenLength(1, EQUIPMENT_BRAND_MAX),
 );
-
 export const EquipmentModel = Schema.String.check(
   Schema.isTrimmed(),
   Schema.isBetweenLength(1, EQUIPMENT_MODEL_MAX),
 );
-
 export const EquipmentReviewTitle = Schema.String.check(
   Schema.isTrimmed(),
   Schema.isBetweenLength(1, EQUIPMENT_REVIEW_TITLE_MAX),
 );
-
 export const EquipmentReviewBody = Schema.String.check(
   Schema.isTrimmed(),
   Schema.isBetweenLength(1, EQUIPMENT_REVIEW_BODY_MAX),
@@ -52,7 +46,6 @@ export const EquipmentReviewBody = Schema.String.check(
 
 /** Stars, 1 to 5. */
 export const EquipmentRating = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 5 }));
-
 export type EquipmentRating = typeof EquipmentRating.Type;
 
 /** How many items one player can add to the catalog an hour, to blunt spam. */
@@ -68,7 +61,6 @@ export const EquipmentRatingSummary = Schema.Struct({
   average: Schema.NullOr(Schema.Number),
   stars: Schema.Array(Schema.Int),
 });
-
 export type EquipmentRatingSummary = typeof EquipmentRatingSummary.Type;
 
 /** An item as listed in the catalog. */
@@ -88,7 +80,6 @@ export const EquipmentReviewer = Schema.Struct({
   displayName: Schema.String,
   photoUrl: Schema.NullOr(Schema.String),
 });
-
 export type EquipmentReviewer = typeof EquipmentReviewer.Type;
 
 /** A review. `authorNtrp` is the reviewer's level when they last saved it. */
@@ -132,7 +123,6 @@ export const EquipmentQuery = {
   cursor: Schema.optionalKey(Schema.String),
   limit: Schema.optionalKey(EquipmentPageSize),
 };
-
 export type EquipmentQuery = Schema.Struct<typeof EquipmentQuery>["Type"];
 
 /** One page of the catalog, by brand then model. */
@@ -146,7 +136,6 @@ export const EquipmentReviewsQuery = {
   cursor: Schema.optionalKey(Schema.String),
   limit: Schema.optionalKey(EquipmentPageSize),
 };
-
 export type EquipmentReviewsQuery = Schema.Struct<typeof EquipmentReviewsQuery>["Type"];
 
 /** One page of other players' reviews of an item, newest first. Mine is on `EquipmentDetail`. */
@@ -163,7 +152,6 @@ export const NewEquipment = Schema.Struct({
   brand: EquipmentBrand,
   model: EquipmentModel,
 });
-
 export type NewEquipment = typeof NewEquipment.Type;
 
 /** `PUT /equipment/:id/review` body. Leave out (or null) the title or text for a rating only. */
@@ -172,7 +160,6 @@ export const EquipmentReviewInput = Schema.Struct({
   title: Schema.optionalKey(Schema.NullOr(EquipmentReviewTitle)),
   body: Schema.optionalKey(Schema.NullOr(EquipmentReviewBody)),
 });
-
 export type EquipmentReviewInput = typeof EquipmentReviewInput.Type;
 
 /** No item with that id. */

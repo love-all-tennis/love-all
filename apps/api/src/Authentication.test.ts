@@ -1,9 +1,10 @@
-import { Api, Unauthorized } from "@love-all/domain";
-import { Cause, Effect, Exit, Layer } from "effect";
+import { Api } from "@love-all/domain";
+import { Effect, Exit, Layer } from "effect";
 import { HttpServer } from "effect/http";
 import { HttpApiTest } from "effect/http-api";
 import { describe, expect, it } from "vite-plus/test";
 import { Accounts } from "./Accounts";
+import type { Auth } from "./auth";
 import { AuthenticationLive } from "./Authentication";
 import { BetterAuth } from "./BetterAuth";
 import { MeHandlers } from "./Handlers";
@@ -13,10 +14,11 @@ type GetSession = () => Promise<{
   user: { id: string; name: string; email: string; role?: unknown };
 } | null>;
 
+/** A stand-in for Better Auth whose only behavior is the session lookup. */
 const fakeAuth = (getSession: GetSession) =>
-  // WARNING: the handlers under test only call auth.api.getSession.
-  Layer.succeed(BetterAuth, { api: { getSession } } as never);
+  Layer.succeed(BetterAuth, { api: { getSession } } as unknown as Auth);
 
+/** GET /me never writes to the account. */
 const noAccounts = Layer.succeed(
   Accounts,
   Accounts.of({ confirmAdult: () => Effect.die("unused") }),
@@ -24,6 +26,7 @@ const noAccounts = Layer.succeed(
 
 const makeClient = HttpApiTest.groups(Api, ["me"]);
 
+/** GET /me through the real middleware, with Better Auth's answer stubbed. */
 const getMe = (getSession: GetSession) =>
   makeClient.pipe(
     Effect.flatMap((client) => client.me.get()),
@@ -56,9 +59,9 @@ describe("Authentication middleware", () => {
   it("fails with Unauthorized when there is no session (missing or expired)", async () => {
     const exit = await getMe(async () => null);
     expect(Exit.isFailure(exit)).toBe(true);
-
-    const error = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined;
-
-    expect(error).toBeInstanceOf(Unauthorized);
+    const error = Exit.isFailure(exit)
+      ? exit.cause.reasons.find((r) => r._tag === "Fail")
+      : undefined;
+    expect(error?._tag === "Fail" && error.error._tag).toBe("Unauthorized");
   });
 });

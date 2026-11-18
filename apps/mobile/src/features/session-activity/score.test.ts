@@ -24,14 +24,16 @@ const ALEX = "33333333-3333-4333-8333-333333333333";
 const JO = "44444444-4444-4444-8444-444444444444";
 
 const singles: ScoreContext = { kind: "singles", meId: ME, others: [{ id: SAM }] };
-
 const doubles: ScoreContext = {
   kind: "doubles",
   meId: ME,
   others: [{ id: SAM }, { id: ALEX }, { id: JO }],
 };
 
-const draftOf = (sets: ReadonlyArray<[string, string]>, extra: Partial<ScoreDraft> = {}) => ({
+const draftOf = (
+  sets: ReadonlyArray<[string, string]>,
+  extra: Partial<ScoreDraft> = {},
+): ScoreDraft => ({
   ...emptyScoreDraft(),
   sets: sets.map(([mine, theirs]) => ({ mine, theirs })),
   ...extra,
@@ -107,7 +109,6 @@ describe("checkScore", () => {
       ]),
       singles,
     );
-
     expect(check.ok && check.result.sets).toEqual([
       [6, 4],
       [3, 6],
@@ -134,8 +135,8 @@ describe("checkScore", () => {
       ],
       { thirdIsTiebreak: false },
     );
-
     expect(checkScore(draft, singles).ok).toBe(true);
+    // The same 7-6 isn't a match tiebreak.
     expect(checkScore({ ...draft, thirdIsTiebreak: true }, singles).ok).toBe(false);
   });
 
@@ -147,9 +148,7 @@ describe("checkScore", () => {
       ]),
       singles,
     );
-
     expect(check.ok).toBe(false);
-
     if (check.ok) return;
     expect(check.errors.sets[0]).toBe("Enter both scores for set 1");
     expect(check.errors.sets[1]).toBe("Set 2 should end 6–0 to 6–4, 7–5 or 7–6");
@@ -165,7 +164,6 @@ describe("checkScore", () => {
       ]),
       singles,
     );
-
     expect(!check.ok && check.errors.sets[2]).toBe(
       "A match tiebreak goes to 10, won by 2, like 10–7",
     );
@@ -179,7 +177,6 @@ describe("checkScore", () => {
       ]),
       singles,
     );
-
     expect(!check.ok && check.errors.match).toBe("Add the deciding set: the match is one set all");
   });
 
@@ -189,7 +186,6 @@ describe("checkScore", () => {
       ["6", "3"],
       ["10", "4"],
     ]);
-
     const check = checkScore(draft, singles);
     expect(!check.ok && check.errors.match).toBe(
       "The match was over after set 2. Remove the extra set.",
@@ -204,7 +200,6 @@ describe("checkScore", () => {
       ],
       { partnerId: ALEX },
     );
-
     expect(checkScore(draft, doubles)).toEqual({
       ok: true,
       result: {
@@ -226,9 +221,7 @@ describe("checkScore", () => {
       ]),
       doubles,
     );
-
     expect(!check.ok && check.errors.partner).toBe("Pick your partner");
-
     const stranger = draftOf(
       [
         ["6", "2"],
@@ -236,13 +229,11 @@ describe("checkScore", () => {
       ],
       { partnerId: "nobody" },
     );
-
     expect(!checkScore(stranger, doubles).ok).toBe(true);
   });
 
   it("needs a full session", () => {
     const short = { ...doubles, others: [{ id: SAM }] };
-
     const check = checkScore(
       draftOf(
         [
@@ -253,7 +244,6 @@ describe("checkScore", () => {
       ),
       short,
     );
-
     expect(!check.ok && check.errors.partner).toBe(
       "A doubles score needs four players in the session",
     );
@@ -267,7 +257,6 @@ describe("showing a result", () => {
     { id: ALEX, displayName: "Alex" },
     { id: JO, displayName: "Jo" },
   ];
-
   const result = (fields: Partial<ConstructorParameters<typeof SessionResult>[0]> = {}) =>
     new SessionResult({
       sideA: [SAM],
@@ -325,7 +314,6 @@ describe("showing a result", () => {
       players,
       ME,
     );
-
     expect(view.headline).toBe("You won 6–4, 6–2");
   });
 
@@ -335,7 +323,6 @@ describe("showing a result", () => {
       players,
       ALEX,
     );
-
     expect(view.headline).toBe("Sam and You won 6–4, 3–6, 10–7");
     expect(view.canRespond).toBe(false);
     expect(view.detail).toBe("Recorded by Sam. Waiting for the other side to confirm.");
@@ -369,7 +356,6 @@ describe("who can do what", () => {
     startsAt: new Date("2026-11-20T18:00:00Z"),
     me: { state: "accepted" },
   };
-
   const after = new Date("2026-11-20T19:00:00Z");
 
   it("lets accepted players record a started singles or doubles score", () => {
@@ -408,7 +394,6 @@ describe("past sessions", () => {
       recordedBy: SAM,
       recordedAt: now,
     };
-
     const confirmed = new SessionResult({
       ...base,
       sets: [...base.sets],
@@ -416,7 +401,6 @@ describe("past sessions", () => {
       respondedBy: ME,
       respondedAt: now,
     });
-
     const pending = new SessionResult({
       ...base,
       sets: [...base.sets],
@@ -424,7 +408,6 @@ describe("past sessions", () => {
       respondedBy: null,
       respondedAt: null,
     });
-
     expect(pastScoreLine(confirmed, ME)).toBe("Lost 4–6, 4–6");
     expect(pastScoreLine(confirmed, SAM)).toBe("Won 6–4, 6–4");
     expect(pastScoreLine(pending, ME)).toBe("Score to confirm");

@@ -1,4 +1,3 @@
-import { Match } from "effect";
 import { Image } from "expo-image";
 import { StyleSheet, View } from "react-native";
 
@@ -9,7 +8,7 @@ import { Text } from "./text";
 export type AvatarSize = keyof typeof sizes.avatar;
 
 /** The initials for a name: "Sam Lee" is "SL". */
-export const initialsOf = (name: string) =>
+export const initialsOf = (name: string): string =>
   name
     .split(/\s+/)
     .filter(Boolean)
@@ -30,31 +29,25 @@ export function Avatar({
 }) {
   const palette = useColors();
   const side = sizes.avatar[size];
-  const circle = { width: side, height: side, borderRadius: side / 2 };
-
+  const shape = { width: side, height: side, borderRadius: side / 2 };
   if (photoUrl) {
     return (
       <Image
         source={{ uri: photoUrl }}
-        style={[circle, { backgroundColor: palette.surfaceSunken }]}
+        style={[shape, { backgroundColor: palette.surfaceSunken }]}
         contentFit="cover"
         accessibilityIgnoresInvertColors
       />
     );
   }
-
   return (
     <View
-      style={[circle, styles.initials, { backgroundColor: palette.surfaceSunken }]}
+      style={[shape, styles.initials, { backgroundColor: palette.surfaceSunken }]}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
       <Text
-        variant={Match.value(size).pipe(
-          Match.when("sm", () => "label" as const),
-          Match.when("md", () => "subheading" as const),
-          Match.orElse(() => "title" as const),
-        )}
+        variant={size === "sm" ? "label" : size === "md" ? "subheading" : "title"}
         color="textMuted"
       >
         {initialsOf(name) || "?"}

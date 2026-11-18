@@ -20,14 +20,11 @@ export function MessagePlayerButton({
 }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-
   const open = async () => {
     setBusy(true);
     setProblem(null);
-
     try {
       const outcome = await openConversation(playerId);
-
       if ("refusal" in outcome) setProblem(outcome.refusal);
       else router.push({ pathname: "/messages/[id]", params: { id: outcome.ok.id, name } });
     } catch {
@@ -36,7 +33,6 @@ export function MessagePlayerButton({
       setBusy(false);
     }
   };
-
   return (
     <View style={styles.group}>
       <Button

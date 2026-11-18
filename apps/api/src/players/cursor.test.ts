@@ -12,7 +12,6 @@ describe("players cursor", () => {
 
   it("rejects tokens it didn't make", () => {
     const base64url = (value: string) => Buffer.from(value).toString("base64url");
-
     for (const token of [
       "",
       "not base64!",

@@ -17,13 +17,12 @@ const CursorJson = Schema.fromJsonString(Schema.Tuple([Schema.Finite, Schema.Str
 const decodeJson = Schema.decodeUnknownOption(CursorJson);
 
 /** An opaque, URL-safe token. Clients pass it back unchanged. */
-export const encodeThreadsCursor = (cursor: ThreadsCursor) =>
+export const encodeThreadsCursor = (cursor: ThreadsCursor): string =>
   Buffer.from(JSON.stringify([cursor.lastPostAt, cursor.id])).toString("base64url");
 
 /** None when the token wasn't made by `encodeThreadsCursor`. */
-export const decodeThreadsCursor = (token: string) => {
+export const decodeThreadsCursor = (token: string): Option.Option<ThreadsCursor> => {
   if (!/^[A-Za-z0-9_-]+$/.test(token)) return Option.none();
-
   return decodeJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([ms, id]) => Number.isInteger(ms) && UUID.test(id)),
     Option.map(([lastPostAt, id]) => ({ lastPostAt, id })),
@@ -31,12 +30,11 @@ export const decodeThreadsCursor = (token: string) => {
 };
 
 /** A replies cursor is the last reply's id, base64url-encoded so clients treat it as opaque. */
-export const encodeRepliesCursor = (id: string) => Buffer.from(id).toString("base64url");
+export const encodeRepliesCursor = (id: string): string => Buffer.from(id).toString("base64url");
 
 /** None when the token isn't an encoded reply id. */
-export const decodeRepliesCursor = (token: string) => {
+export const decodeRepliesCursor = (token: string): Option.Option<string> => {
   if (!/^[A-Za-z0-9_-]+$/.test(token)) return Option.none();
   const id = Buffer.from(token, "base64url").toString("utf8");
-
   return UUID.test(id) ? Option.some(id) : Option.none();
 };

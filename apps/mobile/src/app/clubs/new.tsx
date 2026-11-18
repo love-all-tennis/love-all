@@ -49,12 +49,10 @@ export default function NewClubScreen() {
 
   const save = async () => {
     setTried(true);
-
     if (nameError(name) || addressError(address) || !point || !access) return;
     setSaving(true);
     setProblem(null);
     setExisting(null);
-
     try {
       const outcome = await createClub({
         name: name.trim(),
@@ -63,9 +61,7 @@ export default function NewClubScreen() {
         access,
         indoorCourts: indoor,
       });
-
       if ("existing" in outcome) return setExisting(outcome.existing);
-
       if ("refusal" in outcome) return setProblem(outcome.refusal);
       router.replace({ pathname: "/clubs/[id]", params: { id: outcome.ok.id } });
     } catch {
@@ -146,6 +142,7 @@ export default function NewClubScreen() {
   );
 }
 
+/** The club's map pin: found from the address or name, or taken from where I'm standing. */
 function MapPin({
   name,
   address,
@@ -164,14 +161,11 @@ function MapPin({
 
   const fromText = async () => {
     const text = address.trim() || name.trim();
-
     if (!text) return setProblem("Type the club's name or address first, then find it.");
     setBusy("search");
     setProblem(null);
-
     try {
       const [hit] = await Location.geocodeAsync(text);
-
       if (!hit) return setProblem(`Couldn't find "${text}". Try adding the city.`);
       onChange({ lat: hit.latitude, lng: hit.longitude });
     } catch {
@@ -184,17 +178,13 @@ function MapPin({
   const fromHere = async () => {
     setBusy("here");
     setProblem(null);
-
     try {
       const { granted } = await Location.requestForegroundPermissionsAsync();
-
       if (!granted)
         return setProblem("Location is off for Love All. Find the club by name instead.");
-
       const { coords } = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-
       onChange({ lat: coords.latitude, lng: coords.longitude });
     } catch {
       setProblem("Couldn't get your location. Find the club by name instead.");

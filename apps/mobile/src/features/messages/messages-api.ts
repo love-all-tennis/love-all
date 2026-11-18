@@ -1,3 +1,9 @@
+import type {
+  Conversation,
+  ConversationsPage,
+  DirectMessage,
+  MessagesPage,
+} from "@love-all/domain";
 import { Effect } from "effect";
 
 import { callApi } from "@/lib/api";
@@ -14,11 +20,11 @@ const refuse = (refusal: string) => Effect.succeed<{ refusal: string }>({ refusa
 /** Shown when a conversation is gone: blocked either way, or not mine. */
 export const GONE = "This conversation isn't available any more.";
 
-export const fetchInbox = (cursor?: string) =>
+export const fetchInbox = (cursor?: string): Promise<ConversationsPage> =>
   callApi((api) => api.messages.listConversations({ query: cursor ? { cursor } : {} }));
 
 /** The conversation and a page of messages, or null when it's gone. */
-export const fetchMessages = (id: string, cursor?: string) =>
+export const fetchMessages = (id: string, cursor?: string): Promise<MessagesPage | null> =>
   callApi((api) =>
     api.messages
       .listMessages({ params: { id }, query: cursor ? { cursor } : {} })
@@ -26,7 +32,7 @@ export const fetchMessages = (id: string, cursor?: string) =>
   );
 
 /** Opens my conversation with a player, starting one if there's none. */
-export const openConversation = (playerId: string) =>
+export const openConversation = (playerId: string): Promise<Outcome<Conversation>> =>
   callApi((api) =>
     api.messages.openConversation({ payload: { playerId } }).pipe(
       Effect.map((ok) => ({ ok })),
@@ -39,7 +45,7 @@ export const openConversation = (playerId: string) =>
     ),
   );
 
-export const sendMessage = (id: string, body: string) =>
+export const sendMessage = (id: string, body: string): Promise<Outcome<DirectMessage>> =>
   callApi((api) =>
     api.messages.send({ params: { id }, payload: { body } }).pipe(
       Effect.map((ok) => ({ ok })),
@@ -51,7 +57,7 @@ export const sendMessage = (id: string, body: string) =>
   );
 
 /** Marks the conversation read. A gone conversation has nothing left to read. */
-export const markRead = (id: string) =>
+export const markRead = (id: string): Promise<void> =>
   callApi((api) =>
     api.messages
       .markRead({ params: { id } })

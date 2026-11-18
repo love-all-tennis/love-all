@@ -4,7 +4,6 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/a
 
 /** Who a user is to the app. Admins can use the moderation endpoints. */
 export const roles = ["player", "admin"] as const;
-
 export type Role = (typeof roles)[number];
 
 /**
@@ -50,6 +49,7 @@ export interface IpAddress {
   readonly trustedProxies?: ReadonlyArray<string>;
 }
 
+/** Apple posts the OAuth callback back to us from its own origin. */
 const appleOrigin = "https://appleid.apple.com";
 
 const passwordToDelete = createAuthMiddleware(async (ctx) => {
@@ -84,7 +84,6 @@ const passwordToDelete = createAuthMiddleware(async (ctx) => {
 export const makeAuth = (options: AuthOptions) => {
   const { google, apple } = options.socialProviders ?? {};
   const { headers, trustedProxies } = options.ipAddress ?? {};
-
   return betterAuth({
     appName: "Love All",
     database: options.database,
@@ -97,6 +96,7 @@ export const makeAuth = (options: AuthOptions) => {
     databaseHooks: {
       session: {
         create: {
+          // Suspended players can't sign in. Suspending also deletes their sessions.
           before: async (session) => {
             if (await options.isSuspended(session.userId)) {
               throw APIError.from("FORBIDDEN", {
@@ -135,11 +135,13 @@ export const makeAuth = (options: AuthOptions) => {
           type: [...roles],
           required: false,
           defaultValue: "player",
+          // Never settable from sign-up or update-user; admins are promoted in the database.
           input: false,
         },
         adultConfirmedAt: {
           type: "date",
           required: false,
+          // Set by POST /me/adult-confirmation, never from sign-up or update-user.
           input: false,
         },
       },

@@ -21,9 +21,7 @@ export default function BasicsScreen() {
       aspect: [1, 1],
       quality: 0.7,
     });
-
     const asset = result.canceled ? undefined : result.assets[0];
-
     if (asset) update({ photoUri: asset.uri });
   };
 
@@ -44,7 +42,6 @@ export default function BasicsScreen() {
       actionLabel="Next"
       onAction={() => {
         setTried(true);
-
         if (!error) router.push("/profile-setup/home");
       }}
     >
@@ -71,7 +68,6 @@ export default function BasicsScreen() {
         returnKeyType="next"
         onSubmitEditing={() => {
           setTried(true);
-
           if (!error) router.push("/profile-setup/home");
         }}
       />

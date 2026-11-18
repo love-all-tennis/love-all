@@ -3,11 +3,9 @@ import { SessionUser } from "./Auth";
 
 /** NTRP self-rating. "5.5" means 5.5 and up. Same levels, in order, as the `ntrp_level` enum. */
 export const Ntrp = Schema.Literals(["2.5", "3.0", "3.5", "4.0", "4.5", "5.0", "5.5"]);
-
 export type Ntrp = typeof Ntrp.Type;
 
 export const Handedness = Schema.Literals(["right", "left"]);
-
 export type Handedness = typeof Handedness.Type;
 
 /**
@@ -18,7 +16,6 @@ export const LatLng = Schema.Struct({
   lat: Schema.Number.check(Schema.isBetween({ minimum: -90, maximum: 90 })),
   lng: Schema.Number.check(Schema.isBetween({ minimum: -180, maximum: 180 })),
 });
-
 export type LatLng = typeof LatLng.Type;
 
 /** The launch area a profile falls in, derived from its home point. */
@@ -27,7 +24,6 @@ export const MetroSummary = Schema.Struct({
   slug: Schema.String,
   name: Schema.String,
 });
-
 export type MetroSummary = typeof MetroSummary.Type;
 
 export const DisplayName = Schema.String.check(Schema.isTrimmed(), Schema.isBetweenLength(1, 50));
@@ -68,7 +64,6 @@ export const ProfilePatch = Schema.Struct({
   playsHitting: Schema.optionalKey(Schema.Boolean),
   bio: Schema.optionalKey(Schema.NullOr(Bio)),
 });
-
 export type ProfilePatch = typeof ProfilePatch.Type;
 
 /** A 24-hour wall-clock time, "HH:MM", in the player's local time. */
@@ -87,7 +82,6 @@ export const AvailabilityBlock = Schema.Struct({
     (block) => block.endTime > block.startTime || "endTime must be after startTime",
   ),
 );
-
 export type AvailabilityBlock = typeof AvailabilityBlock.Type;
 
 /** Most anyone needs is a few blocks a day; the cap keeps a bad client from writing thousands. */
@@ -97,16 +91,13 @@ const noOverlaps = Schema.makeFilter((blocks: ReadonlyArray<AvailabilityBlock>) 
   const sorted = [...blocks].sort(
     (a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime),
   );
-
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1]!;
     const next = sorted[i]!;
-
     if (prev.weekday === next.weekday && next.startTime < prev.endTime) {
       return `Blocks overlap on weekday ${next.weekday}: ${prev.startTime}-${prev.endTime} and ${next.startTime}-${next.endTime}`;
     }
   }
-
   return true;
 });
 
@@ -115,7 +106,6 @@ export const Availability = Schema.Array(AvailabilityBlock).check(
   Schema.isMaxLength(MAX_AVAILABILITY_BLOCKS),
   noOverlaps,
 );
-
 export type Availability = typeof Availability.Type;
 
 /**

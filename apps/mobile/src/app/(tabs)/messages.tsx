@@ -1,4 +1,3 @@
-import { Match } from "effect";
 import type { Conversation } from "@love-all/domain";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -18,6 +17,7 @@ const openConversation = (conversation: Conversation) =>
 export default function MessagesScreen() {
   const palette = useColors();
   const { status, items, loadingMore, loadMore, refresh } = useInbox();
+  // "5 min ago" is measured from when the inbox loaded.
   const [now] = useState(() => new Date());
 
   return (
@@ -35,16 +35,16 @@ export default function MessagesScreen() {
         ListFooterComponent={
           loadingMore ? <Loading label="Loading more conversations" /> : undefined
         }
-        ListEmptyComponent={Match.value(status).pipe(
-          Match.when("loading", () => <Loading label="Loading your messages" />),
-          Match.when("error", () => (
+        ListEmptyComponent={
+          status === "loading" ? (
+            <Loading label="Loading your messages" />
+          ) : status === "error" ? (
             <EmptyState
               title="Couldn't load your messages"
               body="Check your connection and try again."
               action={{ label: "Try again", onPress: refresh }}
             />
-          )),
-          Match.orElse(() => (
+          ) : (
             <View style={styles.empty}>
               <EmptyState
                 title="No messages yet"
@@ -52,8 +52,8 @@ export default function MessagesScreen() {
                 action={{ label: "Find players", onPress: () => router.navigate("/players") }}
               />
             </View>
-          )),
-        )}
+          )
+        }
         refreshControl={
           <RefreshControl
             refreshing={false}

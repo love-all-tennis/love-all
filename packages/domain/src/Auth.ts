@@ -3,7 +3,6 @@ import { HttpApiMiddleware } from "effect/http-api";
 
 /** What a user can do: every user is a player; admins can also moderate. */
 export const Role = Schema.Literals(["player", "admin"]);
-
 export type Role = typeof Role.Type;
 
 /** The signed-in player, as resolved from the Better Auth session. */

@@ -11,26 +11,26 @@ export type Loadable<A> =
   | { readonly status: "ready"; readonly value: A };
 
 /** The categories I can see. Reloads on focus, so new activity shows up. */
-export function useCategories() {
+export function useCategories(): {
+  readonly state: Loadable<ReadonlyArray<ForumCategory>>;
+  readonly refresh: () => void;
+} {
   const [state, setState] = useState<Loadable<ReadonlyArray<ForumCategory>>>({
     status: "loading",
   });
-
   const generation = useRef(0);
-
   const refresh = useCallback(() => {
     const mine = ++generation.current;
     fetchCategories()
       .then((value) => mine === generation.current && setState({ status: "ready", value }))
+      // Keep what's up; only show the error when there's nothing to show.
       .catch(
         () =>
           mine === generation.current &&
           setState((s) => (s.status === "ready" ? s : { status: "error" })),
       );
   }, []);
-
   useFocusEffect(refresh);
-
   return { state, refresh };
 }
 
@@ -81,6 +81,7 @@ export function useThreadList(categoryId: string) {
           s ? { ...s, threads: mergeById(s.threads, page.items), cursor: page.nextCursor } : s,
         );
       })
+      // A failed next page leaves the list as it was; scrolling again retries.
       .catch(() => undefined)
       .finally(() => setLoadingMore(false));
   }, [categoryId, state, loadingMore]);

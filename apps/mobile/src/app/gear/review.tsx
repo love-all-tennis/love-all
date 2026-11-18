@@ -34,7 +34,6 @@ export default function GearReviewScreen() {
         if (!live) return;
         setItem(found ?? "missing");
         const mine = found?.myReview;
-
         if (mine) {
           setRating(mine.rating);
           setTitle(mine.title ?? "");
@@ -42,7 +41,6 @@ export default function GearReviewScreen() {
         }
       })
       .catch(() => live && setItem("error"));
-
     return () => {
       live = false;
     };
@@ -52,20 +50,15 @@ export default function GearReviewScreen() {
 
   const save = async () => {
     setTried(true);
-
     if (rating === null || errors.title || errors.body) return;
     setBusy("save");
     setProblem(null);
-
     try {
       const outcome = await saveReview(id, reviewPayload({ rating, title, body }));
-
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
-
         return;
       }
-
       router.back();
     } catch {
       setProblem(`Couldn't save your review. ${NETWORK}`);
@@ -96,7 +89,6 @@ export default function GearReviewScreen() {
       </Screen>
     );
   }
-
   if (item === "missing" || item === "error") {
     return (
       <Screen edges={["left", "right", "bottom"]}>
@@ -124,7 +116,6 @@ export default function GearReviewScreen() {
   }
 
   const editing = item.myReview !== null;
-
   return (
     <Screen edges={["left", "right", "bottom"]}>
       <Stack.Screen options={{ title: editing ? "Edit review" : "Write a review" }} />

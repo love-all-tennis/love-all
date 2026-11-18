@@ -25,9 +25,9 @@ export default function ConfirmAgeScreen() {
   const confirm = async () => {
     setSubmitting(true);
     setError(null);
-
     try {
       await confirmAdult();
+      // The root layout opens the app once the session shows the confirmation.
       await refetch({ query: { disableCookieCache: true } });
     } catch {
       setError("Couldn't save that. Check your connection and try again.");
@@ -39,6 +39,7 @@ export default function ConfirmAgeScreen() {
     if (!autoConfirming) return;
     rememberAdultConfirmation(false);
     void confirm();
+    // Runs once, with the answer given on the sign-up screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

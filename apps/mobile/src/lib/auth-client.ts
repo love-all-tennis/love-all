@@ -13,6 +13,7 @@ export const authClient = createAuthClient({
       storagePrefix: "loveall",
       storage: SecureStore,
     }),
+    // Mirrors `user.additionalFields` in apps/api/src/auth.ts.
     inferAdditionalFields({
       user: {
         role: { type: "string", required: false, input: false },

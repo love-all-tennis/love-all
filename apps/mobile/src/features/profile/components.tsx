@@ -38,6 +38,7 @@ export function StepScreen({
   busy?: boolean;
 }) {
   return (
+    // The stack's native header sits above, so only pad the other edges.
     <Screen edges={["left", "right", "bottom"]}>
       <View style={styles.header}>
         <Text variant="label" color="textMuted">
@@ -82,7 +83,6 @@ export function SlotToggle({
   onPress: () => void;
 }) {
   const palette = useColors();
-
   return (
     <Pressable
       accessibilityRole="checkbox"

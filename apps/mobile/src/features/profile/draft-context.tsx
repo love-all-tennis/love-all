@@ -7,6 +7,7 @@ type DraftState = {
   draft: ProfileDraft;
   update: (patch: Partial<ProfileDraft>) => void;
   replace: (draft: ProfileDraft) => void;
+  /** True until the saved profile (if any) has been loaded into the form. */
   loading: boolean;
   save: () => Promise<void>;
 };
@@ -22,9 +23,9 @@ export function ProfileDraftProvider({ children }: { children: ReactNode }) {
     let live = true;
     fetchMe()
       .then((me) => live && setDraft(draftFromMe(me)))
+      // Can't load: start blank, and the save at the end will report the problem.
       .catch(() => undefined)
       .finally(() => live && setLoading(false));
-
     return () => {
       live = false;
     };
@@ -37,14 +38,11 @@ export function ProfileDraftProvider({ children }: { children: ReactNode }) {
     loading,
     save: () => saveProfile(draft),
   };
-
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;
 }
 
-export function useProfileDraft() {
+export function useProfileDraft(): DraftState {
   const state = useContext(DraftContext);
-
   if (!state) throw new Error("useProfileDraft must be used inside ProfileDraftProvider");
-
   return state;
 }
