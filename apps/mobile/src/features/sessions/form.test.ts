@@ -18,6 +18,7 @@ import {
   type SessionDraft,
 } from "./form";
 
+// Tuesday, Nov 17 2026, 10:00 local.
 const now = new Date(2026, 10, 17, 10, 0);
 
 const filled: SessionDraft = {
@@ -125,7 +126,6 @@ describe("draftErrors", () => {
       { ...filled, courtName: "x".repeat(101), notes: "y".repeat(501) },
       now,
     );
-
     expect(Object.keys(errors).sort()).toEqual(["courtName", "notes"]);
   });
 });
@@ -164,7 +164,6 @@ describe("toSessionPatch", () => {
       notes: "Bring balls",
       courtPoint: { lat: 42.42, lng: -83.13 },
     };
-
     expect(toSessionPatch(draft, saved)).toEqual({
       startsAt: new Date(2026, 10, 21, 10, 30),
       levelMax: null,

@@ -33,20 +33,19 @@ export default function InviteToScreen() {
     let live = true;
     listSessions("mine")
       .then((result) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         const now = new Date();
-
         const hosting =
           result.kind === "page"
             ? result.page.items.filter(
                 (s) => s.me?.role === "host" && isEditable(s, now) && s.acceptedCount < s.spots,
               )
             : [];
-
         setLoaded({ kind: "ready", sessions: hosting });
       })
       .catch(() => live && setLoaded({ kind: "error" }));
-
     return () => {
       live = false;
     };
@@ -55,11 +54,11 @@ export default function InviteToScreen() {
   const inviteTo = async (session: SessionSummary) => {
     setSending(session.id);
     setNotice(null);
-
     try {
       const result = await invitePlayers(session.id, [playerId]);
-
-      if (result.kind === "refused") return setNotice(result.message);
+      if (result.kind === "refused") {
+        return setNotice(result.message);
+      }
       router.replace({ pathname: "/sessions/[id]", params: { id: session.id } });
     } catch {
       setNotice("Couldn't send the invite. Check your connection and try again.");
@@ -75,7 +74,6 @@ export default function InviteToScreen() {
       </Screen>
     );
   }
-
   if (loaded.kind === "error") {
     return (
       <Screen edges={["left", "right"]}>
@@ -119,7 +117,7 @@ export default function InviteToScreen() {
         </View>
       ) : (
         <Text color="textMuted">
-          You're not hosting any upcoming sessions with a spot left, so this sets up a new one.
+          {"You're not hosting any upcoming sessions with a spot left, so this sets up a new one."}
         </Text>
       )}
     </Screen>

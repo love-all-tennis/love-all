@@ -1,4 +1,12 @@
 /**
+ * Love All design tokens. The one source of truth for colour, type, space,
+ * shape and motion in the app. docs/design.md explains how to use them.
+ *
+ * Plain TypeScript with no React Native imports, so the contrast test in
+ * tokens.test.ts can check every colour pair.
+ */
+
+/**
  * Colour roles, light first. Name a colour by what it does, never by its hue,
  * and pair every fill with its `on*` text colour.
  *
@@ -84,9 +92,7 @@ export const colors = {
 } as const;
 
 export type ColorScheme = keyof typeof colors;
-
 export type ColorRole = keyof typeof colors.light;
-
 export type Palette = { readonly [K in ColorRole]: string };
 
 /**

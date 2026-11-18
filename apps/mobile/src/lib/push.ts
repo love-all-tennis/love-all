@@ -1,16 +1,26 @@
-import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
-import * as SecureStore from "expo-secure-store";
+import { isDevice } from "expo-device";
+import {
+  AndroidImportance,
+  getExpoPushTokenAsync,
+  getPermissionsAsync,
+  requestPermissionsAsync,
+  setNotificationChannelAsync,
+  setNotificationHandler,
+} from "expo-notifications";
+import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store";
 import { Platform } from "react-native";
 
 import { callApi } from "./api";
 
+/** The token this phone last registered, so signing out can remove it. */
 const TOKEN_KEY = "loveall.pushToken";
 
-const supported = Platform.OS !== "web" && Device.isDevice;
+/** Push only works on a real iOS or Android device. */
+const supported = Platform.OS !== "web" && isDevice;
 
+// Show notifications that arrive while the app is open, too.
 if (supported) {
-  Notifications.setNotificationHandler({
+  setNotificationHandler({
     handleNotification: async () => ({
       shouldShowBanner: true,
       shouldShowList: true,
@@ -26,40 +36,41 @@ if (supported) {
  * player. Quietly does nothing on the web, in a simulator, when permission is
  * refused, or when the app has no EAS project id yet.
  */
-export async function registerForPush() {
-  if (!supported) return;
-
+export async function registerForPush(): Promise<void> {
+  if (!supported) {
+    return;
+  }
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
+    // The API sends on this channel.
+    await setNotificationChannelAsync("default", {
       name: "Matches, sessions and replies",
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: AndroidImportance.DEFAULT,
     });
   }
-
-  let { granted, canAskAgain } = await Notifications.getPermissionsAsync();
-
-  if (!granted && canAskAgain) {
-    ({ granted } = await Notifications.requestPermissionsAsync());
+  const current = await getPermissionsAsync();
+  let { granted } = current;
+  if (!granted && current.canAskAgain) {
+    ({ granted } = await requestPermissionsAsync());
   }
-
-  if (!granted) return;
-
-  let token: string;
-
-  try {
-    ({ data: token } = await Notifications.getExpoPushTokenAsync());
-  } catch (error) {
-    console.warn("No push token: is the EAS project set up?", error);
-
+  if (!granted) {
     return;
   }
 
+  let token: string;
+  try {
+    // The EAS project id comes from app config (`extra.eas.projectId`, set by `eas init`).
+    ({ data: token } = await getExpoPushTokenAsync());
+  } catch (error) {
+    // oxlint-disable-next-line no-console -- Push is best effort; this warning is the only trace when it fails.
+    console.warn("No push token: is the EAS project set up?", error);
+    return;
+  }
   await callApi((api) =>
     api.devices.register({
       payload: { token, platform: Platform.OS === "ios" ? "ios" : "android" },
     }),
   );
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+  await setItemAsync(TOKEN_KEY, token);
 }
 
 /**
@@ -67,16 +78,19 @@ export async function registerForPush() {
  * out, while the session still works. Never throws: signing out goes ahead
  * even if the API can't be reached.
  */
-export async function unregisterForPush() {
-  if (!supported) return;
-
+export async function unregisterForPush(): Promise<void> {
+  if (!supported) {
+    return;
+  }
   try {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-
-    if (!token) return;
+    const token = await getItemAsync(TOKEN_KEY);
+    if (!token) {
+      return;
+    }
     await callApi((api) => api.devices.unregister({ params: { token } }));
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await deleteItemAsync(TOKEN_KEY);
   } catch (error) {
+    // oxlint-disable-next-line no-console -- Push is best effort; this warning is the only trace when it fails.
     console.warn("Couldn't remove the push token", error);
   }
 }
@@ -86,11 +100,14 @@ export async function unregisterForPush() {
  * account it was registered to is gone.
  */
 export async function forgetPushToken() {
-  if (!supported) return;
+  if (!supported) {
+    return;
+  }
 
   try {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await deleteItemAsync(TOKEN_KEY);
   } catch (error) {
+    // oxlint-disable-next-line no-console -- Push is best effort; this warning is the only trace when it fails.
     console.warn("Couldn't forget the push token", error);
   }
 }

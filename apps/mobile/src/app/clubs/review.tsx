@@ -42,15 +42,17 @@ export default function ReviewSheet() {
     let live = true;
     fetchClub(id)
       .then((club) => {
-        if (!live) return;
-
-        if (!club) return setLoaded({ status: "gone" });
+        if (!live) {
+          return;
+        }
+        if (!club) {
+          return setLoaded({ status: "gone" });
+        }
         setLoaded({ status: "ready", name: club.name, mine: club.myReview });
         setStars(club.myReview?.rating ?? null);
         setNote(club.myReview?.body ?? "");
       })
       .catch(() => live && setLoaded({ status: "error" }));
-
     return () => {
       live = false;
     };
@@ -61,15 +63,16 @@ export default function ReviewSheet() {
 
   const save = async () => {
     setTried(true);
-
-    if (stars === null || noteError(note)) return;
+    if (stars === null || noteError(note)) {
+      return;
+    }
     setBusy("save");
     setProblem(null);
-
     try {
       const outcome = await saveReview(id, { rating: stars, body: optionalText(note) });
-
-      if ("refusal" in outcome) return setProblem(outcome.refusal);
+      if ("refusal" in outcome) {
+        return setProblem(outcome.refusal);
+      }
       router.back();
     } catch {
       setProblem(`Couldn't save your review. ${NETWORK}`);

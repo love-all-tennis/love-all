@@ -1,7 +1,7 @@
 /** A longitude/latitude pair in WGS 84 (SRID 4326), as Drizzle maps PostGIS points. */
 export interface LngLat {
-  readonly x: number;
-  readonly y: number;
+  readonly x: number; // longitude
+  readonly y: number; // latitude
 }
 
 /**
@@ -15,4 +15,4 @@ const factor = 10 ** HOME_POINT_DECIMALS;
 const round = (n: number) => Math.round(n * factor) / factor;
 
 /** Rounds a point to the precision we store for a player's home. */
-export const roundHomePoint = (point: LngLat) => ({ x: round(point.x), y: round(point.y) });
+export const roundHomePoint = (point: LngLat): LngLat => ({ x: round(point.x), y: round(point.y) });

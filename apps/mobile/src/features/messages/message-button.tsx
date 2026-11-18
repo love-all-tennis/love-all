@@ -20,23 +20,22 @@ export function MessagePlayerButton({
 }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-
   const open = async () => {
     setBusy(true);
     setProblem(null);
-
     try {
       const outcome = await openConversation(playerId);
-
-      if ("refusal" in outcome) setProblem(outcome.refusal);
-      else router.push({ pathname: "/messages/[id]", params: { id: outcome.ok.id, name } });
+      if ("refusal" in outcome) {
+        setProblem(outcome.refusal);
+      } else {
+        router.push({ pathname: "/messages/[id]", params: { id: outcome.ok.id, name } });
+      }
     } catch {
       setProblem("Couldn't open your messages. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
   };
-
   return (
     <View style={styles.group}>
       <Button

@@ -8,7 +8,6 @@ import { Text } from "./text";
 /** First-load spinner, centred in `textMuted`. On refresh, keep the old content up instead. */
 export function Loading({ label = "Loading" }: { label?: string }) {
   const palette = useColors();
-
   return (
     <View style={styles.loading}>
       <ActivityIndicator color={palette.textMuted} accessibilityLabel={label} />
@@ -47,9 +46,9 @@ export function EmptyState({
 /** An error banner in place, such as a failed save. Read out as soon as it shows. */
 export function ErrorBanner({ children }: { children: string | null | undefined }) {
   const palette = useColors();
-
-  if (!children) return null;
-
+  if (!children) {
+    return null;
+  }
   return (
     <View
       accessibilityRole="alert"

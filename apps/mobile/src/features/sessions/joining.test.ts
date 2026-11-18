@@ -14,17 +14,16 @@ import {
 const now = new Date("2026-11-20T12:00:00Z");
 const later = new Date("2026-11-22T14:00:00Z");
 
-const facts = (fields: Partial<JoinFacts> = {}) =>
-  ({
-    status: "open",
-    startsAt: later,
-    visibility: "open",
-    spots: 2,
-    acceptedCount: 1,
-    requestCount: 0,
-    me: null,
-    ...fields,
-  }) satisfies JoinFacts;
+const facts = (fields: Partial<JoinFacts> = {}): JoinFacts => ({
+  status: "open",
+  startsAt: later,
+  visibility: "open",
+  spots: 2,
+  acceptedCount: 1,
+  requestCount: 0,
+  me: null,
+  ...fields,
+});
 
 const player = { role: "player" } as const;
 
@@ -122,19 +121,18 @@ describe("Needs your answer", () => {
   });
 });
 
-describe("applyChange", () => {
-  const detail = (fields: Partial<JoinDetail> = {}) =>
-    ({
-      ...facts(),
-      host: { id: "host" },
-      participants: [
-        { player: { id: "host" }, state: "accepted" },
-        { player: { id: "me" }, state: "invited" },
-      ],
-      me: { ...player, state: "invited" },
-      ...fields,
-    }) satisfies JoinDetail;
+const detail = (fields: Partial<JoinDetail> = {}): JoinDetail => ({
+  ...facts(),
+  host: { id: "host" },
+  participants: [
+    { player: { id: "host" }, state: "accepted" },
+    { player: { id: "me" }, state: "invited" },
+  ],
+  me: { ...player, state: "invited" },
+  ...fields,
+});
 
+describe("applyChange", () => {
   it("takes a spot on accept, and confirms the session once full", () => {
     const after = applyChange(detail(), { kind: "accept" }, "me");
     expect(after).toMatchObject({
@@ -155,7 +153,6 @@ describe("applyChange", () => {
         { player: { id: "me" }, state: "accepted" },
       ],
     });
-
     expect(applyChange(accepted, { kind: "leave" }, "me")).toMatchObject({
       acceptedCount: 1,
       status: "open",
@@ -189,7 +186,6 @@ describe("applyChange", () => {
         { player: { id: "b" }, state: "requested" },
       ],
     });
-
     const approved = applyChange(hosted, { kind: "approve", userId: "a" }, "host");
     expect(approved).toMatchObject({ acceptedCount: 2, requestCount: 1, status: "open" });
     expect(pendingRequests(approved).map((p) => p.player.id)).toEqual(["b"]);

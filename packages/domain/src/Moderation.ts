@@ -8,12 +8,10 @@ import { ReportReason, ReportTargetType } from "./Safety";
  */
 
 export const ReportId = Schema.String.check(Schema.isUUID());
-
 export type ReportId = typeof ReportId.Type;
 
 /** Same values as the `report_status` enum. */
 export const ReportStatus = Schema.Literals(["open", "resolved"]);
-
 export type ReportStatus = typeof ReportStatus.Type;
 
 /**
@@ -26,7 +24,6 @@ export const ReportResolution = Schema.Literals([
   "content_hidden",
   "player_suspended",
 ]);
-
 export type ReportResolution = typeof ReportResolution.Type;
 
 /** Report target types that are content a moderator can hide. */
@@ -36,7 +33,6 @@ export const HideableTargetType = Schema.Literals([
   "club_review",
   "equipment_review",
 ]);
-
 export type HideableTargetType = typeof HideableTargetType.Type;
 
 export const SUSPENSION_REASON_MAX = 500;
@@ -48,7 +44,6 @@ export const ModerationPlayer = Schema.Struct({
   displayName: Schema.String,
   suspended: Schema.Boolean,
 });
-
 export type ModerationPlayer = typeof ModerationPlayer.Type;
 
 /** A report in the moderation queue, with what moderators need to act on it. */
@@ -93,7 +88,6 @@ export const ModerationReportsQuery = {
     Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: MODERATION_PAGE_MAX })),
   ),
 };
-
 export type ModerationReportsQuery = Schema.Struct<typeof ModerationReportsQuery>["Type"];
 
 /** Newest first. */
@@ -111,7 +105,6 @@ export const NewSuspension = Schema.Struct({
     Schema.String.check(Schema.isTrimmed(), Schema.isMaxLength(SUSPENSION_REASON_MAX)),
   ),
 });
-
 export type NewSuspension = typeof NewSuspension.Type;
 
 /** The signed-in user isn't an admin. */

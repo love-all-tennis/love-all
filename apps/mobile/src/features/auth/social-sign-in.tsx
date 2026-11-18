@@ -29,13 +29,14 @@ export function SocialSignIn({
   const [error, setError] = useState<string | null>(null);
 
   const signIn = async (provider: SocialProvider) => {
-    if (onBeforeSignIn?.() === false) return;
+    if (onBeforeSignIn?.() === false) {
+      return;
+    }
     setBusy(provider);
     setError(null);
-
     try {
+      // A relative callback is turned into a loveall:// deep link by the Expo plugin.
       const result = await authClient.signIn.social({ provider, callbackURL: "/" });
-
       if (result.error) {
         setError(result.error.message ?? "That sign-in didn't work. Try again.");
       }

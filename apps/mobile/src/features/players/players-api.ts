@@ -1,4 +1,4 @@
-import type { PlayersPage } from "@love-all/domain";
+import type { FollowedPlayers, PlayerProfile, PlayersPage } from "@love-all/domain";
 import { Effect } from "effect";
 
 import { callApi } from "@/lib/api";
@@ -12,10 +12,10 @@ export type SearchResult =
   | { readonly kind: "page"; readonly page: PlayersPage }
   | { readonly kind: "needsHomePoint" };
 
-export const searchPlayers = (filters: PlayerFilters, cursor?: string) =>
+export const searchPlayers = (filters: PlayerFilters, cursor?: string): Promise<SearchResult> =>
   callApi((api) =>
     api.players.search({ query: toPlayersQuery(filters, cursor) }).pipe(
-      Effect.map((page) => ({ kind: "page", page }) satisfies SearchResult),
+      Effect.map((page): SearchResult => ({ kind: "page", page })),
       Effect.catchTag("HomePointRequired", () =>
         Effect.succeed<SearchResult>({ kind: "needsHomePoint" }),
       ),
@@ -23,20 +23,20 @@ export const searchPlayers = (filters: PlayerFilters, cursor?: string) =>
   );
 
 /** Another player's profile, or null when they don't exist (or can't be shown). */
-export const fetchPlayer = (id: string) =>
+export const fetchPlayer = (id: string): Promise<PlayerProfile | null> =>
   callApi((api) =>
     api.players
       .get({ params: { id } })
       .pipe(Effect.catchTag("PlayerNotFound", () => Effect.succeed(null))),
   );
 
-export const fetchFollows = () => callApi((api) => api.follows.list());
+export const fetchFollows = (): Promise<FollowedPlayers> => callApi((api) => api.follows.list());
 
 /**
  * Follows or unfollows a player. Resolves to a message to show when the
  * server said no for a reason the player can act on, otherwise null.
  */
-export const setFollowing = (id: string, following: boolean) =>
+export const setFollowing = (id: string, following: boolean): Promise<string | null> =>
   following
     ? callApi((api) =>
         api.follows.follow({ params: { id } }).pipe(

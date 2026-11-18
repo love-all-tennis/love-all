@@ -17,7 +17,7 @@ export default function HomeScreen() {
       <Card>
         <Text variant="subheading">Find someone to play</Text>
         <Text color="textMuted">
-          Browse players near you at your level, and follow the ones you'd like to hit with.
+          {"Browse players near you at your level, and follow the ones you'd like to hit with."}
         </Text>
         <View style={styles.action}>
           <Button label="Browse players" onPress={() => router.navigate("/players")} />

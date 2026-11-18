@@ -8,7 +8,6 @@ import { type Notice, Notifications } from "../Notifications";
  */
 export const makeNotificationsMemory = () => {
   const notices: Array<Notice> = [];
-
   const layer = Layer.succeed(
     Notifications,
     Notifications.of({
@@ -18,8 +17,7 @@ export const makeNotificationsMemory = () => {
       flush: Effect.void,
     }),
   );
-
+  /** Notices about one app route, such as `/sessions/<id>`. */
   const about = (url: string) => notices.filter((n) => n.url === url);
-
   return { notices, layer, about };
 };

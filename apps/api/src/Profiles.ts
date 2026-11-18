@@ -13,6 +13,8 @@ import { loadAvailability as loadAvailabilityFor } from "./db/availability";
 import { type LngLat, roundHomePoint } from "./db/geo";
 import { availability, metro, profile } from "./db/schema";
 
+const pointSql = (point: LngLat) => sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)`;
+
 /**
  * The signed-in player's own profile and weekly availability.
  *
@@ -35,9 +37,7 @@ export class Profiles extends Context.Service<
     Effect.gen(function* () {
       const db = yield* Db;
 
-      const pointSql = (point: LngLat) =>
-        sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)`;
-
+      /** The closest metro whose radius covers the point, if any. */
       const metroFor = (point: LngLat) =>
         db
           .select({ id: metro.id })
@@ -58,13 +58,10 @@ export class Profiles extends Context.Service<
             .from(profile)
             .leftJoin(metro, eq(metro.id, profile.metroId))
             .where(eq(profile.userId, user.id));
-
           if (!row) {
             return new Me({ user, profile: null, availability: [] });
           }
-
           const p = row.profile;
-
           return new Me({
             user,
             profile: new Profile({
@@ -84,6 +81,10 @@ export class Profiles extends Context.Service<
           });
         }).pipe(Effect.orDie, Effect.withSpan("Profiles.get"));
 
+      /**
+       * Creates the profile on first write, otherwise applies `changes`.
+       * Returns the profile id.
+       */
       const upsert = (user: SessionUser, changes: Partial<typeof profile.$inferInsert>) =>
         db
           .insert(profile)
@@ -99,15 +100,12 @@ export class Profiles extends Context.Service<
         Effect.gen(function* () {
           const { homePoint, ...rest } = patch;
           const changes: Partial<typeof profile.$inferInsert> = { ...rest };
-
           if (homePoint !== undefined) {
             const point = homePoint && roundHomePoint({ x: homePoint.lng, y: homePoint.lat });
             changes.homePoint = point;
             changes.metroId = point ? yield* metroFor(point) : null;
           }
-
           yield* upsert(user, changes);
-
           return yield* get(user);
         }).pipe(Effect.orDie, Effect.withSpan("Profiles.update"));
 
@@ -116,13 +114,13 @@ export class Profiles extends Context.Service<
           const profileId = yield* upsert(user, {});
           yield* db.transaction((tx) =>
             Effect.gen(function* () {
+              // Lock the profile so two concurrent replaces can't interleave.
               yield* tx
                 .select({ id: profile.id })
                 .from(profile)
                 .where(eq(profile.id, profileId))
                 .for("update");
               yield* tx.delete(availability).where(eq(availability.profileId, profileId));
-
               if (blocks.length > 0) {
                 yield* tx
                   .insert(availability)
@@ -130,7 +128,6 @@ export class Profiles extends Context.Service<
               }
             }),
           );
-
           return yield* loadAvailability(profileId);
         }).pipe(Effect.orDie, Effect.withSpan("Profiles.replaceAvailability"));
 
@@ -139,4 +136,5 @@ export class Profiles extends Context.Service<
   );
 }
 
+/** A new profile starts with the account name, cut to fit the 50-character limit. */
 const defaultDisplayName = (user: SessionUser) => user.name.trim().slice(0, 50) || "Player";

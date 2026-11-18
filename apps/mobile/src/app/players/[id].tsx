@@ -1,4 +1,3 @@
-import { Match } from "effect";
 import type { PlayerProfile } from "@love-all/domain";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
@@ -40,6 +39,7 @@ export default function PlayerScreen() {
   const { data: session } = authClient.useSession();
   const [attempt, setAttempt] = useState(0);
   const key = `${id}:${attempt}`;
+  // Tagged with the request it answers, so a new id or a retry shows loading.
   const [loaded, setLoaded] = useState<{ key: string; state: Loaded } | null>(null);
   const state: Loaded = loaded?.key === key ? loaded.state : { kind: "loading" };
   const setState = (next: Loaded) => setLoaded({ key, state: next });
@@ -51,28 +51,32 @@ export default function PlayerScreen() {
     const settle = (next: Loaded) => live && setLoaded({ key, state: next });
     Promise.all([fetchPlayer(id), fetchFollows()])
       .then(([player, follows]) => {
-        if (!player) return settle({ kind: "missing" });
+        if (!player) {
+          return settle({ kind: "missing" });
+        }
         const following = follows.items.some((p) => p.id === player.id);
         settle({ kind: "ready", player, following });
       })
       .catch(() => settle({ kind: "error" }));
-
     return () => {
       live = false;
     };
   }, [id, key]);
 
   const toggleFollow = async () => {
-    if (state.kind !== "ready") return;
+    if (state.kind !== "ready") {
+      return;
+    }
     const next = !state.following;
     setSaving("follow");
     setNotice(null);
-
     try {
       const refusal = await setFollowing(state.player.id, next);
-
-      if (refusal) setNotice(refusal);
-      else setState({ ...state, following: next });
+      if (refusal) {
+        setNotice(refusal);
+      } else {
+        setState({ ...state, following: next });
+      }
     } catch {
       setNotice("Couldn't save that. Check your connection and try again.");
     } finally {
@@ -83,16 +87,16 @@ export default function PlayerScreen() {
   const message = async (player: PlayerProfile) => {
     setSaving("message");
     setNotice(null);
-
     try {
       const outcome = await openConversation(player.id);
-
-      if ("refusal" in outcome) setNotice(outcome.refusal);
-      else
+      if ("refusal" in outcome) {
+        setNotice(outcome.refusal);
+      } else {
         router.push({
           pathname: "/messages/[id]",
           params: { id: outcome.ok.id, name: player.displayName },
         });
+      }
     } catch {
       setNotice("Couldn't open your messages. Check your connection and try again.");
     } finally {
@@ -103,12 +107,15 @@ export default function PlayerScreen() {
   const block = async (player: PlayerProfile) => {
     setSaving("block");
     setNotice(null);
-
     try {
       const refusal = await blockPlayer(player.id);
-
-      if (refusal) setNotice(refusal);
-      else router.back();
+      if (refusal) {
+        setNotice(refusal);
+      }
+      // They're hidden from me now, so leave their profile.
+      else {
+        router.back();
+      }
     } catch {
       setNotice("Couldn't block them. Check your connection and try again.");
     } finally {
@@ -119,6 +126,7 @@ export default function PlayerScreen() {
   const title = state.kind === "ready" ? state.player.displayName : "";
 
   return (
+    // The stack's native header sits above, so only pad the other edges.
     <Screen edges={["left", "right", "bottom"]}>
       <Stack.Screen options={{ title }} />
       {state.kind === "loading" ? <Loading label="Loading profile" /> : null}
@@ -180,21 +188,17 @@ function ProfileBody({
   onBlock: () => void;
 }) {
   const where = [player.metro?.name, distanceLabel(player.distanceKm)].filter(Boolean).join(" · ");
-
-  const hand = Match.value(player.handedness).pipe(
-    Match.when("left", () => "Left-handed"),
-    Match.when("right", () => "Right-handed"),
-    Match.orElse(() => null),
-  );
-
-  const formats = (
-    [
-      [player.playsSingles, "Singles"],
-      [player.playsDoubles, "Doubles"],
-      [player.playsHitting, "Hitting"],
-    ] as const
-  ).flatMap(([plays, label]) => (plays ? [label] : []));
-
+  const hand =
+    player.handedness === "left"
+      ? "Left-handed"
+      : player.handedness === "right"
+        ? "Right-handed"
+        : null;
+  const formats = [
+    player.playsSingles && "Singles",
+    player.playsDoubles && "Doubles",
+    player.playsHitting && "Hitting",
+  ].filter((f): f is string => typeof f === "string");
   const schedule = availabilityLines(player.availability);
 
   return (
@@ -258,7 +262,9 @@ function ProfileBody({
           ))}
         </View>
         {hand ? <Text color="textMuted">{hand}</Text> : null}
-        {formats.length === 0 ? <Text color="textMuted">Hasn't said how they play yet</Text> : null}
+        {formats.length === 0 ? (
+          <Text color="textMuted">{"Hasn't said how they play yet"}</Text>
+        ) : null}
       </Section>
 
       {player.bio ? (

@@ -15,13 +15,14 @@ const CursorJson = Schema.fromJsonString(Schema.Tuple([Schema.Finite, Schema.Str
 const decodeJson = Schema.decodeUnknownOption(CursorJson);
 
 /** An opaque, URL-safe token. Clients pass it back unchanged. */
-export const encodeCursor = (cursor: PlayersCursor) =>
+export const encodeCursor = (cursor: PlayersCursor): string =>
   Buffer.from(JSON.stringify([cursor.distanceM, cursor.id])).toString("base64url");
 
 /** None when the token wasn't made by `encodeCursor`. */
-export const decodeCursor = (token: string) => {
-  if (!/^[A-Za-z0-9_-]+$/.test(token)) return Option.none();
-
+export const decodeCursor = (token: string): Option.Option<PlayersCursor> => {
+  if (!/^[A-Za-z0-9_-]+$/.test(token)) {
+    return Option.none();
+  }
   return decodeJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([distanceM, id]) => distanceM >= 0 && id.length > 0),
     Option.map(([distanceM, id]) => ({ distanceM, id })),
@@ -32,4 +33,4 @@ export const decodeCursor = (token: string) => {
  * Distance as shown to players: whole kilometres, never 0. Home points are
  * rounded to about 1 km, so finer detail would be noise (and a privacy leak).
  */
-export const displayKm = (metres: number) => Math.max(1, Math.round(metres / 1000));
+export const displayKm = (metres: number): number => Math.max(1, Math.round(metres / 1000));

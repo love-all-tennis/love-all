@@ -32,22 +32,31 @@ import { displayKm } from "./players/cursor";
 
 const DAY_MS = 86_400_000;
 
+/** How an author is shown: their profile name, or their account name before they have a profile. */
 const authorName = sql<string>`coalesce(${profile.displayName}, ${user.name})`;
 
-const toLngLat = (point: LatLng) => ({ x: point.lng, y: point.lat });
-const toLatLng = (point: LngLat) => ({ lat: point.y, lng: point.x });
+const toLngLat = (point: LatLng): LngLat => ({ x: point.lng, y: point.lat });
+const toLatLng = (point: LngLat): LatLng => ({ lat: point.y, lng: point.x });
 
 const pointSql = (point: LngLat) => sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)`;
 
 interface Ratings {
   readonly summary: ClubRatingSummary;
+  /** Reviews giving 1..5 stars, in that order. */
   readonly counts: ReadonlyArray<number>;
 }
 
-const noRatings = () => ({
+const noRatings = (): Ratings => ({
   summary: { average: null, count: 0 },
   counts: [0, 0, 0, 0, 0],
 });
+
+/** Metres from `home` to the club, or null when I have no home point. */
+const distanceFrom = (home: LngLat | null) =>
+  (home
+    ? sql`ST_Distance(${club.point}::geography, ${pointSql(home)}::geography)`
+    : sql`null::float8`
+  ).mapWith((value): number | null => (value === null ? null : Number(value)));
 
 /**
  * Clubs and club reviews.
@@ -99,12 +108,6 @@ export class Clubs extends Context.Service<
             Effect.orDie,
           );
 
-      const distanceFrom = (home: LngLat | null) =>
-        (home
-          ? sql`ST_Distance(${club.point}::geography, ${pointSql(home)}::geography)`
-          : sql`null::float8`
-        ).mapWith((value) => (value === null ? null : Number(value)));
-
       const selectClubs = (home: LngLat | null) =>
         db
           .select({
@@ -121,6 +124,7 @@ export class Clubs extends Context.Service<
 
       type ClubRow = Effect.Success<ReturnType<typeof selectClubs>>[number];
 
+      /** Star counts for each club in `ids`, from reviews I can see. */
       const ratingsFor = (viewer: SessionUser, ids: ReadonlyArray<string>) =>
         ids.length === 0
           ? Effect.succeed(new Map<string, Ratings>())
@@ -138,15 +142,12 @@ export class Clubs extends Context.Service<
               .pipe(
                 Effect.map((rows) => {
                   const counts = new Map<string, Array<number>>();
-
                   for (const row of rows) {
                     const list = counts.get(row.clubId) ?? [0, 0, 0, 0, 0];
                     list[row.rating - 1] = row.total;
                     counts.set(row.clubId, list);
                   }
-
                   const byClub = new Map<string, Ratings>();
-
                   for (const [clubId, list] of counts) {
                     const total = list.reduce((a, b) => a + b, 0);
                     const stars = list.reduce((sum, n, i) => sum + n * (i + 1), 0);
@@ -155,7 +156,6 @@ export class Clubs extends Context.Service<
                       counts: list,
                     });
                   }
-
                   return byClub;
                 }),
                 Effect.orDie,
@@ -226,10 +226,10 @@ export class Clubs extends Context.Service<
         Effect.gen(function* () {
           const home = yield* homePointOf(viewer);
           const [row] = yield* selectClubs(home).where(eq(club.id, id)).pipe(Effect.orDie);
-
-          if (!row) return yield* new ClubNotFound({ id });
+          if (!row) {
+            return yield* new ClubNotFound({ id });
+          }
           const ratings = (yield* ratingsFor(viewer, [id])).get(id) ?? noRatings();
-
           return new Club({
             ...clubFields(row, ratings),
             ratingCounts: ratings.counts,
@@ -242,16 +242,13 @@ export class Clubs extends Context.Service<
         list: (viewer, query) =>
           Effect.gen(function* () {
             const home = yield* homePointOf(viewer);
-
             if (!home) {
               return yield* new HomePointRequired({
                 message: "Set your home area to see clubs near you.",
               });
             }
-
             const radiusKm = query.radiusKm ?? CLUBS_RADIUS_DEFAULT_KM;
             const q = query.q?.trim();
-
             const rows = yield* selectClubs(home)
               .where(
                 and(
@@ -264,12 +261,10 @@ export class Clubs extends Context.Service<
               .orderBy(sql`${club.point}::geography <-> ${pointSql(home)}::geography`, club.id)
               .limit(CLUBS_LIST_MAX)
               .pipe(Effect.orDie);
-
             const ratings = yield* ratingsFor(
               viewer,
               rows.map((r) => r.id),
             );
-
             return rows.map(
               (row) => new ClubSummary(clubFields(row, ratings.get(row.id) ?? noRatings())),
             );
@@ -278,7 +273,6 @@ export class Clubs extends Context.Service<
         create: (viewer, input) =>
           Effect.gen(function* () {
             const point = toLngLat(input.point);
-
             const [recent] = yield* db
               .select({ total: count() })
               .from(club)
@@ -289,13 +283,11 @@ export class Clubs extends Context.Service<
                 ),
               )
               .pipe(Effect.orDie);
-
             if ((recent?.total ?? 0) >= CLUBS_PER_DAY) {
               return yield* new ClubRateLimited({
                 message: `You can add ${CLUBS_PER_DAY} clubs a day. Try again tomorrow.`,
               });
             }
-
             const [existing] = yield* db
               .select({ id: club.id, name: club.name })
               .from(club)
@@ -307,9 +299,9 @@ export class Clubs extends Context.Service<
               )
               .limit(1)
               .pipe(Effect.orDie);
-
-            if (existing) return yield* new ClubAlreadyExists(existing);
-
+            if (existing) {
+              return yield* new ClubAlreadyExists(existing);
+            }
             const [area] = yield* db
               .select({ id: metro.id })
               .from(metro)
@@ -319,7 +311,6 @@ export class Clubs extends Context.Service<
               .orderBy(sql`${metro.centerPoint} <-> ${pointSql(point)}`)
               .limit(1)
               .pipe(Effect.orDie);
-
             const [inserted] = yield* db
               .insert(club)
               .values({
@@ -333,7 +324,6 @@ export class Clubs extends Context.Service<
               })
               .returning({ id: club.id })
               .pipe(Effect.orDie);
-
             return yield* get(viewer, inserted!.id).pipe(Effect.orDie);
           }).pipe(Effect.withSpan("Clubs.create")),
 
@@ -342,17 +332,13 @@ export class Clubs extends Context.Service<
         listReviews: (viewer, id, query) =>
           Effect.gen(function* () {
             const limit = query.limit ?? CLUB_REVIEWS_PAGE_DEFAULT;
-
             const cursor =
               query.cursor === undefined ? undefined : decodeReviewsCursor(query.cursor);
-
             if (cursor !== undefined && Option.isNone(cursor)) {
               return yield* new InvalidCursor({ message: "Unknown cursor" });
             }
-
             yield* clubExists(id);
             const after = cursor?.pipe(Option.getOrUndefined);
-
             const rows = yield* selectReviews(viewer)
               .where(
                 and(
@@ -367,10 +353,8 @@ export class Clubs extends Context.Service<
               .orderBy(desc(clubReview.createdAt), desc(clubReview.id))
               .limit(limit + 1)
               .pipe(Effect.orDie);
-
             const page = rows.slice(0, limit);
             const last = page.at(-1);
-
             return new ClubReviewsPage({
               items: page.map(toReview),
               nextCursor:
@@ -384,6 +368,7 @@ export class Clubs extends Context.Service<
           Effect.gen(function* () {
             yield* clubExists(id);
             const body = input.body ?? null;
+            // A moderator's `hidden_at` stays put when the author edits.
             yield* db
               .insert(clubReview)
               .values({ clubId: id, authorId: viewer.id, rating: input.rating, body })
@@ -393,7 +378,6 @@ export class Clubs extends Context.Service<
               })
               .pipe(Effect.orDie);
             const review = yield* findMyReview(viewer, id);
-
             return review!;
           }).pipe(Effect.withSpan("Clubs.saveReview")),
 
@@ -417,8 +401,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 export const reportableClubReview = (db: Db["Service"], viewerId: string, reviewId: string) =>
   Effect.gen(function* () {
-    if (!UUID.test(reviewId)) return Option.none<{ authorId: string; content: string }>();
-
+    if (!UUID.test(reviewId)) {
+      return Option.none<{ authorId: string; content: string }>();
+    }
     const [row] = yield* db
       .select({
         authorId: clubReview.authorId,
@@ -436,10 +421,10 @@ export const reportableClubReview = (db: Db["Service"], viewerId: string, review
         ),
       )
       .pipe(Effect.orDie);
-
-    if (!row) return Option.none<{ authorId: string; content: string }>();
+    if (!row) {
+      return Option.none<{ authorId: string; content: string }>();
+    }
     const stars = `${row.rating} ${row.rating === 1 ? "star" : "stars"} for ${row.clubName}`;
-
     return Option.some({
       authorId: row.authorId,
       content: row.body ? `${stars}\n\n${row.body}` : stars,

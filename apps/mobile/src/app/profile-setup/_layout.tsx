@@ -6,7 +6,6 @@ import { ProfileDraftProvider } from "@/features/profile/draft-context";
 /** Profile setup: four short screens that share one form. */
 export default function ProfileSetupLayout() {
   const palette = useColors();
-
   return (
     <ProfileDraftProvider>
       <Stack

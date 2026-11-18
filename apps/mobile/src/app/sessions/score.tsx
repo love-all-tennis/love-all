@@ -64,7 +64,6 @@ export default function RecordScoreSheet() {
         (session) => live && setLoaded(session ? { status: "ready", session } : { status: "gone" }),
       )
       .catch(() => live && setLoaded({ status: "error" }));
-
     return () => {
       live = false;
     };
@@ -82,8 +81,9 @@ export default function RecordScoreSheet() {
     </ScrollView>
   );
 
-  if (loaded.status === "loading") return frame(<Loading />);
-
+  if (loaded.status === "loading") {
+    return frame(<Loading />);
+  }
   if (loaded.status === "error") {
     return frame(
       <EmptyState
@@ -93,9 +93,7 @@ export default function RecordScoreSheet() {
       />,
     );
   }
-
   const session = loaded.status === "ready" ? loaded.session : null;
-
   if (!session || !meId || session.kind === "hitting" || !canRecordScore(session, now)) {
     return frame(
       <EmptyState
@@ -109,12 +107,9 @@ export default function RecordScoreSheet() {
   const others = session.participants
     .filter((p) => p.state === "accepted" && p.player.id !== meId)
     .map((p) => p.player);
-
   const ctx: ScoreContext = { kind: session.kind, meId, others };
-
   if (!hasFullSides(ctx)) {
     const needed = session.kind === "doubles" ? "four" : "two";
-
     return frame(
       <EmptyState
         title="Not enough players"
@@ -127,26 +122,26 @@ export default function RecordScoreSheet() {
   const check = checkScore(draft, ctx);
   const errors = tried && !check.ok ? check.errors : null;
   const doubles = session.kind === "doubles";
-
   const opponents = doubles
     ? others.filter((p) => p.id !== draft.partnerId).map((p) => p.displayName)
     : [others[0]!.displayName];
-
   const theirLabel =
     doubles && !draft.partnerId ? "Them" : opponents.length === 1 ? opponents[0]! : "Them";
 
   const save = async () => {
     setTried(true);
-
-    if (!check.ok) return;
+    if (!check.ok) {
+      return;
+    }
     setSaving(true);
     setProblem(null);
-
     try {
       const outcome = await recordResult(session.id, check.result);
-
-      if ("refusal" in outcome) setProblem(outcome.refusal);
-      else router.back();
+      if ("refusal" in outcome) {
+        setProblem(outcome.refusal);
+      } else {
+        router.back();
+      }
     } catch {
       setProblem(`Couldn't save the score. ${NETWORK}`);
     } finally {
@@ -191,7 +186,6 @@ export default function RecordScoreSheet() {
         {draft.sets.map((set, i) => {
           const label = setLabel(draft, i);
           const error = errors?.sets[i];
-
           return (
             <View key={i} style={styles.group}>
               <Text variant="subheading">{label}</Text>

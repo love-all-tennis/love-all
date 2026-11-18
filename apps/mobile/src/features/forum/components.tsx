@@ -21,11 +21,12 @@ export const confirmDestructive = (
   run: () => void,
 ) => {
   if (Platform.OS === "web") {
-    if (globalThis.confirm?.(`${title}\n\n${message}`)) run();
-
+    // react-native-web has no Alert.
+    if (globalThis.confirm?.(`${title}\n\n${message}`)) {
+      run();
+    }
     return;
   }
-
   Alert.alert(title, message, [
     { text: "Cancel", style: "cancel" },
     { text: action, style: "destructive", onPress: run },
@@ -43,11 +44,9 @@ export function CategoryCard({
   onPress: () => void;
 }) {
   const latest = category.latestThread;
-
   const meta = latest
     ? `Latest: ${latest.title} · ${timeAgo(latest.lastPostAt, now)}`
     : "No threads yet";
-
   return (
     <Card onPress={onPress} accessibilityLabel={`${category.name}. ${meta}`}>
       <View style={styles.rowText}>
@@ -74,7 +73,6 @@ export function ThreadCard({
     thread.lastPostAt,
     now,
   )}`;
-
   return (
     <Card onPress={onPress} accessibilityLabel={`${thread.title}. ${meta}`}>
       <View style={styles.row}>
@@ -153,7 +151,6 @@ export function PostCard({
   onAction: (action: PostMenuAction) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-
   if (body === null) {
     return (
       <Card tone="sunken">
@@ -161,9 +158,7 @@ export function PostCard({
       </Card>
     );
   }
-
   const name = author ? (mine ? "You" : author.displayName) : DELETED_ACCOUNT;
-
   return (
     <Card>
       <View style={styles.post}>

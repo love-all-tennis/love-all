@@ -5,14 +5,14 @@ import {
   ThemeProvider,
   type NativeStackNavigationOptions,
 } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
+import { hideAsync, preventAutoHideAsync } from "expo-splash-screen";
 import { useEffect } from "react";
 
 import { typography, useAppFonts, useColors } from "@/design";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { authClient } from "@/lib/auth-client";
 
-void SplashScreen.preventAutoHideAsync();
+void preventAutoHideAsync();
 
 /**
  * Which screens exist depends on the session:
@@ -32,16 +32,21 @@ export default function RootLayout() {
   const fontsReady = useAppFonts();
   const ready = !isPending && fontsReady;
 
+  // Keep the native splash screen up until the stored session and the fonts are ready.
   useEffect(() => {
-    if (ready) void SplashScreen.hideAsync();
+    if (ready) {
+      void hideAsync();
+    }
   }, [ready]);
 
-  if (!ready) return null;
+  if (!ready) {
+    return null;
+  }
 
   const signedIn = session != null;
   const confirmedAdult = session?.user.adultConfirmedAt != null;
   const base = scheme === "dark" ? DarkTheme : DefaultTheme;
-
+  // Native headers, sheets and the navigation container take the app's palette.
   const theme = {
     ...base,
     colors: {
@@ -54,7 +59,6 @@ export default function RootLayout() {
       notification: palette.danger,
     },
   };
-
   const header: NativeStackNavigationOptions = {
     headerShown: true,
     headerShadowVisible: false,
@@ -67,7 +71,6 @@ export default function RootLayout() {
       color: palette.text,
     },
   };
-
   const sheet: NativeStackNavigationOptions = {
     ...header,
     presentation: "formSheet",

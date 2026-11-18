@@ -1,4 +1,9 @@
+/**
+ * Labels and state for the moderation queue, kept free of React Native so
+ * they can be unit tested.
+ */
 import type {
+  HideableTargetType,
   ModerationReport,
   ReportReason,
   ReportResolution,
@@ -35,7 +40,7 @@ export type StateTag = {
 };
 
 /** Forum threads and replies, club reviews and gear reviews can be hidden; players and direct messages can't. */
-export const hideableType = (report: ModerationReport) =>
+export const hideableType = (report: ModerationReport): HideableTargetType | null =>
   report.targetType === "forum_thread" ||
   report.targetType === "forum_post" ||
   report.targetType === "club_review" ||
@@ -44,38 +49,37 @@ export const hideableType = (report: ModerationReport) =>
     : null;
 
 /** "3 reports" when others have reported the same thing; nothing for just this one. */
-export const reportCountLabel = (open: number) => (open > 1 ? `${open} reports` : null);
+export const reportCountLabel = (open: number): string | null =>
+  open > 1 ? `${open} reports` : null;
 
 /** Read-only tags for where things stand: hidden, deleted, suspended, resolved. */
-export const stateTags = (report: ModerationReport) => {
+export const stateTags = (report: ModerationReport): ReadonlyArray<StateTag> => {
   const tags: Array<StateTag> = [];
-
   if (report.status === "resolved" && report.resolution) {
     tags.push({ label: RESOLUTION_LABELS[report.resolution], tone: "neutral" });
   }
-
-  if (report.hidden) tags.push({ label: "Hidden", tone: "clay" });
-
+  if (report.hidden) {
+    tags.push({ label: "Hidden", tone: "clay" });
+  }
   if (report.removed) {
     tags.push({
       label: report.targetType === "player" ? "Account deleted" : "Deleted by author",
       tone: "neutral",
     });
   }
-
-  if (report.subject?.suspended) tags.push({ label: "Suspended", tone: "danger" });
-
+  if (report.subject?.suspended) {
+    tags.push({ label: "Suspended", tone: "danger" });
+  }
   return tags;
 };
 
 /** Who reported it and when, for the meta line. */
-export const reportedByLabel = (report: ModerationReport, when: string) =>
+export const reportedByLabel = (report: ModerationReport, when: string): string =>
   `Reported by ${report.reporter?.displayName ?? "a deleted account"} · ${when}`;
 
 /** Which actions to offer on a report card. */
 export const reportActions = (report: ModerationReport) => {
   const hideable = hideableType(report) !== null && !report.removed;
-
   return {
     hide: hideable && !report.hidden,
     unhide: hideable && report.hidden,
@@ -83,6 +87,7 @@ export const reportActions = (report: ModerationReport) => {
     unsuspend: report.subject !== null && report.subject.suspended,
     dismiss: report.status === "open",
     openThread: report.threadId !== null && !report.hidden && !report.removed,
+    // The club stays open to everyone, whatever happened to the review.
     openClub: report.clubId !== null,
     openItem: report.equipmentId !== null,
   };

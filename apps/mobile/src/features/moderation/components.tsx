@@ -44,7 +44,6 @@ export function ReportCard({
   const subjectName = report.subject?.displayName ?? DELETED_ACCOUNT;
   const count = reportCountLabel(report.openReportsOnTarget);
   const what = TARGET_LABELS[report.targetType];
-
   return (
     <Card>
       <View style={styles.group}>
@@ -72,7 +71,7 @@ export function ReportCard({
         {report.details ? (
           <View style={styles.tight}>
             <Text variant="label" color="textMuted">
-              Reporter's note
+              {"Reporter's note"}
             </Text>
             <Text>{report.details}</Text>
           </View>

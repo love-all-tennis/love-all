@@ -46,10 +46,14 @@ export default function DeleteAccountScreen() {
     authClient
       .listAccounts()
       .then(({ data }) => {
-        if (live) setCheck(deletionCheck((data ?? []).map((a) => a.providerId)));
+        if (live) {
+          setCheck(deletionCheck((data ?? []).map((a) => a.providerId)));
+        }
       })
       .catch(() => {
-        if (live) setCheck({ kind: "password" });
+        if (live) {
+          setCheck({ kind: "password" });
+        }
       });
 
     return () => {
@@ -76,9 +80,13 @@ export default function DeleteAccountScreen() {
       if (result.error) {
         const problem = deletionProblem(result.error.code);
 
-        if (problem.kind === "password") setPasswordError(problem.message);
-        else if (problem.kind === "sign-in") setNeedsSignIn(true);
-        else setError(problem.message);
+        if (problem.kind === "password") {
+          setPasswordError(problem.message);
+        } else if (problem.kind === "sign-in") {
+          setNeedsSignIn(true);
+        } else {
+          setError(problem.message);
+        }
         setBusy(false);
 
         return;
@@ -127,12 +135,13 @@ export default function DeleteAccountScreen() {
   return (
     <Screen edges={["left", "right", "bottom"]}>
       <Text>
-        Deleting your account removes you from Love All for good. It can't be undone, and other
-        players won't be able to find you or message you.
+        {
+          "Deleting your account removes you from Love All for good. It can't be undone, and other players won't be able to find you or message you."
+        }
       </Text>
 
       <Card>
-        <Text variant="subheading">What's deleted</Text>
+        <Text variant="subheading">{"What's deleted"}</Text>
         <View style={styles.list}>
           {gone.map((line) => (
             <Text key={line} color="textMuted">

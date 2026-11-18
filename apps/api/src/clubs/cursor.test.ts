@@ -18,6 +18,6 @@ describe("reviews cursor", () => {
 
 describe("likeContains", () => {
   it("escapes wildcards", () => {
-    expect(likeContains("100% clay_courts")).toBe("%100\\% clay\\_courts%");
+    expect(likeContains("100% clay_courts")).toBe(String.raw`%100\% clay\_courts%`);
   });
 });

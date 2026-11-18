@@ -28,6 +28,7 @@ const timestamps = {
     .notNull(),
 };
 
+/** A WGS 84 point. Drizzle reads and writes it as `{ x: lng, y: lat }`. */
 const point = (name: string) => geometry(name, { type: "point", mode: "xy", srid: 4326 });
 
 /** NTRP levels, in order, so `ntrp between '3.0' and '4.0'` works on the enum. "5.5" means 5.5+. */

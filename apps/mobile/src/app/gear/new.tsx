@@ -26,20 +26,17 @@ export default function NewGearScreen() {
 
   const save = async () => {
     setTried(true);
-
-    if (!kind || errors.brand || errors.model) return;
+    if (!kind || errors.brand || errors.model) {
+      return;
+    }
     setSaving(true);
     setProblem(null);
-
     try {
       const outcome = await addItem({ kind, brand: brand.trim(), model: model.trim() });
-
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
-
         return;
       }
-
       const id = "existing" in outcome ? outcome.existing : outcome.ok.id;
       router.replace({ pathname: "/gear/[id]", params: { id } });
     } catch {

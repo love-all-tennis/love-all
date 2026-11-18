@@ -51,14 +51,11 @@ export function SessionCard({
   const what = `${kindLabel(session.kind)} · ${durationLabel(session.durationMinutes)}`;
   const distance = distanceLabel(session.distanceKm);
   const where = distance ? `${session.courtName} · ${distance}` : session.courtName;
-
   const level = `${levelRangeLabel(session.levelMin, session.levelMax)} · ${spotsLabel(
     session.acceptedCount,
     session.spots,
   )}`;
-
   const host = `Hosted by ${session.host?.displayName ?? DELETED_ACCOUNT}`;
-
   return (
     <Card
       onPress={onPress}
@@ -135,7 +132,6 @@ export function ParticipantRow({
   const { player, role, state } = participant;
   const place = role === "host" ? "Host" : PLACE_LABELS[state];
   const level = levelLabel(player.ntrp);
-
   return (
     <Card
       onPress={onPress}
@@ -176,7 +172,6 @@ export function PickPlayerRow({
   onPress: () => void;
 }) {
   const palette = useColors();
-
   return (
     <Pressable
       accessibilityRole="checkbox"

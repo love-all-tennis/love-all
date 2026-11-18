@@ -29,7 +29,6 @@ export default function AppTabs() {
   const palette = useColors();
   useUnreadBadgeSync();
   const badge = unreadBadge(useUnreadConversations());
-
   return (
     <Tabs>
       <TabSlot style={styles.slot} />
@@ -63,10 +62,8 @@ function TabButton({
 }) {
   const palette = useColors();
   const color = isFocused ? "accent" : "textMuted";
-
   return (
     <Pressable
-      // WARNING: expo-router passes the tab trigger's Pressable props through untyped.
       {...(props as PressableProps)}
       accessibilityRole="tab"
       accessibilityState={{ selected: isFocused }}

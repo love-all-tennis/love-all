@@ -2,6 +2,8 @@ import { Option } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { decodeCursor, displayKm, encodeCursor } from "./cursor";
 
+const base64url = (value: string) => Buffer.from(value).toString("base64url");
+
 describe("players cursor", () => {
   it("round-trips the exact distance and id", () => {
     const cursor = { distanceM: 1112.4508528727, id: "user_abc-123" };
@@ -11,8 +13,6 @@ describe("players cursor", () => {
   });
 
   it("rejects tokens it didn't make", () => {
-    const base64url = (value: string) => Buffer.from(value).toString("base64url");
-
     for (const token of [
       "",
       "not base64!",

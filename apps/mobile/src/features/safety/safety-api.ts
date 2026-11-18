@@ -1,8 +1,9 @@
 import type { NewReport, ReportReason, ReportTargetType } from "@love-all/domain";
-import { Effect, type Types, Match } from "effect";
+import { Effect, type Types } from "effect";
 
 import { callApi } from "@/lib/api";
 
+/** What went wrong, in words a player can act on, or null when it worked. */
 type Outcome = string | null;
 
 const refusals = {
@@ -11,23 +12,23 @@ const refusals = {
 };
 
 /** Blocks a player. They disappear from search, follows and their profile for both of us. */
-export const blockPlayer = (id: string) =>
+export const blockPlayer = (id: string): Promise<Outcome> =>
   callApi((api) =>
     api.safety.block({ params: { id } }).pipe(Effect.as<Outcome>(null), Effect.catchTags(refusals)),
   );
 
+/** The report body, leaving out details when there are none. */
 const reportPayload = (
   targetType: ReportTargetType,
   targetId: string,
   reason: ReportReason,
   details: string,
-) => {
+): NewReport => {
   const payload: Types.Mutable<NewReport> = { targetType, targetId, reason };
-
   const trimmed = details.trim();
-
-  if (trimmed) payload.details = trimmed;
-
+  if (trimmed) {
+    payload.details = trimmed;
+  }
   return payload;
 };
 
@@ -41,7 +42,7 @@ export const sendReport = (
   targetId: string,
   reason: ReportReason,
   details: string,
-) =>
+): Promise<Outcome> =>
   callApi((api) =>
     api.safety
       .report({
@@ -52,12 +53,13 @@ export const sendReport = (
         Effect.catchTags({
           TargetNotFound: () =>
             Effect.succeed<Outcome>(
-              Match.value(targetType).pipe(
-                Match.when("player", () => "This player is no longer available."),
-                Match.when("direct_message", () => "This message is no longer available."),
-                Match.when("equipment_review", () => "This review is no longer available."),
-                Match.orElse(() => "This post is no longer available."),
-              ),
+              targetType === "player"
+                ? "This player is no longer available."
+                : targetType === "direct_message"
+                  ? "This message is no longer available."
+                  : targetType === "equipment_review"
+                    ? "This review is no longer available."
+                    : "This post is no longer available.",
             ),
           CannotTargetSelf: () =>
             Effect.succeed<Outcome>("You can't report yourself or your own posts."),

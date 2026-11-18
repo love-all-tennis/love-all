@@ -9,8 +9,8 @@ import { Safety } from "./Safety";
 import { SessionJoins } from "./SessionJoins";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
+/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const sent = makeNotificationsMemory();
-
 const TestLayer = Layer.mergeAll(
   SessionJoins.layer,
   Safety.layer.pipe(Layer.provide(Forum.layer)),
@@ -18,6 +18,10 @@ const TestLayer = Layer.mergeAll(
 
 type Services = { db: Db["Service"]; joins: SessionJoins["Service"]; safety: Safety["Service"] };
 
+/**
+ * Creates throwaway accounts with profiles at the given NTRP levels (null for
+ * none), runs `f` with them, then deletes them and their sessions.
+ */
 const withPlayers = <A, E>(
   levels: ReadonlyArray<Ntrp | null>,
   f: (players: ReadonlyArray<SessionUser>, services: Services) => Effect.Effect<A, E>,
@@ -25,18 +29,14 @@ const withPlayers = <A, E>(
   Effect.gen(function* () {
     const db = yield* Db;
     const services = { db, joins: yield* SessionJoins, safety: yield* Safety };
-
     const players = levels.map((_, i) => {
       const id = `test_${crypto.randomUUID()}`;
-
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
-
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
     yield* db
       .insert(profile)
       .values(players.map((p, i) => ({ userId: p.id, displayName: p.name, ntrp: levels[i] })));
-
     return yield* f(players, services).pipe(
       Effect.ensuring(
         Effect.orDie(
@@ -53,6 +53,7 @@ const withPlayers = <A, E>(
 
 const tomorrow = () => new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+/** Inserts a session hosted by `host`, plus the host's own accepted row and any invites. */
 const makeSession = (
   db: Db["Service"],
   host: SessionUser,
@@ -68,7 +69,6 @@ const makeSession = (
 ) =>
   Effect.gen(function* () {
     const kind = options.kind ?? "singles";
-
     const [row] = yield* db
       .insert(playSession)
       .values({
@@ -83,7 +83,6 @@ const makeSession = (
         levelMax: options.levelMax ?? null,
       })
       .returning({ id: playSession.id });
-
     const id = row!.id;
     yield* db.insert(playSessionParticipant).values([
       { sessionId: id, userId: host.id, role: "host", state: "accepted" },
@@ -98,23 +97,21 @@ const makeSession = (
         state: "accepted" as const,
       })),
     ]);
-
     return id;
   });
 
+/** The session's status and each player's state, by display name. */
 const snapshot = (db: Db["Service"], sessionId: string) =>
   Effect.gen(function* () {
     const [session] = yield* db
       .select({ status: playSession.status })
       .from(playSession)
       .where(eq(playSession.id, sessionId));
-
     const rows = yield* db
       .select({ name: user.name, state: playSessionParticipant.state })
       .from(playSessionParticipant)
       .innerJoin(user, eq(user.id, playSessionParticipant.userId))
       .where(eq(playSessionParticipant.sessionId, sessionId));
-
     return {
       status: session?.status,
       states: Object.fromEntries(rows.map((r) => [r.name, r.state])),
@@ -127,6 +124,13 @@ const tagOf = <A, E extends { _tag: string }>(effect: Effect.Effect<A, E>) =>
     Effect.map((e) => e._tag),
   );
 
+/** Notices about the session, with players named instead of ids. */
+const heard = (id: string, players: ReadonlyArray<SessionUser>) =>
+  sent.about(`/sessions/${id}`).map((notice) => ({
+    to: notice.to.map((to) => players.find((p) => p.id === to)?.name ?? to).sort(),
+    title: notice.title,
+  }));
+
 describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
   it("confirms a singles session when the invited player accepts", async () => {
     const result = await withPlayers(["3.5", "3.5"], ([host, guest], { db, joins }) =>
@@ -134,11 +138,9 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
         const id = yield* makeSession(db, host!, { invited: [guest!] });
         yield* joins.respond(guest!, id, "accept");
         yield* joins.respond(guest!, id, "accept");
-
         return yield* snapshot(db, id);
       }),
     );
-
     expect(result).toEqual({ status: "confirmed", states: { P0: "accepted", P1: "accepted" } });
   });
 
@@ -150,11 +152,9 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
         const acceptAfter = yield* tagOf(joins.respond(guest!, id, "accept"));
         const noInvite = yield* tagOf(joins.respond(other!, id, "accept"));
         const declineNone = yield* tagOf(joins.respond(other!, id, "decline"));
-
         return { acceptAfter, noInvite, declineNone, ...(yield* snapshot(db, id)) };
       }),
     );
-
     expect(result).toMatchObject({
       acceptAfter: "NotInvited",
       noInvite: "NotInvited",
@@ -178,11 +178,9 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
           yield* joins.approve(host!, id, c!.id);
           const approveLate = yield* tagOf(joins.approve(host!, id, d!.id));
           const requestLate = yield* tagOf(joins.respond(d!, id, "request"));
-
           return { pending, approveLate, requestLate, after: yield* snapshot(db, id) };
         }),
     );
-
     expect(result.pending.states).toMatchObject({ P2: "requested", P3: "requested" });
     expect(result.approveLate).toBe("JoinRequestNotFound");
     expect(result.requestLate).toBe("NotInvited");
@@ -195,13 +193,12 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
   it("accepts an invite when the invited player asks to join", async () => {
     const result = await withPlayers(["3.0", "5.0"], ([host, guest], { db, joins }) =>
       Effect.gen(function* () {
+        // The host picked them, so the level range doesn't apply.
         const id = yield* makeSession(db, host!, { invited: [guest!], levelMax: "3.5" });
         yield* joins.respond(guest!, id, "request");
-
         return yield* snapshot(db, id);
       }),
     );
-
     expect(result.states.P1).toBe("accepted");
   });
 
@@ -213,11 +210,9 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
         const notHost = yield* tagOf(joins.reject(guest!, id, guest!.id));
         yield* joins.reject(host!, id, guest!.id);
         const again = yield* tagOf(joins.respond(guest!, id, "request"));
-
         return { notHost, again, ...(yield* snapshot(db, id)) };
       }),
     );
-
     expect(result).toMatchObject({
       notHost: "NotSessionHost",
       again: "NotInvited",
@@ -236,22 +231,20 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
             levelMin: "3.5",
             levelMax: "4.0",
           });
-
           const strangers = {
+            // Out of range, the session is hidden from them, as in GET /sessions/:id.
             low: yield* tagOf(joins.respond(low!, id, "request")),
             high: yield* tagOf(joins.respond(high!, id, "request")),
             none: yield* tagOf(joins.respond(none!, id, "request")),
             fits: yield* joins.respond(fits!, id, "request").pipe(Effect.as("ok")),
           };
-
+          // A player who left can still see it, but can't ask again once out of range.
           yield* joins.leave(fits!, id);
           yield* db.update(playSession).set({ levelMax: "3.5" }).where(eq(playSession.id, id));
           const narrowed = yield* tagOf(joins.respond(fits!, id, "request"));
-
           return { ...strangers, narrowed };
         }),
     );
-
     expect(result).toEqual({
       low: "SessionNotFound",
       high: "SessionNotFound",
@@ -266,11 +259,9 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
       Effect.gen(function* () {
         const id = yield* makeSession(db, host!);
         yield* joins.cancel(host!, id);
-
         return yield* tagOf(joins.respond(stranger!, id, "request"));
       }),
     );
-
     expect(result).toBe("SessionNotFound");
   });
 
@@ -278,7 +269,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
     const result = await withPlayers(["3.5", "3.5"], ([host, stranger], { db, joins }) =>
       Effect.gen(function* () {
         const id = yield* makeSession(db, host!, { visibility: "invite_only" });
-
         return {
           request: yield* tagOf(joins.respond(stranger!, id, "request")),
           leave: yield* tagOf(joins.leave(stranger!, id)),
@@ -286,7 +276,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
         };
       }),
     );
-
     expect(result).toEqual({
       request: "SessionNotFound",
       leave: "SessionNotFound",
@@ -304,21 +293,18 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
             accepted: [a!, b!],
             invited: [c!, d!],
           });
-
           const outcomes = yield* Effect.all(
             [c!, d!].map((p) =>
               joins.respond(p, id, "accept").pipe(
                 Effect.as("ok"),
-                Effect.catch((e) => Effect.succeed(e._tag)),
+                Effect.catch((error) => Effect.succeed(error._tag)),
               ),
             ),
             { concurrency: "unbounded" },
           );
-
           return { outcomes, after: yield* snapshot(db, id) };
         }),
     );
-
     expect([...result.outcomes].sort()).toEqual(["SessionFull", "ok"]);
     expect(result.after.status).toBe("confirmed");
     expect(Object.values(result.after.states).filter((s) => s === "accepted")).toHaveLength(4);
@@ -334,11 +320,9 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
         const hostLeaves = yield* tagOf(joins.leave(host!, id));
         const notIn = yield* tagOf(joins.leave(other!, id));
         const leaveTwice = yield* tagOf(joins.leave(guest!, id));
-
         return { confirmed, hostLeaves, notIn, leaveTwice, after: yield* snapshot(db, id) };
       }),
     );
-
     expect(result).toEqual({
       confirmed: "confirmed",
       hostLeaves: "InvalidSession",
@@ -356,11 +340,9 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
         yield* joins.leave(guest!, id);
         const left = (yield* snapshot(db, id)).states.P1;
         yield* joins.respond(guest!, id, "request");
-
         return { left, again: (yield* snapshot(db, id)).states.P1 };
       }),
     );
-
     expect(result).toEqual({ left: "left", again: "requested" });
   });
 
@@ -371,7 +353,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
         const notHost = yield* tagOf(joins.cancel(guest!, id));
         yield* joins.cancel(host!, id);
         yield* joins.cancel(host!, id);
-
         return {
           notHost,
           accept: yield* tagOf(joins.respond(guest!, id, "accept")),
@@ -380,7 +361,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
         };
       }),
     );
-
     expect(result).toEqual({
       notHost: "NotSessionHost",
       accept: "SessionClosed",
@@ -396,7 +376,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
           invited: [guest!],
           startsAt: new Date(Date.now() - 60_000),
         });
-
         return {
           accept: yield* tagOf(joins.respond(guest!, id, "accept")),
           request: yield* tagOf(joins.respond(other!, id, "request")),
@@ -404,7 +383,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
         };
       }),
     );
-
     expect(result).toEqual({
       accept: "SessionClosed",
       request: "SessionClosed",
@@ -420,14 +398,13 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
           const id = yield* makeSession(db, host!, { kind: "doubles" });
           yield* db.insert(block).values({ blockerId: blocker!.id, blockedId: host!.id });
           const request = yield* tagOf(joins.respond(blocker!, id, "request"));
+          // A request already in when the block lands (Safety.block also removes it).
           yield* joins.respond(blocked!, id, "request");
           yield* db.insert(block).values({ blockerId: host!.id, blockedId: blocked!.id });
           const approve = yield* tagOf(joins.approve(host!, id, blocked!.id));
-
           return { request, approve };
         }),
     );
-
     expect(result).toEqual({ request: "SessionNotFound", approve: "JoinRequestNotFound" });
   });
 
@@ -440,15 +417,13 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
           .update(playSession)
           .set({ status: "confirmed" })
           .where(eq(playSession.id, hosted));
+        // A session the blocked player hosts loses the blocker too.
         const theirs = yield* makeSession(db, guest!, { kind: "doubles", invited: [host!] });
-
         const unrelated = yield* makeSession(db, bystander!, {
           kind: "doubles",
           accepted: [guest!],
         });
-
         yield* safety.block(host!, guest!.id);
-
         const [unrelatedGuest] = yield* db
           .select({ state: playSessionParticipant.state })
           .from(playSessionParticipant)
@@ -458,7 +433,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
               eq(playSessionParticipant.userId, guest!.id),
             ),
           );
-
         return {
           hosted: yield* snapshot(db, hosted),
           theirs: yield* snapshot(db, theirs),
@@ -466,7 +440,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
         };
       }),
     );
-
     expect(result).toEqual({
       hosted: { status: "open", states: { P0: "accepted" } },
       theirs: { status: "open", states: { P1: "accepted" } },
@@ -475,12 +448,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
   });
 
   describe("notifications", () => {
-    const heard = (id: string, players: ReadonlyArray<SessionUser>) =>
-      sent.about(`/sessions/${id}`).map((notice) => ({
-        to: notice.to.map((to) => players.find((p) => p.id === to)?.name ?? to).sort(),
-        title: notice.title,
-      }));
-
     it("tells the host about answers to invites, and everyone when it fills", async () => {
       await withPlayers(["3.5", "3.5", "3.5", "3.5"], (players, { db, joins }) =>
         Effect.gen(function* () {
@@ -499,6 +466,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
           const [host, guest] = players;
           const id = yield* makeSession(db, host!, { invited: [guest!] });
           yield* joins.respond(guest!, id, "accept");
+          // The guest filled the last spot, so only the host needs telling.
           expect(heard(id, players)).toEqual([{ to: ["P0"], title: "Session confirmed" }]);
         }),
       );
@@ -540,13 +508,11 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
       await withPlayers(["4.0", "4.0", "4.0", "4.0"], (players, { db, joins }) =>
         Effect.gen(function* () {
           const [host, a, b, c] = players;
-
           const id = yield* makeSession(db, host!, {
             kind: "doubles",
             accepted: [a!],
             invited: [b!],
           });
-
           yield* joins.respond(c!, id, "request");
           yield* joins.cancel(host!, id);
           yield* joins.cancel(host!, id);

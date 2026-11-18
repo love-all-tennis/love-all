@@ -1,4 +1,4 @@
-import * as ImagePicker from "expo-image-picker";
+import { launchImageLibraryAsync } from "expo-image-picker";
 import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -15,16 +15,16 @@ export default function BasicsScreen() {
   const error = stepError(draft, "basics");
 
   const pickPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
+    const result = await launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
     });
-
     const asset = result.canceled ? undefined : result.assets[0];
-
-    if (asset) update({ photoUri: asset.uri });
+    if (asset) {
+      update({ photoUri: asset.uri });
+    }
   };
 
   if (loading) {
@@ -44,8 +44,9 @@ export default function BasicsScreen() {
       actionLabel="Next"
       onAction={() => {
         setTried(true);
-
-        if (!error) router.push("/profile-setup/home");
+        if (!error) {
+          router.push("/profile-setup/home");
+        }
       }}
     >
       <View style={styles.photoRow}>
@@ -71,8 +72,9 @@ export default function BasicsScreen() {
         returnKeyType="next"
         onSubmitEditing={() => {
           setTried(true);
-
-          if (!error) router.push("/profile-setup/home");
+          if (!error) {
+            router.push("/profile-setup/home");
+          }
         }}
       />
     </StepScreen>

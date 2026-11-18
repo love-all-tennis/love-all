@@ -37,7 +37,6 @@ describe("ClubReviewInput", () => {
     for (const rating of [1, 2, 3, 4, 5]) {
       expect(decodeReview({ rating })._tag).toBe("Success");
     }
-
     for (const rating of [0, 6, 3.5, "4"]) {
       expect(decodeReview({ rating })._tag).toBe("Failure");
     }

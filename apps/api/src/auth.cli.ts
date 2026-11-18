@@ -1,6 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { drizzle } from "drizzle-orm/node-postgres";
-// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- The Better Auth CLI needs a plain instance, outside any Layer.
 import { makeAuth } from "./auth";
 
 /**

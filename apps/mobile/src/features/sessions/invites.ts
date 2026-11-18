@@ -1,3 +1,8 @@
+/**
+ * Who the host can invite, kept free of React Native so it can be unit
+ * tested.
+ */
+
 import { MAX_INVITES_PER_REQUEST, type Ntrp, type Session } from "@love-all/domain";
 
 export type InviteCandidate = {
@@ -6,6 +11,11 @@ export type InviteCandidate = {
   readonly photoUrl: string | null;
   readonly ntrp: Ntrp | null;
   readonly distanceKm: number | null;
+};
+
+export type InviteCandidates = {
+  readonly followed: ReadonlyArray<InviteCandidate>;
+  readonly nearby: ReadonlyArray<InviteCandidate>;
 };
 
 /**
@@ -23,17 +33,15 @@ export const inviteCandidates = ({
   myId: string;
   followed: ReadonlyArray<InviteCandidate>;
   nearby: ReadonlyArray<InviteCandidate>;
-}) => {
+}): InviteCandidates => {
   const taken = new Set([
     myId,
     ...session.participants
       .filter((p) => p.state !== "declined" && p.state !== "left")
       .map((p) => p.player.id),
   ]);
-
   const keptFollowed = followed.filter((p) => !taken.has(p.id));
   const followedIds = new Set(keptFollowed.map((p) => p.id));
-
   return {
     followed: keptFollowed,
     nearby: nearby.filter((p) => !taken.has(p.id) && !followedIds.has(p.id)),
@@ -44,10 +52,12 @@ export const inviteCandidates = ({
  * Picks or unpicks a player. Past the per-request limit, the same array comes
  * back unchanged, so the screen can say why.
  */
-export const toggleInvite = (picked: ReadonlyArray<string>, id: string) => {
-  if (picked.includes(id)) return picked.filter((p) => p !== id);
-
-  if (picked.length >= MAX_INVITES_PER_REQUEST) return picked;
-
+export const toggleInvite = (picked: ReadonlyArray<string>, id: string): ReadonlyArray<string> => {
+  if (picked.includes(id)) {
+    return picked.filter((p) => p !== id);
+  }
+  if (picked.length >= MAX_INVITES_PER_REQUEST) {
+    return picked;
+  }
   return [...picked, id];
 };

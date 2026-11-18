@@ -44,16 +44,18 @@ export function ReportSheet({
 
   const send = async () => {
     setTried(true);
-
-    if (!reason) return;
+    if (!reason) {
+      return;
+    }
     setBusy("report");
     setProblem(null);
-
     try {
       const refusal = await sendReport(targetType, targetId, reason, details);
-
-      if (refusal) setProblem(refusal);
-      else setSent(true);
+      if (refusal) {
+        setProblem(refusal);
+      } else {
+        setSent(true);
+      }
     } catch {
       setProblem("Couldn't send your report. Check your connection and try again.");
     } finally {
@@ -64,12 +66,13 @@ export function ReportSheet({
   const block = async () => {
     setBusy("block");
     setProblem(null);
-
     try {
       const refusal = await blockPlayer(author.id);
-
-      if (refusal) setProblem(refusal);
-      else afterBlock();
+      if (refusal) {
+        setProblem(refusal);
+      } else {
+        afterBlock();
+      }
     } catch {
       setProblem("Couldn't block them. Check your connection and try again.");
     } finally {
@@ -93,7 +96,7 @@ export function ReportSheet({
             </Text>
             <Text color="textMuted">
               The moderators will look at your report about {subject}. You can block {author.name}{" "}
-              too, so you won't see each other.
+              {"too, so you won't see each other."}
             </Text>
           </View>
           <ErrorBanner>{problem}</ErrorBanner>

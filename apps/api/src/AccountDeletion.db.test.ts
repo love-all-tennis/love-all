@@ -88,6 +88,9 @@ const session_ = (hostId: string, startsAt: Date, status: "open" | "confirmed" =
   status,
 });
 
+const asPlayer = (id: string, name: string) =>
+  new SessionUser({ id, name, email: `${id}@example.com`, role: "player" });
+
 describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
   it("asks for the password of an email account", async () => {
     const test = makeTest();
@@ -306,9 +309,6 @@ describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
               headers: new Headers({ cookie: sam.cookie }),
             }),
           );
-
-          const asPlayer = (id: string, name: string) =>
-            new SessionUser({ id, name, email: `${id}@example.com`, role: "player" });
 
           const forum = yield* Forum;
           const sessions = yield* Sessions;

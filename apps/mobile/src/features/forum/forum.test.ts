@@ -108,7 +108,6 @@ describe("deleting a reply", () => {
       createdAt: new Date(),
       reactions,
     });
-
     const gone = asDeleted(post);
     expect(gone).toBeInstanceOf(ForumPost);
     expect(gone).toMatchObject({ id: post.id, deleted: true, body: null, author: null });

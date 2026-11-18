@@ -1,4 +1,9 @@
-import * as Location from "expo-location";
+import {
+  Accuracy,
+  geocodeAsync,
+  getCurrentPositionAsync,
+  requestForegroundPermissionsAsync,
+} from "expo-location";
 import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -8,7 +13,7 @@ import { StepScreen } from "@/features/profile/components";
 import { roundPoint, stepError, type HomeArea } from "@/features/profile/draft";
 import { useProfileDraft } from "@/features/profile/draft-context";
 
-const describe = (area: HomeArea) =>
+const describe = (area: HomeArea): string =>
   area.kind === "city" ? area.label : "Near your current location";
 
 /** Step 2: where they play from, as a city or a pin from their location. */
@@ -24,15 +29,16 @@ export default function HomeAreaScreen() {
   const findCity = async () => {
     const label = city.trim();
     setPinProblem(null);
-
-    if (!label) return setCityProblem("Type a city first, like Royal Oak, MI");
+    if (!label) {
+      return setCityProblem("Type a city first, like Royal Oak, MI");
+    }
     setBusy("city");
     setCityProblem(null);
-
     try {
-      const [hit] = await Location.geocodeAsync(label);
-
-      if (!hit) return setCityProblem(`Couldn't find "${label}". Try adding the state.`);
+      const [hit] = await geocodeAsync(label);
+      if (!hit) {
+        return setCityProblem(`Couldn't find "${label}". Try adding the state.`);
+      }
       update({
         homeArea: {
           kind: "city",
@@ -47,20 +53,19 @@ export default function HomeAreaScreen() {
     }
   };
 
-  const usePin = async () => {
+  const pinCurrentLocation = async () => {
     setBusy("pin");
     setPinProblem(null);
     setCityProblem(null);
-
     try {
-      const { granted } = await Location.requestForegroundPermissionsAsync();
-
-      if (!granted) return setPinProblem("Location is off for Love All. Type your city instead.");
-
-      const { coords } = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Low,
+      const { granted } = await requestForegroundPermissionsAsync();
+      if (!granted) {
+        return setPinProblem("Location is off for Love All. Type your city instead.");
+      }
+      // Low accuracy is plenty: we only keep about 1 km.
+      const { coords } = await getCurrentPositionAsync({
+        accuracy: Accuracy.Low,
       });
-
       update({
         homeArea: {
           kind: "pin",
@@ -83,8 +88,9 @@ export default function HomeAreaScreen() {
       actionLabel="Next"
       onAction={() => {
         setTried(true);
-
-        if (!error) router.push("/profile-setup/game");
+        if (!error) {
+          router.push("/profile-setup/game");
+        }
       }}
     >
       <View style={styles.group}>
@@ -115,7 +121,7 @@ export default function HomeAreaScreen() {
         label="Use my current location"
         icon={<Icon ios="location" md="my_location" color="text" />}
         loading={busy === "pin"}
-        onPress={() => void usePin()}
+        onPress={() => void pinCurrentLocation()}
       />
 
       {draft.homeArea ? (

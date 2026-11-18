@@ -45,20 +45,23 @@ export default function ClubScreen() {
     let live = true;
     Promise.all([fetchClub(id), fetchReviews(id)])
       .then(([club, page]) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         setState(
           club && page
             ? { status: "ready", club, reviews: page.items, cursor: page.nextCursor }
             : { status: "missing" },
         );
       })
+      // Keep what's up after a review changes; only show the error when there's nothing to show.
       .catch(() => live && setState((s) => (s.status === "ready" ? s : { status: "error" })));
-
     return () => {
       live = false;
     };
   }, [id, generation]);
 
+  // Saving or deleting my review in the sheet reloads the page underneath.
   useEffect(() => onReviewChanged((clubId) => clubId === id && setGeneration((g) => g + 1)), [id]);
 
   const retry = () => {
@@ -67,12 +70,16 @@ export default function ClubScreen() {
   };
 
   const loadMore = useCallback(() => {
-    if (state.status !== "ready" || !state.cursor || loadingMore) return;
+    if (state.status !== "ready" || !state.cursor || loadingMore) {
+      return;
+    }
     setLoadingMore(true);
     setProblem(null);
     fetchReviews(id, state.cursor)
       .then((page) => {
-        if (!page) return;
+        if (!page) {
+          return;
+        }
         setState((s) =>
           s.status === "ready"
             ? { ...s, reviews: mergeById(s.reviews, page.items), cursor: page.nextCursor }
@@ -110,7 +117,6 @@ export default function ClubScreen() {
   const mine = club.myReview;
   const others = state.reviews.filter((review) => !review.mine);
   const distance = distanceLabel(club.distanceKm);
-
   const openReview = () =>
     router.push({ pathname: "/clubs/review", params: { id: club.id, name: club.name } });
 

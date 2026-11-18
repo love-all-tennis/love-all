@@ -3,6 +3,7 @@ import { FetchHttpClient } from "effect/http";
 import { describe, expect, it } from "vite-plus/test";
 import { EXPO_BATCH_SIZE, type PushMessage, PushSender } from "./PushSender";
 
+/** The part of each sent message the tests check. */
 const SentBody = Schema.fromJsonString(
   Schema.Array(
     Schema.Struct({
@@ -18,22 +19,20 @@ const decodeSentBody = Schema.decodeUnknownSync(SentBody);
 
 type SentRequest = { url: string; body: typeof SentBody.Type };
 
+/** Runs `PushSender.expo` against a fake `fetch` that answers every message with "ok". */
 const sendWith = (messages: ReadonlyArray<PushMessage>) => {
   const requests: Array<SentRequest> = [];
-
-  // WARNING: fakeFetch only implements the call shape PushSender.expo uses.
   const fakeFetch = (async (input: string | URL, init?: RequestInit) => {
-    // WARNING: HttpClientRequest.bodyJson sends its body as a Uint8Array.
     const body = decodeSentBody(new TextDecoder().decode(init?.body as Uint8Array));
-
     requests.push({ url: input.toString(), body });
-
     return new Response(JSON.stringify({ data: body.map(() => ({ status: "ok", id: "x" })) }), {
       headers: { "content-type": "application/json" },
     });
   }) as typeof fetch;
-
-  return PushSender.use((sender) => sender.send(messages)).pipe(
+  return Effect.gen(function* () {
+    const sender = yield* PushSender;
+    return yield* sender.send(messages);
+  }).pipe(
     Effect.provide(PushSender.expo),
     Effect.provideService(FetchHttpClient.Fetch, fakeFetch),
     Effect.runPromise,
@@ -41,7 +40,7 @@ const sendWith = (messages: ReadonlyArray<PushMessage>) => {
   );
 };
 
-const message = (i: number) => ({
+const message = (i: number): PushMessage => ({
   to: `ExponentPushToken[${i}]`,
   title: "Title",
   body: "Body",

@@ -8,15 +8,12 @@ import { PlayerId } from "./Player";
  */
 
 export const ForumCategoryId = Schema.String.check(Schema.isUUID());
-
 export type ForumCategoryId = typeof ForumCategoryId.Type;
 
 export const ForumThreadId = Schema.String.check(Schema.isUUID());
-
 export type ForumThreadId = typeof ForumThreadId.Type;
 
 export const ForumPostId = Schema.String.check(Schema.isUUID());
-
 export type ForumPostId = typeof ForumPostId.Type;
 
 export const FORUM_TITLE_MAX = 120;
@@ -26,7 +23,6 @@ export const ForumTitle = Schema.String.check(
   Schema.isTrimmed(),
   Schema.isBetweenLength(1, FORUM_TITLE_MAX),
 );
-
 export const ForumBody = Schema.String.check(
   Schema.isTrimmed(),
   Schema.isBetweenLength(1, FORUM_BODY_MAX),
@@ -45,7 +41,6 @@ export const ForumAuthor = Schema.Struct({
   displayName: Schema.String,
   photoUrl: Schema.NullOr(Schema.String),
 });
-
 export type ForumAuthor = typeof ForumAuthor.Type;
 
 /**
@@ -54,7 +49,6 @@ export type ForumAuthor = typeof ForumAuthor.Type;
  */
 export const FORUM_REACTION_KINDS = ["like", "helpful", "ace"] as const;
 export const ForumReactionKind = Schema.Literals(FORUM_REACTION_KINDS);
-
 export type ForumReactionKind = typeof ForumReactionKind.Type;
 
 /**
@@ -67,7 +61,6 @@ export const ForumReactionCount = Schema.Struct({
   count: Schema.Int,
   mine: Schema.Boolean,
 });
-
 export type ForumReactionCount = typeof ForumReactionCount.Type;
 
 /** The thread with the latest activity in a category, for the category list. */
@@ -76,7 +69,6 @@ export const ForumLatestThread = Schema.Struct({
   title: Schema.String,
   lastPostAt: Schema.DateFromString,
 });
-
 export type ForumLatestThread = typeof ForumLatestThread.Type;
 
 /**
@@ -147,7 +139,6 @@ export const ForumThreadsQuery = {
   cursor: Schema.optionalKey(Schema.String),
   limit: Schema.optionalKey(ForumPageSize),
 };
-
 export type ForumThreadsQuery = Schema.Struct<typeof ForumThreadsQuery>["Type"];
 
 /** One page of a category's threads, latest activity first. */
@@ -161,7 +152,6 @@ export const ForumRepliesQuery = {
   cursor: Schema.optionalKey(Schema.String),
   limit: Schema.optionalKey(ForumPageSize),
 };
-
 export type ForumRepliesQuery = Schema.Struct<typeof ForumRepliesQuery>["Type"];
 
 /** A thread and one page of its replies, oldest first. */
@@ -177,12 +167,10 @@ export const NewForumThread = Schema.Struct({
   title: ForumTitle,
   body: ForumBody,
 });
-
 export type NewForumThread = typeof NewForumThread.Type;
 
 /** `POST /forum/threads/:id/posts` body. */
 export const NewForumPost = Schema.Struct({ body: ForumBody });
-
 export type NewForumPost = typeof NewForumPost.Type;
 
 /** No category with that id that I can see (another metro's Local category, say). */

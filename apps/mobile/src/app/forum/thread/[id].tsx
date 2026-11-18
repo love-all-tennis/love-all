@@ -48,6 +48,19 @@ type State =
       readonly cursor: string | null;
     };
 
+/** Reports the thread or reply itself, so moderators see what was written. */
+const report = (type: "thread" | "post", postId: string, author: ForumAuthor) =>
+  router.push({
+    pathname: "/forum/report",
+    params: { type, id: postId, authorId: author.id, name: author.displayName },
+  });
+
+const runPostAction = (
+  action: PostMenuAction,
+  target: { type: "thread" | "post"; id: string; author: ForumAuthor },
+  remove: () => void,
+) => (action === "delete" ? remove() : report(target.type, target.id, target.author));
+
 /** One thread: the opening post, its replies oldest first, and a box to reply. */
 export default function ThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -61,13 +74,16 @@ export default function ThreadScreen() {
   const [posting, setPosting] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  // "5 min ago" is measured from when the thread opened; a new reply reads "Just now".
   const [now] = useState(() => new Date());
 
   useEffect(() => {
     let live = true;
     fetchThread(id)
       .then((page) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         setState(
           page
             ? {
@@ -80,7 +96,6 @@ export default function ThreadScreen() {
         );
       })
       .catch(() => live && setState({ status: "error" }));
-
     return () => {
       live = false;
     };
@@ -92,11 +107,15 @@ export default function ThreadScreen() {
   };
 
   const loadMore = useCallback(() => {
-    if (state.status !== "ready" || !state.cursor || loadingMore) return;
+    if (state.status !== "ready" || !state.cursor || loadingMore) {
+      return;
+    }
     setLoadingMore(true);
     fetchThread(id, state.cursor)
       .then((page) => {
-        if (!page) return;
+        if (!page) {
+          return;
+        }
         setState((s) =>
           s.status === "ready"
             ? { ...s, replies: mergeById(s.replies, page.replies), cursor: page.nextCursor }
@@ -111,20 +130,17 @@ export default function ThreadScreen() {
 
   const send = async () => {
     setTried(true);
-
-    if (bodyError(draft, "reply")) return;
+    if (bodyError(draft, "reply")) {
+      return;
+    }
     setPosting(true);
     setProblem(null);
-
     try {
       const outcome = await reply(id, draft.trim());
-
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
-
         return;
       }
-
       setDraft("");
       setTried(false);
       setState((s) =>
@@ -143,25 +159,27 @@ export default function ThreadScreen() {
     }
   };
 
+  /** Updates my reaction straight away, and puts it back if the server says no. */
   const react = (target: "thread" | "post", targetId: string, kind: ForumReactionKind) => {
-    if (state.status !== "ready") return;
-
+    if (state.status !== "ready") {
+      return;
+    }
     const before =
       target === "thread"
         ? state.thread.reactions
         : state.replies.find((p) => p.id === targetId)?.reactions;
-
-    if (!before) return;
+    if (!before) {
+      return;
+    }
     const { reactions, on } = toggleReaction(before, kind);
-
     const put = (next: typeof before) =>
       setState((s) => {
-        if (s.status !== "ready") return s;
-
+        if (s.status !== "ready") {
+          return s;
+        }
         if (target === "thread") {
           return { ...s, thread: patchThread(s.thread, { reactions: next }) };
         }
-
         return {
           ...s,
           replies: s.replies.map((p) =>
@@ -169,7 +187,6 @@ export default function ThreadScreen() {
           ),
         };
       });
-
     put(reactions);
     setProblem(null);
     setReaction(target, targetId, kind, on)
@@ -195,8 +212,11 @@ export default function ThreadScreen() {
         setProblem(null);
         deleteThread(thread.id)
           .then((outcome) => {
-            if ("refusal" in outcome) setProblem(outcome.refusal);
-            else router.back();
+            if ("refusal" in outcome) {
+              setProblem(outcome.refusal);
+            } else {
+              router.back();
+            }
           })
           .catch(() => setProblem(`Couldn't delete your thread. ${NETWORK}`))
           .finally(() => setBusy(null));
@@ -215,10 +235,8 @@ export default function ThreadScreen() {
           .then((outcome) => {
             if ("refusal" in outcome) {
               setProblem(outcome.refusal);
-
               return;
             }
-
             setState((s) =>
               s.status === "ready"
                 ? {
@@ -235,12 +253,6 @@ export default function ThreadScreen() {
           .finally(() => setBusy(null));
       },
     );
-
-  const report = (type: "thread" | "post", postId: string, author: ForumAuthor) =>
-    router.push({
-      pathname: "/forum/report",
-      params: { type, id: postId, authorId: author.id, name: author.displayName },
-    });
 
   const title = state.status === "ready" ? state.thread.category.name : "";
 
@@ -270,13 +282,6 @@ export default function ThreadScreen() {
   const { thread } = state;
   const threadAuthor = thread.author;
   const threadMine = threadAuthor?.id === meId;
-
-  const onAction = (
-    action: PostMenuAction,
-    target: { type: "thread" | "post"; id: string; author: ForumAuthor },
-    remove: () => void,
-  ) => (action === "delete" ? remove() : report(target.type, target.id, target.author));
-
   return (
     <Screen scroll={false} edges={["left", "right", "bottom"]}>
       <Stack.Screen options={{ title }} />
@@ -301,7 +306,7 @@ export default function ThreadScreen() {
               onToggleReaction={(kind) => react("thread", thread.id, kind)}
               onAction={(action) =>
                 threadAuthor &&
-                onAction(action, { type: "thread", id: thread.id, author: threadAuthor }, () =>
+                runPostAction(action, { type: "thread", id: thread.id, author: threadAuthor }, () =>
                   removeThread(thread),
                 )
               }
@@ -324,7 +329,7 @@ export default function ThreadScreen() {
             onToggleReaction={(kind) => react("post", item.id, kind)}
             onAction={(action) =>
               item.author &&
-              onAction(action, { type: "post", id: item.id, author: item.author }, () =>
+              runPostAction(action, { type: "post", id: item.id, author: item.author }, () =>
                 removeReply(item),
               )
             }

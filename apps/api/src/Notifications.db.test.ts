@@ -7,6 +7,7 @@ import { block, pushToken, user } from "./db/schema";
 import { Notifications } from "./Notifications";
 import { makePushSenderMemory } from "./testing/PushSenderMemory";
 
+/** Runs against a migrated Postgres. Skipped when DATABASE_URL is not set. */
 const withPlayers = <A, E>(
   count: number,
   f: (
@@ -18,15 +19,11 @@ const withPlayers = <A, E>(
   Effect.gen(function* () {
     const db = yield* Db;
     const notifications = yield* Notifications;
-
     const players = Array.from({ length: count }, (_, i) => {
       const id = `test_${crypto.randomUUID()}`;
-
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
-
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
-
     return yield* f(players, { db, notifications }).pipe(
       Effect.ensuring(
         Effect.orDie(
@@ -90,6 +87,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Notifications", () => {
           yield* notifications.register(b!, { token: tokens.b2, platform: "android" });
           yield* notifications.register(c!, { token: tokens.c, platform: "ios" });
           yield* notifications.register(d!, { token: tokens.d, platform: "ios" });
+          // d blocked a, so a's actions never reach d.
           yield* db.insert(block).values({ blockerId: d!.id, blockedId: a!.id });
           yield* notifications.notify({
             to: [a!.id, b!.id, b!.id, d!.id],

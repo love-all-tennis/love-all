@@ -47,6 +47,7 @@ export class Follows extends Context.Service<
             playsSingles: profile.playsSingles,
             playsDoubles: profile.playsDoubles,
             playsHitting: profile.playsHitting,
+            // Whole km, at least 1: home points are rounded to about 1 km anyway.
             distanceKm: sql<number | null>`case
               when ${mine.homePoint} is null or ${profile.homePoint} is null then null
               else greatest(1, round(ST_Distance(${mine.homePoint}::geography, ${profile.homePoint}::geography) / 1000))::int
@@ -70,30 +71,33 @@ export class Follows extends Context.Service<
           if (playerId === user.id) {
             return yield* new CannotFollowSelf({ message: "You can't follow yourself" });
           }
-
           const [target] = yield* db
             .select({ id: profile.userId })
             .from(profile)
             .where(and(eq(profile.userId, playerId), notBlocked(user.id, profile.userId)))
             .pipe(Effect.orDie);
-
-          if (!target) return yield* new PlayerNotFound({ id: playerId });
+          // A blocked player is hidden, so following them looks the same as a missing one.
+          if (!target) {
+            return yield* new PlayerNotFound({ id: playerId });
+          }
 
           const [already] = yield* db
             .select({ id: follow.followedId })
             .from(follow)
             .where(and(eq(follow.followerId, user.id), eq(follow.followedId, playerId)))
             .pipe(Effect.orDie);
-
-          if (already) return;
+          if (already) {
+            return;
+          }
 
           const [{ total } = { total: 0 }] = yield* db
             .select({ total: count() })
             .from(follow)
             .where(eq(follow.followerId, user.id))
             .pipe(Effect.orDie);
-
-          if (total >= MAX_FOLLOWS) return yield* new FollowLimitReached({ limit: MAX_FOLLOWS });
+          if (total >= MAX_FOLLOWS) {
+            return yield* new FollowLimitReached({ limit: MAX_FOLLOWS });
+          }
 
           yield* db
             .insert(follow)

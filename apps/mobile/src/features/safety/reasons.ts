@@ -1,3 +1,7 @@
+/**
+ * Report reasons in the words players see, kept free of React Native so
+ * the list can be unit tested against the API's values.
+ */
 import type { ReportReason, ReportTargetType } from "@love-all/domain";
 
 export const REPORT_REASONS = [
@@ -11,6 +15,7 @@ export const REPORT_REASONS = [
 
 export type ReasonOption = { readonly reason: ReportReason; readonly label: string };
 
+/** Reasons that fit something a player wrote. */
 const CONTENT_REASONS: ReadonlyArray<ReasonOption> = [
   { reason: "harassment", label: "Harassment or threats" },
   { reason: "inappropriate", label: "Offensive or inappropriate" },
@@ -19,5 +24,5 @@ const CONTENT_REASONS: ReadonlyArray<ReasonOption> = [
 ];
 
 /** The reasons to offer for a report target: all of them for a player, fewer for a post. */
-export const reasonsFor = (target: ReportTargetType) =>
+export const reasonsFor = (target: ReportTargetType): ReadonlyArray<ReasonOption> =>
   target === "player" ? REPORT_REASONS : CONTENT_REASONS;

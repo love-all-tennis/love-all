@@ -13,9 +13,7 @@ export default function ReportPostSheet() {
     authorId: string;
     name: string;
   }>();
-
   const thread = type === "thread";
-
   return (
     <ReportSheet
       targetType={thread ? "forum_thread" : "forum_post"}
@@ -23,6 +21,7 @@ export default function ReportPostSheet() {
       author={{ id: authorId, name }}
       title={thread ? "Report thread" : "Report reply"}
       subject={thread ? `${name}'s thread` : `${name}'s reply`}
+      // Their posts are hidden from me now, and a blocked author's thread is gone.
       afterBlock={() => router.dismissTo("/forum")}
     />
   );

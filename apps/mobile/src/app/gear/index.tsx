@@ -20,6 +20,7 @@ import { useCatalog } from "@/features/gear/use-gear";
 
 const openItem = (id: string) => router.push({ pathname: "/gear/[id]", params: { id } });
 
+/** What the add-gear screen starts with: the kind and search text, when set. */
 type NewGearParams = { kind?: EquipmentKind; model?: string };
 
 /** The gear catalog: search, filter by kind, open an item, or add a missing one. */
@@ -29,14 +30,14 @@ export default function GearScreen() {
   const [q, setQ] = useState("");
   const catalog = useCatalog(kind, q);
   const filtered = kind !== null || q.trim() !== "";
-
   const addItem = () => {
     const params: NewGearParams = {};
-
-    if (kind) params.kind = kind;
-
-    if (q.trim()) params.model = q.trim();
-
+    if (kind) {
+      params.kind = kind;
+    }
+    if (q.trim()) {
+      params.model = q.trim();
+    }
     router.push({ pathname: "/gear/new", params });
   };
 

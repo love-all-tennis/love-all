@@ -30,15 +30,14 @@ export function Card({
 }: CardProps) {
   const palette = useColors();
   const fill = tone === "surface" ? palette.surface : palette.surfaceSunken;
-
   const base = [
     styles.card,
     { backgroundColor: fill, borderColor: tone === "surface" ? palette.border : fill },
     style,
   ];
-
-  if (!onPress) return <View style={base}>{children}</View>;
-
+  if (!onPress) {
+    return <View style={base}>{children}</View>;
+  }
   return (
     <Pressable
       accessibilityRole="button"
