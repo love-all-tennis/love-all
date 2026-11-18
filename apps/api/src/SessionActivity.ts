@@ -32,14 +32,13 @@ import {
   user,
 } from "./db/schema";
 
-/** Players a side of each kind has. Hitting sessions have no score. */
 const SIDE_SIZE = { singles: 1, doubles: 2 } as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** A comments cursor is the last comment's id, base64url-encoded so clients treat it as opaque. */
 export const encodeCommentCursor = (id: string) => Buffer.from(id).toString("base64url");
-export const decodeCommentCursor = (token: string): string | undefined => {
+export const decodeCommentCursor = (token: string) => {
   if (!/^[A-Za-z0-9_-]+$/.test(token)) return undefined;
   const id = Buffer.from(token, "base64url").toString("utf8");
   return UUID.test(id) ? id : undefined;
@@ -112,11 +111,6 @@ export class SessionActivity extends Context.Service<
       const db = yield* Db;
       const sessions = yield* Sessions;
 
-      /**
-       * The session, if the viewer is its host or an accepted player. Uses
-       * `Sessions.get`, so anyone who couldn't see the session gets
-       * `SessionNotFound`, the same as on `GET /sessions/:id`.
-       */
       const requirePlayer = (viewer: SessionUser, sessionId: string) =>
         Effect.gen(function* () {
           const session = yield* sessions.get(viewer, sessionId);
@@ -291,7 +285,7 @@ export class SessionActivity extends Context.Service<
             const values = {
               sideA: [...input.sideA],
               sideB: [...input.sideB],
-              sets: input.sets.map(([a, b]): [number, number] => [a, b]),
+              sets: input.sets.map(([a, b]) => [a, b] satisfies [number, number]),
               winner: winningSide(input.sets),
               status: "pending" as const,
               recordedBy: viewer.id,
@@ -299,7 +293,6 @@ export class SessionActivity extends Context.Service<
               respondedBy: null,
               respondedAt: null,
             };
-            // One score per session; a new one only replaces a disputed one.
             const [row] = yield* db
               .insert(playSessionResult)
               .values({ sessionId, ...values })

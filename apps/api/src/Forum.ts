@@ -23,7 +23,7 @@ import {
   NotForumAuthor,
   type SessionUser,
 } from "@love-all/domain";
-import { type SQL, and, asc, count, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { Context, Effect, Layer, Option } from "effect";
 import { Db } from "./Db";
 import { Notifications } from "./Notifications";
@@ -48,11 +48,8 @@ export interface ForumReportable {
   readonly content: string;
 }
 
-/** Every kind at zero, for a deleted reply or a target nobody reacted to. */
-const noReactions = (): Array<ForumReactionCount> =>
-  FORUM_REACTION_KINDS.map((kind) => ({ kind, count: 0, mine: false }));
+const noReactions = () => FORUM_REACTION_KINDS.map((kind) => ({ kind, count: 0, mine: false }));
 
-/** How an author is shown: their profile name, or their account name before they have a profile. */
 const authorName = sql<string>`coalesce(${profile.displayName}, ${user.name})`;
 
 /**
@@ -136,7 +133,6 @@ export class Forum extends Context.Service<
       const db = yield* Db;
       const notifications = yield* Notifications;
 
-      /** The metro of my profile, or null when I have no profile or no metro. */
       const viewerMetro = (viewer: SessionUser) =>
         db
           .select({ metroId: profile.metroId })
@@ -147,14 +143,12 @@ export class Forum extends Context.Service<
             Effect.orDie,
           );
 
-      /** Categories I can see: global ones, plus the Local one for my metro. */
-      const visibleCategory = (metroId: string | null): SQL =>
+      const visibleCategory = (metroId: string | null) =>
         metroId === null
           ? isNull(forumCategory.metroId)
           : or(isNull(forumCategory.metroId), eq(forumCategory.metroId, metroId))!;
 
-      /** Threads I can see. Needs the `forumCategory` join. */
-      const visibleThread = (viewer: SessionUser, metroId: string | null): SQL =>
+      const visibleThread = (viewer: SessionUser, metroId: string | null) =>
         and(
           isNull(forumThread.deletedAt),
           isNull(forumThread.hiddenAt),
@@ -193,10 +187,6 @@ export class Forum extends Context.Service<
         readonly authorPhotoUrl: string | null;
       }) => ({ id: row.authorId, displayName: row.authorName, photoUrl: row.authorPhotoUrl });
 
-      /**
-       * Reaction counts for each thread (or reply) in `ids`, leaving out
-       * reactions by players blocked either way with the viewer.
-       */
       const reactionsFor = (
         viewer: SessionUser,
         target: typeof forumReaction.threadId,
@@ -304,7 +294,6 @@ export class Forum extends Context.Service<
               reactions,
             });
 
-      /** A reply that is live, by a player I can see, in a thread I can see. */
       const findLivePost = (viewer: SessionUser, postId: string) =>
         Effect.gen(function* () {
           const metroId = yield* viewerMetro(viewer);
@@ -326,7 +315,6 @@ export class Forum extends Context.Service<
           return post;
         });
 
-      /** Fails when the viewer already wrote `limit` rows of `table` in the last hour. */
       const checkRate = (
         viewer: SessionUser,
         table: typeof forumThread | typeof forumPost,
@@ -363,7 +351,6 @@ export class Forum extends Context.Service<
               .select()
               .from(forumCategory)
               .where(visibleCategory(metroId))
-              // Local first, then the global ones in their set order.
               .orderBy(sql`${forumCategory.metroId} is null`, asc(forumCategory.sortOrder))
               .pipe(Effect.orDie);
             const latest = yield* db
@@ -443,7 +430,6 @@ export class Forum extends Context.Service<
               .pipe(Effect.orDie);
             if (!category) return yield* new ForumCategoryNotFound({ id: input.categoryId });
             yield* checkRate(viewer, forumThread, FORUM_THREADS_PER_HOUR, "new threads");
-            // One millisecond-precision time for both, so `last_post_at` matches exactly.
             const now = new Date();
             const [inserted] = yield* db
               .insert(forumThread)
@@ -539,7 +525,6 @@ export class Forum extends Context.Service<
             const [row] = yield* selectPosts()
               .where(eq(forumPost.id, inserted.id))
               .pipe(Effect.orDie);
-            // The thread's author hears about others' replies (`notify` also skips blocked players).
             if (thread.authorId !== viewer.id) {
               yield* notifications.notify({
                 to: [thread.authorId],
@@ -582,7 +567,6 @@ export class Forum extends Context.Service<
             yield* db
               .transaction((tx) =>
                 Effect.gen(function* () {
-                  // The `deleted_at is null` guard keeps two deletes from counting twice.
                   const deleted = yield* tx
                     .update(forumPost)
                     .set({ deletedAt: new Date() })
@@ -647,7 +631,6 @@ export class Forum extends Context.Service<
 
         findReportable: (viewer, kind, id) =>
           Effect.gen(function* () {
-            // Ids are uuids; anything else can't name a thread or reply.
             if (!UUID.test(id)) return Option.none<ForumReportable>();
             if (kind === "thread") {
               const metroId = yield* viewerMetro(viewer);

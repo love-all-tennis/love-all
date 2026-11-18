@@ -47,7 +47,6 @@ export class Follows extends Context.Service<
             playsSingles: profile.playsSingles,
             playsDoubles: profile.playsDoubles,
             playsHitting: profile.playsHitting,
-            // Whole km, at least 1: home points are rounded to about 1 km anyway.
             distanceKm: sql<number | null>`case
               when ${mine.homePoint} is null or ${profile.homePoint} is null then null
               else greatest(1, round(ST_Distance(${mine.homePoint}::geography, ${profile.homePoint}::geography) / 1000))::int
@@ -76,7 +75,6 @@ export class Follows extends Context.Service<
             .from(profile)
             .where(and(eq(profile.userId, playerId), notBlocked(user.id, profile.userId)))
             .pipe(Effect.orDie);
-          // A blocked player is hidden, so following them looks the same as a missing one.
           if (!target) return yield* new PlayerNotFound({ id: playerId });
 
           const [already] = yield* db

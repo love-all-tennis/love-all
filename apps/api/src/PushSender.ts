@@ -20,7 +20,6 @@ export interface PushMessage {
   readonly data: { readonly url: string };
 }
 
-/** Expo's answer for one message, in the order the messages were sent. */
 const PushTicket = Schema.Union([
   Schema.Struct({ status: Schema.Literal("ok") }),
   Schema.Struct({

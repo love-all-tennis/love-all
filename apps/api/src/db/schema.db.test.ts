@@ -5,7 +5,6 @@ import { Db } from "../Db";
 import { roundHomePoint } from "./geo";
 import { availability, metro, playSession, playSessionParticipant, profile, user } from "./schema";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const run = <A, E>(effect: Effect.Effect<A, E, Db>) =>
   effect.pipe(Effect.provide(Db.layer), Effect.runPromise);
 
@@ -106,7 +105,6 @@ describe.skipIf(!process.env.DATABASE_URL)("core tables", () => {
       visibility: "open" as const,
     };
 
-    /** The constraint each bad row trips, or "ok" when the insert works. */
     const tryInsert = (overrides: Partial<typeof playSession.$inferInsert>) =>
       withPlayer((hostId) =>
         withDb((db) =>

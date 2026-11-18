@@ -50,7 +50,6 @@ export function useReports(status: ReportStatus) {
           };
         });
       })
-      // A failed next page leaves the list as it was; scrolling again retries.
       .catch(() => undefined)
       .finally(() => setLoadingMore(false));
   }, [status, state, loadingMore]);

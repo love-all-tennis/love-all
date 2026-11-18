@@ -1,10 +1,4 @@
-import type {
-  NewSessionResult,
-  Session,
-  SessionComment,
-  SessionCommentsPage,
-  SessionResult,
-} from "@love-all/domain";
+import type { NewSessionResult, SessionResult } from "@love-all/domain";
 import { Effect } from "effect";
 
 import { callApi } from "@/lib/api";
@@ -23,9 +17,11 @@ const resultListeners = new Set<ResultListener>();
  * Hears every score this app records or answers, so a session screen under
  * the Record score sheet updates when the sheet closes.
  */
-export const onResultChanged = (listener: ResultListener): (() => void) => {
+export const onResultChanged = (listener: ResultListener) => {
   resultListeners.add(listener);
-  return () => resultListeners.delete(listener);
+  return () => {
+    resultListeners.delete(listener);
+  };
 };
 
 const announce = (sessionId: string) => (result: SessionResult) => {
@@ -36,14 +32,14 @@ const announce = (sessionId: string) => (result: SessionResult) => {
 const refuse = (refusal: string) => Effect.succeed<{ refusal: string }>({ refusal });
 
 /** The session, or null when it's gone or hidden from me. */
-export const fetchSession = (id: string): Promise<Session | null> =>
+export const fetchSession = (id: string) =>
   callApi((api) =>
     api.sessions
       .get({ params: { id } })
       .pipe(Effect.catchTag("SessionNotFound", () => Effect.succeed(null))),
   );
 
-export const fetchComments = (id: string, cursor?: string): Promise<SessionCommentsPage> =>
+export const fetchComments = (id: string, cursor?: string) =>
   callApi((api) =>
     api.sessionActivity.listComments({
       params: { id },
@@ -51,7 +47,7 @@ export const fetchComments = (id: string, cursor?: string): Promise<SessionComme
     }),
   );
 
-export const postComment = (id: string, body: string): Promise<Outcome<SessionComment>> =>
+export const postComment = (id: string, body: string) =>
   callApi((api) =>
     api.sessionActivity.addComment({ params: { id }, payload: { body } }).pipe(
       Effect.map((ok) => ({ ok })),
@@ -63,18 +59,17 @@ export const postComment = (id: string, body: string): Promise<Outcome<SessionCo
     ),
   );
 
-export const deleteComment = (commentId: string): Promise<Outcome<null>> =>
+export const deleteComment = (commentId: string) =>
   callApi((api) =>
     api.sessionActivity.deleteComment({ params: { commentId } }).pipe(
       Effect.as({ ok: null }),
-      // Already gone is what I wanted.
       Effect.catchTag("CommentNotFound", () => Effect.succeed({ ok: null })),
       Effect.catchTag("NotCommentAuthor", () => refuse("You can only delete your own comments.")),
     ),
   );
 
 /** The score, or null when nobody has recorded one (or I can't see it). */
-export const fetchResult = (id: string): Promise<SessionResult | null> =>
+export const fetchResult = (id: string) =>
   callApi((api) =>
     api.sessionActivity.getResult({ params: { id } }).pipe(
       Effect.catchTags({
@@ -84,10 +79,7 @@ export const fetchResult = (id: string): Promise<SessionResult | null> =>
     ),
   );
 
-export const recordResult = (
-  id: string,
-  result: NewSessionResult,
-): Promise<Outcome<SessionResult>> =>
+export const recordResult = (id: string, result: NewSessionResult) =>
   callApi((api) =>
     api.sessionActivity.recordResult({ params: { id }, payload: result }).pipe(
       Effect.map(announce(id)),
@@ -102,10 +94,7 @@ export const recordResult = (
     ),
   );
 
-export const respondToResult = (
-  id: string,
-  response: "confirm" | "dispute",
-): Promise<Outcome<SessionResult>> =>
+export const respondToResult = (id: string, response: "confirm" | "dispute") =>
   callApi((api) =>
     api.sessionActivity.respondToResult({ params: { id }, payload: { response } }).pipe(
       Effect.map(announce(id)),

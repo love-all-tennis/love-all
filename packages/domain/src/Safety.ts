@@ -1,6 +1,5 @@
 import { Schema } from "effect";
 
-/** An account id: what other players are known by in the API. */
 const AccountId = Schema.String.check(Schema.isMinLength(1));
 
 /** A player I blocked, for the "Blocked players" list in settings. */

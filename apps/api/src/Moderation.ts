@@ -36,7 +36,6 @@ import {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Content tables a moderator can hide, by report target type. */
 const hideable = {
   forum_thread: forumThread,
   forum_post: forumPost,
@@ -122,7 +121,6 @@ export class Moderation extends Context.Service<
 
       type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-      /** Closes the open reports matching `where` as `resolution`. */
       const resolveReports = (
         tx: Tx,
         viewer: SessionUser,
@@ -145,7 +143,6 @@ export class Moderation extends Context.Service<
       const playerName = (displayName: SQLWrapper, name: SQLWrapper) =>
         sql<string | null>`coalesce(${displayName}, ${name})`;
 
-      /** Sets or clears `hidden_at`; a reply's thread counts it in or out of `reply_count`. */
       const setHidden = (
         viewer: SessionUser,
         type: HideableTargetType,
@@ -179,7 +176,6 @@ export class Moderation extends Context.Service<
                   yield* resolveReports(tx, viewer, "content_hidden", onTarget(type, id));
                 }
                 if (changed.length === 0 || type !== "forum_post") return;
-                // Deleted replies already left the count when they were deleted.
                 const [post] = yield* tx
                   .select({ threadId: forumPost.threadId, deletedAt: forumPost.deletedAt })
                   .from(forumPost)
@@ -384,7 +380,6 @@ export class Moderation extends Context.Service<
                       reason: input.reason || null,
                     })
                     .onConflictDoNothing();
-                  // Signs them out everywhere; `auth.ts` refuses new sessions.
                   yield* tx.delete(session).where(eq(session.userId, playerId));
                   yield* resolveReports(
                     tx,

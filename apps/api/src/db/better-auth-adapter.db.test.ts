@@ -13,13 +13,6 @@ import { SqlClient } from "effect/sql";
 import { describe } from "vite-plus/test";
 import { effectSqlAdapter, toSnakeCase } from "./better-auth-adapter";
 
-/**
- * Better Auth's own adapter test suite, run against Postgres.
- *
- * The suite changes Better Auth's options as it goes (extra fields, plugins,
- * renamed models), so it works in its own schema, rebuilt from those options
- * with the same snake_case names the adapter uses. Skipped without DATABASE_URL.
- */
 const schemaName = "better_auth_adapter_test";
 
 const columnType = (type: unknown, bigint: boolean | undefined) => {
@@ -30,13 +23,11 @@ const columnType = (type: unknown, bigint: boolean | undefined) => {
       return bigint ? "bigint" : "integer";
     case "date":
       return "timestamp";
-    // Strings, enums, JSON and arrays: the adapter has Better Auth store them as text.
     default:
       return "text";
   }
 };
 
-/** Drops the test schema and creates Better Auth's tables for these options. */
 const migrate = (options: BetterAuthOptions) =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;

@@ -8,7 +8,6 @@ import { messages } from "./notifications/messages";
 /** How long before a session starts its players get the "starting soon" push. */
 export const REMINDER_LEAD_MINUTES = 60;
 
-/** How often the API looks for sessions that are due a reminder. */
 const CHECK_EVERY = "1 minute";
 
 /**

@@ -10,13 +10,9 @@ export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";
 type Look = { fill: ColorRole | null; pressed: ColorRole | null; label: ColorRole };
 
 const looks: Record<ButtonVariant, Look> = {
-  /** The one main action on a screen. */
   primary: { fill: "accent", pressed: "accentPressed", label: "onAccent" },
-  /** Any other action next to it. */
   secondary: { fill: "surfaceSunken", pressed: "surfacePressed", label: "text" },
-  /** A low-key text action: "Skip for now", "Edit". */
   quiet: { fill: null, pressed: null, label: "accent" },
-  /** Block, report, delete. Asks for a confirm step first. */
   danger: { fill: "danger", pressed: "dangerPressed", label: "onDanger" },
 };
 

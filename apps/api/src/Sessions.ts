@@ -108,15 +108,13 @@ export class Sessions extends Context.Service<
       const geographyOf = (point: LngLat) =>
         sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)::geography`;
 
-      /** The court pin, or the host's home point when there is no pin. */
       const sessionPoint = sql`coalesce(${playSession.courtPoint}, ${hostProfile.homePoint})`;
 
-      /** Metres from `point` to where the session is, or null when it has no location. */
       const distanceFrom = (point: LngLat | null | undefined) =>
         (point
           ? sql`ST_Distance(${sessionPoint}::geography, ${geographyOf(point)})`
           : sql`null::float8`
-        ).mapWith((value): number | null => (value === null ? null : Number(value)));
+        ).mapWith((value) => (value === null ? null : Number(value)));
 
       const acceptedCount = sql<number>`(
         select count(*)::int from ${playSessionParticipant}
@@ -124,15 +122,13 @@ export class Sessions extends Context.Service<
           and ${playSessionParticipant.state} = 'accepted'
       )`.mapWith(Number);
 
-      /** Players waiting on the host's answer. Only the host sees the count; others get 0. */
       const requestCount = sql<number>`case when ${mine.role} = 'host' then (
         select count(*)::int from ${playSessionParticipant}
         where ${playSessionParticipant.sessionId} = ${playSession.id}
           and ${playSessionParticipant.state} = 'requested'
       ) else 0 end`.mapWith(Number);
 
-      /** True when the session's level range includes `ntrp`. No rating fits only "any level". */
-      const levelIncludes = (ntrp: Ntrp | null | undefined): SQL =>
+      const levelIncludes = (ntrp: Ntrp | null | undefined) =>
         ntrp
           ? and(
               or(isNull(playSession.levelMin), lte(playSession.levelMin, ntrp)),
@@ -140,8 +136,7 @@ export class Sessions extends Context.Service<
             )!
           : and(isNull(playSession.levelMin), isNull(playSession.levelMax))!;
 
-      /** Who may see a session at all. Needs the `mine` join. */
-      const canSee = (viewer: SessionUser, ntrp: Ntrp | null | undefined): Array<SQL> => [
+      const canSee = (viewer: SessionUser, ntrp: Ntrp | null | undefined) => [
         notBlocked(viewer.id, playSession.hostId),
         or(
           sql`${mine.userId} is not null`,
@@ -193,7 +188,6 @@ export class Sessions extends Context.Service<
         distanceKm: distanceM === null ? null : displayKm(distanceM),
       });
 
-      /** The session as `viewer` may see it, or none. */
       const visibleSession = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           const me = yield* viewerProfile(viewer);
@@ -262,7 +256,6 @@ export class Sessions extends Context.Service<
           return yield* detail(viewer, row.value);
         }).pipe(Effect.withSpan("Sessions.get"));
 
-      /** For host-only changes: the session, if the viewer can see it and hosts it. */
       const hostedSession = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           const found = yield* visibleSession(viewer, id);
@@ -352,10 +345,8 @@ export class Sessions extends Context.Service<
             .update(playSession)
             .set({
               ...rest,
-              // A new start time gets a new "starting soon" reminder.
               ...(startsAt === undefined ? {} : { startsAt, reminderSentAt: null }),
               ...(courtPoint === undefined ? {} : { courtPoint: toPoint(courtPoint) }),
-              // More or fewer spots can fill a session or open one up again.
               ...(patch.spots === undefined
                 ? {}
                 : { status: row.acceptedCount >= spots ? "confirmed" : "open" }),
@@ -375,7 +366,6 @@ export class Sessions extends Context.Service<
           if (ids.includes(viewer.id)) {
             return yield* new InvalidSession({ message: "You're already in this session" });
           }
-          // Blocked players look the same as missing ones, as everywhere else.
           const found = yield* db
             .select({ id: profile.userId })
             .from(profile)
@@ -391,7 +381,6 @@ export class Sessions extends Context.Service<
             .onConflictDoNothing()
             .returning({ userId: playSessionParticipant.userId })
             .pipe(Effect.orDie);
-          // Only players new to the session hear about it.
           yield* notifications.notify({
             to: invited.map((p) => p.userId),
             from: viewer.id,
@@ -423,7 +412,6 @@ export class Sessions extends Context.Service<
           const limit = query.limit ?? SESSIONS_PAGE_DEFAULT;
           const at = (yield* now).toISOString();
 
-          // `mine` lists sessions still going on (not yet ended) first, then past ones.
           const upcoming =
             query.scope === "mine"
               ? sql`${playSession.startsAt} + make_interval(mins => ${playSession.durationMinutes}::int) > ${at}::timestamptz`
@@ -463,7 +451,6 @@ export class Sessions extends Context.Service<
             .orderBy(asc(bucket), asc(key), asc(playSession.id))
             .limit(limit + 1)
             .pipe(Effect.orDie);
-          // The ordering keys aren't columns on the row, so work them out again in JS.
           const nowMs = new Date(at).getTime();
           const keyOf = (row: Row) => {
             const startMs = row.startsAt.getTime();

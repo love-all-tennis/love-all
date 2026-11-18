@@ -5,7 +5,6 @@ import { Accounts } from "./Accounts";
 import { Db } from "./Db";
 import { user } from "./db/schema";
 
-/** Runs against a migrated Postgres. Skipped when DATABASE_URL is not set. */
 const run = <A, E>(effect: Effect.Effect<A, E, Db | Accounts>) =>
   effect.pipe(Effect.provide(Accounts.layer.pipe(Layer.provideMerge(Db.layer))), Effect.runPromise);
 

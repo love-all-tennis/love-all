@@ -16,10 +16,6 @@ import {
   wasEdited,
 } from "./clubs";
 
-/**
- * One star: filled in the accent, or an outline. Drawn as a text glyph so
- * filled and empty differ by shape on every platform, not only by colour.
- */
 function Star({ on, size: starSize }: { on: boolean; size: keyof typeof size.icon }) {
   const px = size.icon[starSize];
   return (

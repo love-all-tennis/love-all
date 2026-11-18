@@ -7,7 +7,6 @@ import { block, forumCategory, forumPost, forumThread, metro, profile, user } fr
 import { Forum } from "./Forum";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const sent = makeNotificationsMemory();
 const TestLayer = Forum.layer.pipe(Layer.provide(sent.layer), Layer.provideMerge(Db.layer));
 
@@ -15,18 +14,11 @@ interface World {
   readonly players: ReadonlyArray<SessionUser>;
   readonly forum: Forum["Service"];
   readonly db: Db["Service"];
-  /** A global category only this test uses, so lists aren't mixed with other tests. */
   readonly categoryId: string;
-  /** A test metro (Dunedin, NZ) and its Local category. Players with `inMetro` are in it. */
   readonly metroId: string;
   readonly localCategoryId: string;
 }
 
-/**
- * Creates `count` players (those listed in `inMetro` get the test metro),
- * a private global category and a test metro with its Local category, runs
- * `f`, then deletes it all (accounts cascade to threads and posts).
- */
 const withForum = <A, E>(
   setup: { readonly count: number; readonly inMetro?: ReadonlyArray<number> },
   f: (world: World) => Effect.Effect<A, E>,
@@ -356,7 +348,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Forum blocks", () => {
           const mine = yield* forum.createThread(me!, thread(categoryId, "Mine"));
           yield* forum.reply(blocked!, mine.id, { body: "From blocked" });
           yield* forum.reply(other!, mine.id, { body: "From other" });
-          // The other player blocked me; it hides us from each other all the same.
           yield* db.insert(block).values({ blockerId: blocked!.id, blockedId: me!.id });
           return {
             myList: yield* forum.listThreads(me!, { categoryId }),

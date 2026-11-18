@@ -16,7 +16,7 @@ type RowPlayer = {
   readonly distanceKm: number | null;
 };
 
-export const levelLabel = (ntrp: Ntrp | null): string =>
+export const levelLabel = (ntrp: Ntrp | null) =>
   ntrp ? `NTRP ${ntrpLabel(ntrp)}` : "No rating yet";
 
 /** One player in a list: photo, name, level, distance and what they play. */

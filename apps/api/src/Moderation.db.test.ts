@@ -26,7 +26,6 @@ import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = Layer.mergeAll(
   Moderation.layer,
   Equipment.layer,
@@ -36,7 +35,6 @@ const TestLayer = Layer.mergeAll(
 ).pipe(Layer.provide(makeNotificationsMemory().layer), Layer.provideMerge(Db.layer));
 
 interface World {
-  /** players[0] is an admin. */
   readonly players: ReadonlyArray<SessionUser>;
   readonly moderation: Moderation["Service"];
   readonly safety: Safety["Service"];
@@ -45,7 +43,6 @@ interface World {
   readonly generalId: string;
 }
 
-/** Creates `count` accounts (the first an admin), runs `f`, then deletes them and their reports. */
 const withWorld = <A, E>(
   count: number,
   f: (world: World) => Effect.Effect<A, E, Players | Profiles | Equipment>,
@@ -238,7 +235,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Moderation", () => {
       removed: false,
     });
     expect(result.hiddenRow?.hiddenAt).not.toBeNull();
-    // Hidden reviews aren't anyone's to see, so they can't be reported again.
     expect(result.hiddenAgain._tag).toBe("TargetNotFound");
     expect(result.afterDelete).toMatchObject({
       resolution: "content_hidden",
@@ -315,7 +311,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Moderation", () => {
       Effect.gen(function* () {
         const players = yield* Players;
         const profiles = yield* Profiles;
-        // Tromsø, away from the points other test files search around.
         for (const [i, p] of [sam!, alex!].entries()) {
           yield* profiles.update(p, { homePoint: { lat: 69.65 + i / 100, lng: 18.96 } });
         }

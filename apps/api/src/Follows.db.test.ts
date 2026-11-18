@@ -7,12 +7,10 @@ import { follow, user } from "./db/schema";
 import { Follows } from "./Follows";
 import { Profiles } from "./Profiles";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = Layer.mergeAll(Follows.layer, Profiles.layer).pipe(Layer.provideMerge(Db.layer));
 
 type Services = { db: Db["Service"]; follows: Follows["Service"]; profiles: Profiles["Service"] };
 
-/** Creates `count` throwaway accounts, runs `f` with them, then deletes them. */
 const withPlayers = <A, E>(
   count: number,
   f: (players: ReadonlyArray<SessionUser>, services: Services) => Effect.Effect<A, E>,
@@ -110,7 +108,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Follows", () => {
     const error = await withPlayers(2, ([me, other], { db, follows, profiles }) =>
       Effect.gen(function* () {
         yield* profiles.update(other!, {});
-        // Fill the list straight in the table: the limit counts rows, not profiles.
         const fillers = Array.from({ length: MAX_FOLLOWS }, () => `test_${crypto.randomUUID()}`);
         yield* db
           .insert(user)

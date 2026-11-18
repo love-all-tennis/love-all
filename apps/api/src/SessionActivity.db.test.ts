@@ -8,7 +8,6 @@ import { SessionActivity } from "./SessionActivity";
 import { Sessions } from "./Sessions";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = SessionActivity.layer.pipe(
   Layer.provideMerge(Sessions.layer),
   Layer.provide(makeNotificationsMemory().layer),
@@ -20,19 +19,12 @@ type State = "invited" | "requested" | "accepted" | "declined" | "left";
 
 interface Setup {
   readonly kind?: Kind;
-  /** Hours from now; negative means it already started. Defaults to -2. */
   readonly startsInHours?: number;
   readonly status?: "open" | "confirmed" | "cancelled";
   readonly visibility?: "open" | "invite_only";
-  /** States of players 1..n; player 0 is the host. */
   readonly states: ReadonlyArray<State | null>;
 }
 
-/**
- * Creates the host (player 0) plus one account per entry in `states`, a
- * session hosted by player 0 with those participants, runs `f`, then deletes
- * the accounts (which cascades to everything else).
- */
 const withSession = <A, E>(
   setup: Setup,
   f: (
@@ -85,15 +77,16 @@ const withSession = <A, E>(
     }).pipe(Effect.ensuring(Effect.orDie(db.delete(user).where(inArray(user.id, ids)))));
   }).pipe(Effect.provide(TestLayer), Effect.runPromise);
 
-const singles = (a: SessionUser, b: SessionUser): NewSessionResult => ({
-  sideA: [a.id],
-  sideB: [b.id],
-  sets: [
-    [6, 4],
-    [3, 6],
-    [10, 7],
-  ],
-});
+const singles = (a: SessionUser, b: SessionUser) =>
+  ({
+    sideA: [a.id],
+    sideB: [b.id],
+    sets: [
+      [6, 4],
+      [3, 6],
+      [10, 7],
+    ],
+  }) satisfies NewSessionResult;
 
 describe.skipIf(!process.env.DATABASE_URL)("SessionActivity comments", () => {
   it("lets the host and accepted players post and read, oldest first, with paging", async () => {
@@ -128,7 +121,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity comments", () => {
           Effect.flip(activity.listComments(stranger!, id, {})),
         ]).pipe(Effect.map((errors) => errors.map((e) => e._tag))),
     );
-    // The stranger can't see an invite-only session at all.
     expect(tags).toEqual([
       "NotSessionPlayer",
       "NotSessionPlayer",

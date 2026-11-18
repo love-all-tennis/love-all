@@ -1,9 +1,3 @@
-/**
- * How sessions read in lists and on the detail screen. Plain TypeScript with
- * no React Native imports, so it can be unit tested. Times are the device's
- * local time.
- */
-
 import type {
   LatLng,
   MySessionPlace,
@@ -32,32 +26,31 @@ const MONTHS = [
   "Dec",
 ] as const;
 
-export const kindLabel = (kind: SessionKind): string =>
+export const kindLabel = (kind: SessionKind) =>
   kind === "singles" ? "Singles match" : kind === "doubles" ? "Doubles match" : "Hitting session";
 
 /** "Sat, Nov 22". */
-export const dateLabel = (date: Date): string =>
+export const dateLabel = (date: Date) =>
   `${WEEKDAYS[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}`;
 
 /** "9:00 AM", "6:30 PM". */
-export const clockOf = (date: Date): string => timeLabel(`${date.getHours()}:${date.getMinutes()}`);
+export const clockOf = (date: Date) => timeLabel(`${date.getHours()}:${date.getMinutes()}`);
 
 /** A "HH:MM" start as players say it: "9:00 AM". */
-export const timeLabel = (time: string): string => {
+export const timeLabel = (time: string) => {
   const [hours = 0, minutes = 0] = time.split(":").map(Number);
   const hour = hours % 12 === 0 ? 12 : hours % 12;
   return `${hour}:${String(minutes).padStart(2, "0")} ${hours < 12 ? "AM" : "PM"}`;
 };
 
 /** "Sat, Nov 22 · 9:00 AM". */
-export const whenLabel = (startsAt: Date): string =>
-  `${dateLabel(startsAt)} · ${clockOf(startsAt)}`;
+export const whenLabel = (startsAt: Date) => `${dateLabel(startsAt)} · ${clockOf(startsAt)}`;
 
 /** "90 min", as players write durations. */
-export const durationLabel = (minutes: number): string => `${minutes} min`;
+export const durationLabel = (minutes: number) => `${minutes} min`;
 
 /** A day in the picker: "Today", "Tomorrow", or "Wed, Nov 19". */
-export const dayChipLabel = (day: string, now: Date): string => {
+export const dayChipLabel = (day: string, now: Date) => {
   const [y = 0, m = 1, d = 1] = day.split("-").map(Number);
   const date = new Date(y, m - 1, d);
   if (day === dayKey(now)) return "Today";
@@ -67,7 +60,7 @@ export const dayChipLabel = (day: string, now: Date): string => {
 };
 
 /** "Any level", "NTRP 3.5", "NTRP 3.0–4.0", "NTRP 3.5 and up", "NTRP 4.0 and below". */
-export const levelRangeLabel = (min: Ntrp | null, max: Ntrp | null): string => {
+export const levelRangeLabel = (min: Ntrp | null, max: Ntrp | null) => {
   if (!min && !max) return "Any level";
   if (min && max)
     return min === max ? `NTRP ${ntrpLabel(min)}` : `NTRP ${ntrpLabel(min)}–${ntrpLabel(max)}`;
@@ -75,10 +68,10 @@ export const levelRangeLabel = (min: Ntrp | null, max: Ntrp | null): string => {
 };
 
 /** "2 of 4 spots filled". */
-export const spotsLabel = (accepted: number, spots: number): string =>
+export const spotsLabel = (accepted: number, spots: number) =>
   `${accepted} of ${spots} spots filled`;
 
-export const visibilityLabel = (visibility: SessionVisibility): string =>
+export const visibilityLabel = (visibility: SessionVisibility) =>
   visibility === "open" ? "Open to nearby players" : "Invite only";
 
 export type SessionTag = {
@@ -101,7 +94,7 @@ export const sessionTags = (
     readonly me: MySessionPlace | null;
   },
   now: Date,
-): ReadonlyArray<SessionTag> => {
+) => {
   const tags: Array<SessionTag> = [];
   const me = session.me;
   const upcoming = session.status !== "cancelled" && session.startsAt.getTime() > now.getTime();
@@ -129,13 +122,13 @@ export const sessionTags = (
 export const isEditable = (
   session: { readonly startsAt: Date; readonly status: SessionStatus },
   now: Date,
-): boolean => session.status !== "cancelled" && session.startsAt.getTime() > now.getTime();
+) => session.status !== "cancelled" && session.startsAt.getTime() > now.getTime();
 
 /**
  * A link that opens the court's pin in the phone's maps app: Apple Maps on
  * iOS, Google Maps elsewhere.
  */
-export const mapsUrl = (point: LatLng, label: string, platform: string): string => {
+export const mapsUrl = (point: LatLng, label: string, platform: string) => {
   const ll = `${point.lat},${point.lng}`;
   return platform === "ios"
     ? `https://maps.apple.com/?ll=${ll}&q=${encodeURIComponent(label)}`

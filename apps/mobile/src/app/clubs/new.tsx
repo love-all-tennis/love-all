@@ -142,7 +142,6 @@ export default function NewClubScreen() {
   );
 }
 
-/** The club's map pin: found from the address or name, or taken from where I'm standing. */
 function MapPin({
   name,
   address,

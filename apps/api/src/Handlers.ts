@@ -24,7 +24,6 @@ export const SystemHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const db = yield* Db;
     return handlers.handle("health", () =>
-      // A round trip to Postgres, so the host's health check covers the database too.
       db.execute(sql`select 1`).pipe(Effect.as({ status: "ok" as const }), Effect.orDie),
     );
   }),

@@ -25,7 +25,6 @@ import { SessionReminders } from "./SessionReminders";
 import { Sessions } from "./Sessions";
 import { SessionJoins } from "./SessionJoins";
 
-/** Better Auth's own routes (sign-up, sign-in, OAuth callbacks, sessions). */
 const AuthRoutes = Layer.effectDiscard(
   Effect.gen(function* () {
     const auth = yield* BetterAuth;
@@ -52,13 +51,11 @@ const ApiRoutes = HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pi
   ]),
 );
 
-/** Sends "starting soon" reminders in the background while the server runs. */
 const Reminders = SessionReminders.schedule.pipe(Layer.provide(SessionReminders.layer));
 
 const DocsRoute = HttpApiScalar.layer(Api, { path: "/docs" });
 
 export const AllRoutes = Layer.mergeAll(ApiRoutes, AuthRoutes, DocsRoute, Reminders).pipe(
-  // Notifications is shared, so notices from every service go through one sender.
   Layer.provide(Notifications.layer.pipe(Layer.provide(PushSender.expo))),
   Layer.provide(BetterAuth.layer.pipe(Layer.provideMerge(Db.layer))),
 );

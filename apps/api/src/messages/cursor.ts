@@ -16,11 +16,11 @@ const CursorJson = Schema.fromJsonString(Schema.Tuple([Schema.Finite, Schema.Str
 const decodeJson = Schema.decodeUnknownOption(CursorJson);
 
 /** An opaque, URL-safe token. Clients pass it back unchanged. */
-export const encodeCursor = (cursor: TimeIdCursor): string =>
+export const encodeCursor = (cursor: TimeIdCursor) =>
   Buffer.from(JSON.stringify([cursor.at, cursor.id])).toString("base64url");
 
 /** None when the token wasn't made by `encodeCursor`. */
-export const decodeCursor = (token: string): Option.Option<TimeIdCursor> => {
+export const decodeCursor = (token: string) => {
   if (!/^[A-Za-z0-9_-]+$/.test(token)) return Option.none();
   return decodeJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([ms, id]) => Number.isInteger(ms) && UUID.test(id)),

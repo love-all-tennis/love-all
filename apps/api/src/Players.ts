@@ -43,15 +43,10 @@ export class Players extends Context.Service<
       const geographyOf = (point: LngLat) =>
         sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)::geography`;
 
-      /** Metres from `point` to the profile's home point, on the spheroid. */
       const distanceFrom = (point: LngLat) =>
         sql`ST_Distance(${profile.homePoint}::geography, ${geographyOf(point)})`;
 
-      /**
-       * Who the viewer may see. Every query about other players goes through
-       * this list, so visibility rules (such as blocks) are added here once.
-       */
-      const visibleTo = (viewer: SessionUser): Array<SQL> => [
+      const visibleTo = (viewer: SessionUser) => [
         notBlocked(viewer.id, profile.userId),
         notSuspended(profile.userId),
       ];
@@ -113,7 +108,6 @@ export class Players extends Context.Service<
               sql`(${distance}, ${profile.userId}) > (${cursor.distanceM}::float8, ${cursor.id})`,
           ];
 
-          // One extra row tells us whether there is another page.
           const rows = yield* db
             .select({ ...summaryColumns, distanceM: distance })
             .from(profile)
@@ -145,9 +139,8 @@ export class Players extends Context.Service<
               ...summaryColumns,
               profileId: profile.id,
               bio: profile.bio,
-              // Null when either of us has no home point.
               distanceM: (me?.homePoint ? distanceFrom(me.homePoint) : sql`null::float8`).mapWith(
-                (value): number | null => (value === null ? null : Number(value)),
+                (value) => (value === null ? null : Number(value)),
               ),
             })
             .from(profile)

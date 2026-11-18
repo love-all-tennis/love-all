@@ -17,7 +17,6 @@ export const makeNotificationsMemory = () => {
       flush: Effect.void,
     }),
   );
-  /** Notices about one app route, such as `/sessions/<id>`. */
   const about = (url: string) => notices.filter((n) => n.url === url);
   return { notices, layer, about };
 };

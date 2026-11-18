@@ -17,7 +17,6 @@ type State =
 const openClub = (id: string) => router.push({ pathname: "/clubs/[id]", params: { id } });
 const addClub = () => router.push("/clubs/new");
 
-/** How long to wait after typing before searching. */
 const SEARCH_DELAY_MS = 300;
 
 const radius = radiusLabel(Math.round(kmToMiles(CLUBS_RADIUS_DEFAULT_KM)));
@@ -45,12 +44,10 @@ export default function ClubsScreen() {
       })
       .catch(() => {
         if (mine !== generation.current) return;
-        // Keep what's up; only show the error when there's nothing to show.
         setState((s) => (s.status === "ready" ? s : { status: "error" }));
       });
   }, [search]);
 
-  // Reloads on focus too, so stars change after I review a club.
   useFocusEffect(
     useCallback(() => {
       void load();

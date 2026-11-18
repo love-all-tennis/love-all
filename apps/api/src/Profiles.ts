@@ -38,7 +38,6 @@ export class Profiles extends Context.Service<
       const pointSql = (point: LngLat) =>
         sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)`;
 
-      /** The closest metro whose radius covers the point, if any. */
       const metroFor = (point: LngLat) =>
         db
           .select({ id: metro.id })
@@ -82,10 +81,6 @@ export class Profiles extends Context.Service<
           });
         }).pipe(Effect.orDie, Effect.withSpan("Profiles.get"));
 
-      /**
-       * Creates the profile on first write, otherwise applies `changes`.
-       * Returns the profile id.
-       */
       const upsert = (user: SessionUser, changes: Partial<typeof profile.$inferInsert>) =>
         db
           .insert(profile)
@@ -115,7 +110,6 @@ export class Profiles extends Context.Service<
           const profileId = yield* upsert(user, {});
           yield* db.transaction((tx) =>
             Effect.gen(function* () {
-              // Lock the profile so two concurrent replaces can't interleave.
               yield* tx
                 .select({ id: profile.id })
                 .from(profile)
@@ -137,5 +131,4 @@ export class Profiles extends Context.Service<
   );
 }
 
-/** A new profile starts with the account name, cut to fit the 50-character limit. */
 const defaultDisplayName = (user: SessionUser) => user.name.trim().slice(0, 50) || "Player";

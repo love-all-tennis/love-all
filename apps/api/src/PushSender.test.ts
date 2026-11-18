@@ -3,7 +3,6 @@ import { FetchHttpClient } from "effect/http";
 import { describe, expect, it } from "vite-plus/test";
 import { EXPO_BATCH_SIZE, type PushMessage, PushSender } from "./PushSender";
 
-/** Runs `PushSender.expo` against a fake `fetch` that answers every message with "ok". */
 const sendWith = (messages: ReadonlyArray<PushMessage>) => {
   const requests: Array<{ url: string; body: Array<Record<string, unknown>> }> = [];
   const fakeFetch = (async (input: string | URL, init?: RequestInit) => {
@@ -23,7 +22,7 @@ const sendWith = (messages: ReadonlyArray<PushMessage>) => {
   );
 };
 
-const message = (i: number): PushMessage => ({
+const message = (i: number) => ({
   to: `ExponentPushToken[${i}]`,
   title: "Title",
   body: "Body",

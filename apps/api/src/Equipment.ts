@@ -31,16 +31,14 @@ import {
 
 const HOUR_MS = 3_600_000;
 
-const noRatings = (): EquipmentRatingSummary => ({
+const noRatings = () => ({
   count: 0,
   average: null,
   stars: [0, 0, 0, 0, 0],
 });
 
-/** How an author is shown: their profile name, or their account name before they have a profile. */
 const authorName = sql<string>`coalesce(${profile.displayName}, ${user.name})`;
 
-/** `q` as `name_key` ILIKE patterns, one per word, with LIKE's wildcards escaped. */
 const searchPatterns = (q: string) =>
   q
     .toLowerCase()
@@ -101,7 +99,6 @@ export class Equipment extends Context.Service<
             Effect.orDie,
           );
 
-      /** Rating summaries (and my stars) for each item in `ids`, as the viewer sees them. */
       const ratingsFor = (viewer: SessionUser, ids: ReadonlyArray<string>) =>
         ids.length === 0
           ? Effect.succeed(
@@ -290,7 +287,6 @@ export class Equipment extends Context.Service<
               .returning()
               .pipe(Effect.orDie);
             if (inserted) return yield* detail(viewer, inserted);
-            // Already in the catalog: point at the existing item (even if hidden, it's the same thing).
             const [existing] = yield* db
               .select({ id: equipment.id })
               .from(equipment)
@@ -397,11 +393,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * says. None unless the viewer can see it (not hidden, the item not hidden,
  * and its author not blocked either way).
  */
-export const reportableEquipmentReview = (
-  db: Db["Service"],
-  viewerId: string,
-  reviewId: string,
-): Effect.Effect<Option.Option<{ readonly authorId: string; readonly content: string }>> =>
+export const reportableEquipmentReview = (db: Db["Service"], viewerId: string, reviewId: string) =>
   UUID.test(reviewId)
     ? db
         .select({

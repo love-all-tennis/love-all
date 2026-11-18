@@ -1,15 +1,6 @@
 import { Schema } from "effect";
 
 /**
- * Joining and leaving sessions. An invited player accepts or declines; on an
- * open session anyone in range can ask to join, and the host approves or
- * rejects. A session is `confirmed` once its accepted players fill every
- * spot, and goes back to `open` when one of them leaves.
- *
- * These endpoints answer with no content; the app reloads the session.
- */
-
-/**
  * `POST /sessions/:id/respond` body.
  * - `accept` / `decline`: answer my invite.
  * - `request`: ask the host to let me join an open session. With an invite,

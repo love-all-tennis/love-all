@@ -8,7 +8,6 @@ import { SocialSignIn } from "@/features/auth/social-sign-in";
 import { rememberAdultConfirmation } from "@/lib/adult-confirmation";
 import { authClient } from "@/lib/auth-client";
 
-/** Better Auth's default minimum. */
 const MIN_PASSWORD_LENGTH = 8;
 
 const ADULT_ERROR = "Confirm you're 18 or older to create an account";
@@ -16,14 +15,15 @@ const ADULT_ERROR = "Confirm you're 18 or older to create an account";
 type Fields = { name: string; email: string; password: string; isAdult: boolean };
 type FieldErrors = Partial<Record<keyof Fields, string>>;
 
-const check = ({ name, email, password, isAdult }: Fields): FieldErrors => ({
-  ...(name.trim() ? {} : { name: "Enter the name other players will see" }),
-  ...(email.trim() ? {} : { email: "Enter your email" }),
-  ...(password.length >= MIN_PASSWORD_LENGTH
-    ? {}
-    : { password: `Use at least ${MIN_PASSWORD_LENGTH} characters for your password` }),
-  ...(isAdult ? {} : { isAdult: ADULT_ERROR }),
-});
+const check = ({ name, email, password, isAdult }: Fields) =>
+  ({
+    ...(name.trim() ? {} : { name: "Enter the name other players will see" }),
+    ...(email.trim() ? {} : { email: "Enter your email" }),
+    ...(password.length >= MIN_PASSWORD_LENGTH
+      ? {}
+      : { password: `Use at least ${MIN_PASSWORD_LENGTH} characters for your password` }),
+    ...(isAdult ? {} : { isAdult: ADULT_ERROR }),
+  }) satisfies FieldErrors;
 
 export default function SignUpScreen() {
   const [name, setName] = useState("");
@@ -35,7 +35,6 @@ export default function SignUpScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fields = { name, email, password, isAdult };
-  // Validate on submit, then live once a field has shown an error.
   const fieldErrors = tried ? check(fields) : {};
   const adultError = fieldErrors.isAdult ?? (triedSocial && !isAdult ? ADULT_ERROR : null);
 
@@ -44,7 +43,6 @@ export default function SignUpScreen() {
     if (Object.keys(check(fields)).length > 0) return;
     setSubmitting(true);
     setError(null);
-    // Sent from the confirm-age screen once the new session exists.
     rememberAdultConfirmation(true);
     try {
       const result = await authClient.signUp.email({

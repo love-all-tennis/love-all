@@ -143,17 +143,11 @@ export class MeApi extends HttpApiGroup.make("me")
       success: Availability,
     }),
   )
-  /**
-   * Records that the signed-in player confirmed they are 18 or older. The app
-   * asks once, right after sign-up (or the first social sign-in). Calling it
-   * again keeps the first confirmation time.
-   */
   .add(HttpApiEndpoint.post("confirmAdult", "/me/adult-confirmation"))
   .middleware(Authentication) {}
 
 /** Finding other players near me and viewing their profiles. */
 export class PlayersApi extends HttpApiGroup.make("players")
-  /** Players within the radius of my home point, nearest first, cursor-paginated. */
   .add(
     HttpApiEndpoint.get("search", "/players", {
       query: PlayersQuery,
@@ -177,14 +171,12 @@ export class PlayersApi extends HttpApiGroup.make("players")
  */
 export class FollowsApi extends HttpApiGroup.make("follows")
   .add(HttpApiEndpoint.get("list", "/me/follows", { success: FollowedPlayers }))
-  /** Idempotent: following someone I already follow does nothing. */
   .add(
     HttpApiEndpoint.put("follow", "/players/:id/follow", {
       params: { id: PlayerId },
       error: [PlayerNotFound, CannotFollowSelf, FollowLimitReached],
     }),
   )
-  /** Idempotent: unfollowing someone I don't follow does nothing. */
   .add(
     HttpApiEndpoint.delete("unfollow", "/players/:id/follow", {
       params: { id: PlayerId },
@@ -199,22 +191,14 @@ const PlayerIdParam = { id: PlayerId };
  * everywhere, whoever did the blocking.
  */
 export class SafetyApi extends HttpApiGroup.make("safety")
-  /** Blocks a player. Blocking someone already blocked is a no-op. */
   .add(
     HttpApiEndpoint.post("block", "/players/:id/block", {
       params: PlayerIdParam,
       error: [TargetNotFound, CannotTargetSelf],
     }),
   )
-  /** Unblocks a player. Unblocking someone not blocked is a no-op. */
   .add(HttpApiEndpoint.delete("unblock", "/players/:id/block", { params: PlayerIdParam }))
-  /** Players I blocked, most recent first. */
   .add(HttpApiEndpoint.get("listBlocks", "/me/blocks", { success: Schema.Array(BlockedPlayer) }))
-  /**
-   * Reports a player, or a forum thread or reply, to the moderators. It
-   * doesn't block anyone; the app offers that next. Content must be visible
-   * to me and not mine.
-   */
   .add(
     HttpApiEndpoint.post("report", "/reports", {
       payload: NewReport,
@@ -233,7 +217,6 @@ const SessionPlayerParams = { id: SessionId, userId: PlayerId };
  * Sessions whose host is blocked either way with the viewer never show up.
  */
 export class SessionsApi extends HttpApiGroup.make("sessions")
-  /** Creates a session with me as host (and its first accepted player). */
   .add(
     HttpApiEndpoint.post("create", "/sessions", {
       payload: NewSession,
@@ -241,7 +224,6 @@ export class SessionsApi extends HttpApiGroup.make("sessions")
       error: [InvalidSession, ProfileRequired],
     }),
   )
-  /** `scope=mine` or `scope=nearby`, cursor-paginated. */
   .add(
     HttpApiEndpoint.get("list", "/sessions", {
       query: SessionsQuery,
@@ -249,7 +231,6 @@ export class SessionsApi extends HttpApiGroup.make("sessions")
       error: [HomePointRequired, InvalidCursor],
     }),
   )
-  /** Visible to its players, and to others while it is open to them and in their level range. */
   .add(
     HttpApiEndpoint.get("get", "/sessions/:id", {
       params: SessionIdParam,
@@ -257,7 +238,6 @@ export class SessionsApi extends HttpApiGroup.make("sessions")
       error: SessionNotFound,
     }),
   )
-  /** Host only: time, court, level range, spots (hitting), visibility and notes. */
   .add(
     HttpApiEndpoint.patch("update", "/sessions/:id", {
       params: SessionIdParam,
@@ -266,7 +246,6 @@ export class SessionsApi extends HttpApiGroup.make("sessions")
       error: [SessionNotFound, NotSessionHost, SessionClosed, InvalidSession],
     }),
   )
-  /** Host only: invites players. Anyone already in the session is skipped. */
   .add(
     HttpApiEndpoint.post("invite", "/sessions/:id/invites", {
       params: SessionIdParam,
@@ -282,10 +261,6 @@ export class SessionsApi extends HttpApiGroup.make("sessions")
       ],
     }),
   )
-  /**
-   * Answers my invite (`accept` / `decline`), or asks to join an open session
-   * (`request`), which waits on the host. Accepting takes a spot.
-   */
   .add(
     HttpApiEndpoint.post("respond", "/sessions/:id/respond", {
       params: SessionIdParam,
@@ -300,31 +275,24 @@ export class SessionsApi extends HttpApiGroup.make("sessions")
       ],
     }),
   )
-  /** Host only: lets a player who asked to join take a spot. */
   .add(
     HttpApiEndpoint.post("approve", "/sessions/:id/approve/:userId", {
       params: SessionPlayerParams,
       error: [SessionNotFound, NotSessionHost, SessionClosed, SessionFull, JoinRequestNotFound],
     }),
   )
-  /** Host only: turns down a player who asked to join. */
   .add(
     HttpApiEndpoint.post("reject", "/sessions/:id/reject/:userId", {
       params: SessionPlayerParams,
       error: [SessionNotFound, NotSessionHost, JoinRequestNotFound],
     }),
   )
-  /**
-   * Gives up my spot, or withdraws my request to join. A confirmed session
-   * goes back to open. The host can't leave; they cancel instead.
-   */
   .add(
     HttpApiEndpoint.post("leave", "/sessions/:id/leave", {
       params: SessionIdParam,
       error: [SessionNotFound, SessionClosed, NotInvited, InvalidSession],
     }),
   )
-  /** Host only: calls the session off. Cancelling twice is a no-op. */
   .add(
     HttpApiEndpoint.post("cancel", "/sessions/:id/cancel", {
       params: SessionIdParam,
@@ -339,7 +307,6 @@ export class SessionsApi extends HttpApiGroup.make("sessions")
  * use these. A separate group from `sessions` so each has its own handlers.
  */
 export class SessionActivityApi extends HttpApiGroup.make("sessionActivity")
-  /** Oldest first, cursor-paginated. Comments by players blocked either way with me are left out. */
   .add(
     HttpApiEndpoint.get("listComments", "/sessions/:id/comments", {
       params: SessionIdParam,
@@ -348,7 +315,6 @@ export class SessionActivityApi extends HttpApiGroup.make("sessionActivity")
       error: [SessionNotFound, NotSessionPlayer, InvalidCursor],
     }),
   )
-  /** Not on cancelled sessions. */
   .add(
     HttpApiEndpoint.post("addComment", "/sessions/:id/comments", {
       params: SessionIdParam,
@@ -357,14 +323,12 @@ export class SessionActivityApi extends HttpApiGroup.make("sessionActivity")
       error: [SessionNotFound, NotSessionPlayer, SessionClosed],
     }),
   )
-  /** Author only. The comment disappears for everyone. */
   .add(
     HttpApiEndpoint.delete("deleteComment", "/sessions/comments/:commentId", {
       params: { commentId: SessionCommentId },
       error: [CommentNotFound, NotCommentAuthor],
     }),
   )
-  /** The session's score, or null when nobody has recorded one. */
   .add(
     HttpApiEndpoint.get("getResult", "/sessions/:id/result", {
       params: SessionIdParam,
@@ -372,11 +336,6 @@ export class SessionActivityApi extends HttpApiGroup.make("sessionActivity")
       error: [SessionNotFound, NotSessionPlayer],
     }),
   )
-  /**
-   * An accepted player records the score of a singles or doubles session
-   * after it starts. It waits for the other side to confirm. Replaces a
-   * disputed score; fails if one is pending or confirmed.
-   */
   .add(
     HttpApiEndpoint.post("recordResult", "/sessions/:id/result", {
       params: SessionIdParam,
@@ -385,7 +344,6 @@ export class SessionActivityApi extends HttpApiGroup.make("sessionActivity")
       error: [SessionNotFound, NotSessionPlayer, SessionClosed, InvalidResult, ResultConflict],
     }),
   )
-  /** A player on the other side confirms or disputes a pending score. */
   .add(
     HttpApiEndpoint.post("respondToResult", "/sessions/:id/result/confirm", {
       params: SessionIdParam,
@@ -407,13 +365,11 @@ const PostReactionParams = { id: ForumPostId, kind: ForumReactionKind };
  * and so is anything a moderator hid.
  */
 export class ForumApi extends HttpApiGroup.make("forum")
-  /** The Local category for my metro first (when I have one), then the global ones. */
   .add(
     HttpApiEndpoint.get("listCategories", "/forum/categories", {
       success: Schema.Array(ForumCategory),
     }),
   )
-  /** A category's threads, latest activity first, cursor-paginated. */
   .add(
     HttpApiEndpoint.get("listThreads", "/forum/threads", {
       query: ForumThreadsQuery,
@@ -421,7 +377,6 @@ export class ForumApi extends HttpApiGroup.make("forum")
       error: [ForumCategoryNotFound, InvalidCursor],
     }),
   )
-  /** Starts a thread. Local categories only take threads from players in that metro. */
   .add(
     HttpApiEndpoint.post("createThread", "/forum/threads", {
       payload: NewForumThread,
@@ -429,7 +384,6 @@ export class ForumApi extends HttpApiGroup.make("forum")
       error: [ForumCategoryNotFound, ForumRateLimited],
     }),
   )
-  /** The thread and a page of its replies, oldest first. */
   .add(
     HttpApiEndpoint.get("getThread", "/forum/threads/:id", {
       params: ForumThreadParam,
@@ -438,7 +392,6 @@ export class ForumApi extends HttpApiGroup.make("forum")
       error: [ForumThreadNotFound, InvalidCursor],
     }),
   )
-  /** Replies to a thread, which moves it to the top of its category. */
   .add(
     HttpApiEndpoint.post("reply", "/forum/threads/:id/posts", {
       params: ForumThreadParam,
@@ -447,41 +400,35 @@ export class ForumApi extends HttpApiGroup.make("forum")
       error: [ForumThreadNotFound, ForumRateLimited],
     }),
   )
-  /** Author only. The thread drops out of lists for everyone. */
   .add(
     HttpApiEndpoint.delete("deleteThread", "/forum/threads/:id", {
       params: ForumThreadParam,
       error: [ForumThreadNotFound, NotForumAuthor],
     }),
   )
-  /** Author only. The reply stays in the thread as "Post deleted". */
   .add(
     HttpApiEndpoint.delete("deletePost", "/forum/posts/:id", {
       params: ForumPostParam,
       error: [ForumPostNotFound, NotForumAuthor],
     }),
   )
-  /** Idempotent. Not on deleted or hidden threads. */
   .add(
     HttpApiEndpoint.put("reactToThread", "/forum/threads/:id/reactions/:kind", {
       params: ThreadReactionParams,
       error: ForumThreadNotFound,
     }),
   )
-  /** Idempotent: removing a reaction I didn't make does nothing. */
   .add(
     HttpApiEndpoint.delete("unreactToThread", "/forum/threads/:id/reactions/:kind", {
       params: ThreadReactionParams,
     }),
   )
-  /** Idempotent. Not on deleted or hidden replies. */
   .add(
     HttpApiEndpoint.put("reactToPost", "/forum/posts/:id/reactions/:kind", {
       params: PostReactionParams,
       error: ForumPostNotFound,
     }),
   )
-  /** Idempotent: removing a reaction I didn't make does nothing. */
   .add(
     HttpApiEndpoint.delete("unreactToPost", "/forum/posts/:id/reactions/:kind", {
       params: PostReactionParams,
@@ -496,7 +443,6 @@ const HiddenContentParams = { type: HideableTargetType, id: Schema.String };
  * suspending are idempotent, and each closes the open reports it answers.
  */
 export class ModerationApi extends HttpApiGroup.make("moderation")
-  /** Reports, newest first, cursor-paginated. Open ones unless `status=resolved`. */
   .add(
     HttpApiEndpoint.get("listReports", "/moderation/reports", {
       query: ModerationReportsQuery,
@@ -504,31 +450,24 @@ export class ModerationApi extends HttpApiGroup.make("moderation")
       error: [NotModerator, InvalidCursor],
     }),
   )
-  /** Closes this report, and the other open reports on the same target, with no action. */
   .add(
     HttpApiEndpoint.post("dismissReport", "/moderation/reports/:id/dismiss", {
       params: { id: ReportId },
       error: [NotModerator, ReportNotFound],
     }),
   )
-  /** Hides a thread or reply from everyone, and closes its open reports. */
   .add(
     HttpApiEndpoint.put("hideContent", "/moderation/content/:type/:id/hidden", {
       params: HiddenContentParams,
       error: [NotModerator, TargetNotFound],
     }),
   )
-  /** Shows hidden content again. */
   .add(
     HttpApiEndpoint.delete("unhideContent", "/moderation/content/:type/:id/hidden", {
       params: HiddenContentParams,
       error: [NotModerator, TargetNotFound],
     }),
   )
-  /**
-   * Suspends a player: signs them out everywhere, stops them signing in,
-   * and drops them from player search. Closes the open reports about them.
-   */
   .add(
     HttpApiEndpoint.put("suspend", "/moderation/players/:id/suspension", {
       params: PlayerIdParam,
@@ -536,7 +475,6 @@ export class ModerationApi extends HttpApiGroup.make("moderation")
       error: [NotModerator, TargetNotFound, CannotTargetSelf],
     }),
   )
-  /** Lets a suspended player sign in again. */
   .add(
     HttpApiEndpoint.delete("unsuspend", "/moderation/players/:id/suspension", {
       params: PlayerIdParam,
@@ -550,12 +488,7 @@ export class ModerationApi extends HttpApiGroup.make("moderation")
  * registers it after signing in and removes it before signing out.
  */
 export class DevicesApi extends HttpApiGroup.make("devices")
-  /**
-   * Saves the token for me. A token that belonged to another account (the
-   * phone switched accounts) moves to me. Registering again is a no-op.
-   */
   .add(HttpApiEndpoint.post("register", "/devices", { payload: NewDevice }))
-  /** Stops notifications to this token. Removing a token that isn't mine does nothing. */
   .add(HttpApiEndpoint.delete("unregister", "/devices/:token", { params: { token: PushToken } }))
   .middleware(Authentication) {}
 
@@ -566,7 +499,6 @@ const ConversationParam = { id: ConversationId };
  * conversation can see it, and a block either way ends it for both.
  */
 export class MessagesApi extends HttpApiGroup.make("messages")
-  /** My conversations that have messages, latest message first, cursor-paginated. */
   .add(
     HttpApiEndpoint.get("listConversations", "/conversations", {
       query: ConversationsQuery,
@@ -574,10 +506,6 @@ export class MessagesApi extends HttpApiGroup.make("messages")
       error: InvalidCursor,
     }),
   )
-  /**
-   * Opens my conversation with a player, starting one if we have none.
-   * Starting one needs a profile, and the player must be one I can see.
-   */
   .add(
     HttpApiEndpoint.post("openConversation", "/conversations", {
       payload: NewConversation,
@@ -585,7 +513,6 @@ export class MessagesApi extends HttpApiGroup.make("messages")
       error: [PlayerNotFound, CannotMessageSelf, ProfileRequired, MessagesRateLimited],
     }),
   )
-  /** The conversation and a page of its messages, newest first. Doesn't mark anything read. */
   .add(
     HttpApiEndpoint.get("listMessages", "/conversations/:id/messages", {
       params: ConversationParam,
@@ -594,7 +521,6 @@ export class MessagesApi extends HttpApiGroup.make("messages")
       error: [ConversationNotFound, InvalidCursor],
     }),
   )
-  /** Sends a message. Everything before it counts as read for me. */
   .add(
     HttpApiEndpoint.post("send", "/conversations/:id/messages", {
       params: ConversationParam,
@@ -603,7 +529,6 @@ export class MessagesApi extends HttpApiGroup.make("messages")
       error: [ConversationNotFound, MessagesRateLimited],
     }),
   )
-  /** Marks every message in the conversation read for me. */
   .add(
     HttpApiEndpoint.post("markRead", "/conversations/:id/read", {
       params: ConversationParam,
@@ -620,7 +545,6 @@ const EquipmentIdParam = { id: EquipmentId };
  * with me are left out, and don't count toward the ratings I see.
  */
 export class EquipmentApi extends HttpApiGroup.make("equipment")
-  /** The catalog by brand then model, optionally one kind or matching `q`, cursor-paginated. */
   .add(
     HttpApiEndpoint.get("list", "/equipment", {
       query: EquipmentQuery,
@@ -628,7 +552,6 @@ export class EquipmentApi extends HttpApiGroup.make("equipment")
       error: InvalidCursor,
     }),
   )
-  /** Adds an item to the catalog. Fails with the existing id when it's already there. */
   .add(
     HttpApiEndpoint.post("create", "/equipment", {
       payload: NewEquipment,
@@ -636,7 +559,6 @@ export class EquipmentApi extends HttpApiGroup.make("equipment")
       error: [EquipmentExists, EquipmentRateLimited],
     }),
   )
-  /** An item with its rating summary and my review. */
   .add(
     HttpApiEndpoint.get("get", "/equipment/:id", {
       params: EquipmentIdParam,
@@ -644,7 +566,6 @@ export class EquipmentApi extends HttpApiGroup.make("equipment")
       error: EquipmentNotFound,
     }),
   )
-  /** Other players' reviews of an item, newest first, cursor-paginated. */
   .add(
     HttpApiEndpoint.get("listReviews", "/equipment/:id/reviews", {
       params: EquipmentIdParam,
@@ -653,7 +574,6 @@ export class EquipmentApi extends HttpApiGroup.make("equipment")
       error: [EquipmentNotFound, InvalidCursor],
     }),
   )
-  /** Writes or replaces my review of an item. */
   .add(
     HttpApiEndpoint.put("saveReview", "/equipment/:id/review", {
       params: EquipmentIdParam,
@@ -662,7 +582,6 @@ export class EquipmentApi extends HttpApiGroup.make("equipment")
       error: EquipmentNotFound,
     }),
   )
-  /** Idempotent: deleting a review I haven't written does nothing. */
   .add(
     HttpApiEndpoint.delete("deleteReview", "/equipment/:id/review", {
       params: EquipmentIdParam,
@@ -678,7 +597,6 @@ const ClubParam = { id: ClubId };
  * either way with me are left out, of lists and of the star counts.
  */
 export class ClubsApi extends HttpApiGroup.make("clubs")
-  /** Clubs near my home point, nearest first, at most `CLUBS_LIST_MAX`. */
   .add(
     HttpApiEndpoint.get("list", "/clubs", {
       query: ClubsQuery,
@@ -686,7 +604,6 @@ export class ClubsApi extends HttpApiGroup.make("clubs")
       error: HomePointRequired,
     }),
   )
-  /** Adds a club. Fails with the existing club when the same name is already pinned nearby. */
   .add(
     HttpApiEndpoint.post("create", "/clubs", {
       payload: NewClub,
@@ -701,7 +618,6 @@ export class ClubsApi extends HttpApiGroup.make("clubs")
       error: ClubNotFound,
     }),
   )
-  /** Newest first, cursor-paginated. */
   .add(
     HttpApiEndpoint.get("listReviews", "/clubs/:id/reviews", {
       params: ClubParam,
@@ -710,7 +626,6 @@ export class ClubsApi extends HttpApiGroup.make("clubs")
       error: [ClubNotFound, InvalidCursor],
     }),
   )
-  /** Writes my review of the club, or replaces the one I wrote. */
   .add(
     HttpApiEndpoint.put("saveReview", "/clubs/:id/review", {
       params: ClubParam,
@@ -719,7 +634,6 @@ export class ClubsApi extends HttpApiGroup.make("clubs")
       error: ClubNotFound,
     }),
   )
-  /** Idempotent: removing a review I never wrote does nothing. */
   .add(HttpApiEndpoint.delete("deleteReview", "/clubs/:id/review", { params: ClubParam }))
   .middleware(Authentication) {}
 

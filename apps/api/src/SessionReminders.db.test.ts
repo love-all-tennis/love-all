@@ -7,7 +7,6 @@ import { playSession, playSessionParticipant, user } from "./db/schema";
 import { SessionReminders } from "./SessionReminders";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
-/** Runs against a migrated Postgres. Skipped when DATABASE_URL is not set. */
 const sent = makeNotificationsMemory();
 const TestLayer = SessionReminders.layer.pipe(
   Layer.provide(sent.layer),
@@ -45,7 +44,6 @@ const withPlayers = <A, E>(
 
 const minutesFromNow = (minutes: number) => new Date(Date.now() + minutes * 60_000);
 
-/** A singles session hosted by `host` with `others` accepted. */
 const makeSession = (
   db: Db["Service"],
   host: SessionUser,

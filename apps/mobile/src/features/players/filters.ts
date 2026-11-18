@@ -4,7 +4,7 @@
  * `GET /players` query with `toPlayersQuery`.
  */
 
-import type { Availability, Ntrp, PlayersQuery, PlayKind, Profile } from "@love-all/domain";
+import type { Availability, Ntrp, PlayKind, Profile } from "@love-all/domain";
 
 import { milesToKm, nearestMiles, radiusLabel } from "../../lib/distance";
 
@@ -24,7 +24,6 @@ export type { PlayKind };
  */
 export const RADIUS_OPTIONS_MI: ReadonlyArray<number> = [5, 10, 15, 25, 50];
 
-/** Where the list starts for a player with no saved radius. */
 const DEFAULT_RADIUS_MI = 10;
 
 export type PlayerFilters = {
@@ -36,15 +35,15 @@ export type PlayerFilters = {
   readonly plays: PlayKind | null;
 };
 
-const levelIndex = (level: Ntrp): number => NTRP_LEVELS.indexOf(level);
-const levelAt = (index: number): Ntrp =>
+const levelIndex = (level: Ntrp) => NTRP_LEVELS.indexOf(level);
+const levelAt = (index: number) =>
   NTRP_LEVELS[Math.min(Math.max(index, 0), NTRP_LEVELS.length - 1)]!;
 
 /**
  * Where the list starts: my own search radius (as the nearest mile option), and half a level either side
  * of my NTRP (the whole range if I haven't set one).
  */
-export const defaultFilters = (profile: Profile | null): PlayerFilters => {
+export const defaultFilters = (profile: Profile | null) => {
   const own = profile?.ntrp ?? null;
   const at = own ? levelIndex(own) : -1;
   return {
@@ -59,11 +58,7 @@ export const defaultFilters = (profile: Profile | null): PlayerFilters => {
  * Sets one end of the level range. If it would cross the other end, the
  * other end moves with it, so the range is never empty.
  */
-export const setLevelBound = (
-  filters: PlayerFilters,
-  bound: "min" | "max",
-  level: Ntrp,
-): PlayerFilters => {
+export const setLevelBound = (filters: PlayerFilters, bound: "min" | "max", level: Ntrp) => {
   const at = levelIndex(level);
   if (bound === "min") {
     const max = levelIndex(filters.levelMax) < at ? level : filters.levelMax;
@@ -74,7 +69,7 @@ export const setLevelBound = (
 };
 
 /** Picks a kind of tennis, or goes back to any when the picked one is tapped again. */
-export const togglePlay = (filters: PlayerFilters, kind: PlayKind): PlayerFilters => ({
+export const togglePlay = (filters: PlayerFilters, kind: PlayKind) => ({
   ...filters,
   plays: filters.plays === kind ? null : kind,
 });
@@ -84,7 +79,7 @@ export const togglePlay = (filters: PlayerFilters, kind: PlayKind): PlayerFilter
  * when they narrow the range, because sending them leaves out players who
  * haven't rated themselves.
  */
-export const toPlayersQuery = (filters: PlayerFilters, cursor?: string): PlayersQuery => {
+export const toPlayersQuery = (filters: PlayerFilters, cursor?: string) => {
   const wholeRange =
     filters.levelMin === NTRP_LEVELS[0] && filters.levelMax === NTRP_LEVELS[NTRP_LEVELS.length - 1];
   return {
@@ -96,11 +91,11 @@ export const toPlayersQuery = (filters: PlayerFilters, cursor?: string): Players
 };
 
 /** "3.0 to 4.0", or a single level when both ends match. */
-export const levelRangeLabel = ({ levelMin, levelMax }: PlayerFilters): string =>
+export const levelRangeLabel = ({ levelMin, levelMax }: PlayerFilters) =>
   levelMin === levelMax ? ntrpLabel(levelMin) : `${ntrpLabel(levelMin)} to ${ntrpLabel(levelMax)}`;
 
 /** One line for the collapsed filter bar, such as "Within 10 mi · 3.0 to 4.0 · Singles". */
-export const filtersSummary = (filters: PlayerFilters): string => {
+export const filtersSummary = (filters: PlayerFilters) => {
   const plays = PLAY_KINDS.find((p) => p.kind === filters.plays)?.label ?? "Any play";
   return `${radiusLabel(filters.radiusMi)} · ${levelRangeLabel(filters)} · ${plays}`;
 };
@@ -110,7 +105,7 @@ export const playsLabel = (p: {
   readonly playsSingles: boolean;
   readonly playsDoubles: boolean;
   readonly playsHitting: boolean;
-}): string => {
+}) => {
   const kinds = [
     p.playsSingles && "Singles",
     p.playsDoubles && "Doubles",
@@ -122,7 +117,7 @@ export const playsLabel = (p: {
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 /** A 24-hour "HH:MM" as players say it: "17:00" is "5 PM", "06:30" is "6:30 AM". */
-export const clockLabel = (time: string): string => {
+export const clockLabel = (time: string) => {
   const [hours = 0, minutes = 0] = time.split(":").map(Number);
   const suffix = hours < 12 ? "AM" : "PM";
   const hour = hours % 12 === 0 ? 12 : hours % 12;
@@ -135,7 +130,7 @@ export const clockLabel = (time: string): string => {
  * A player's weekly availability as one line per day, such as
  * "Tue: 5 PM–10 PM". Blocks arrive sorted by weekday, then start time.
  */
-export const availabilityLines = (blocks: Availability): ReadonlyArray<string> => {
+export const availabilityLines = (blocks: Availability) => {
   const byDay = new Map<number, Array<string>>();
   for (const block of blocks) {
     const spans = byDay.get(block.weekday) ?? [];

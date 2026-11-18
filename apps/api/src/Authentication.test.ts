@@ -14,11 +14,9 @@ type GetSession = () => Promise<{
   user: { id: string; name: string; email: string; role?: unknown };
 } | null>;
 
-/** A stand-in for Better Auth whose only behavior is the session lookup. */
 const fakeAuth = (getSession: GetSession) =>
   Layer.succeed(BetterAuth, { api: { getSession } } as unknown as Auth);
 
-/** GET /me never writes to the account. */
 const noAccounts = Layer.succeed(
   Accounts,
   Accounts.of({ confirmAdult: () => Effect.die("unused") }),
@@ -26,7 +24,6 @@ const noAccounts = Layer.succeed(
 
 const makeClient = HttpApiTest.groups(Api, ["me"]);
 
-/** GET /me through the real middleware, with Better Auth's answer stubbed. */
 const getMe = (getSession: GetSession) =>
   makeClient.pipe(
     Effect.flatMap((client) => client.me.get()),

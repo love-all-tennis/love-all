@@ -17,7 +17,6 @@ const openConversation = (conversation: Conversation) =>
 export default function MessagesScreen() {
   const palette = useColors();
   const { status, items, loadingMore, loadMore, refresh } = useInbox();
-  // "5 min ago" is measured from when the inbox loaded.
   const [now] = useState(() => new Date());
 
   return (

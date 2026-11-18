@@ -9,7 +9,6 @@ import { Safety } from "./Safety";
 import { SessionJoins } from "./SessionJoins";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const sent = makeNotificationsMemory();
 const TestLayer = Layer.mergeAll(
   SessionJoins.layer,
@@ -18,10 +17,6 @@ const TestLayer = Layer.mergeAll(
 
 type Services = { db: Db["Service"]; joins: SessionJoins["Service"]; safety: Safety["Service"] };
 
-/**
- * Creates throwaway accounts with profiles at the given NTRP levels (null for
- * none), runs `f` with them, then deletes them and their sessions.
- */
 const withPlayers = <A, E>(
   levels: ReadonlyArray<Ntrp | null>,
   f: (players: ReadonlyArray<SessionUser>, services: Services) => Effect.Effect<A, E>,
@@ -53,7 +48,6 @@ const withPlayers = <A, E>(
 
 const tomorrow = () => new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-/** Inserts a session hosted by `host`, plus the host's own accepted row and any invites. */
 const makeSession = (
   db: Db["Service"],
   host: SessionUser,
@@ -100,7 +94,6 @@ const makeSession = (
     return id;
   });
 
-/** The session's status and each player's state, by display name. */
 const snapshot = (db: Db["Service"], sessionId: string) =>
   Effect.gen(function* () {
     const [session] = yield* db
@@ -186,7 +179,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
   it("accepts an invite when the invited player asks to join", async () => {
     const result = await withPlayers(["3.0", "5.0"], ([host, guest], { db, joins }) =>
       Effect.gen(function* () {
-        // The host picked them, so the level range doesn't apply.
         const id = yield* makeSession(db, host!, { invited: [guest!], levelMax: "3.5" });
         yield* joins.respond(guest!, id, "request");
         return yield* snapshot(db, id);
@@ -225,13 +217,11 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
             levelMax: "4.0",
           });
           const strangers = {
-            // Out of range, the session is hidden from them, as in GET /sessions/:id.
             low: yield* tagOf(joins.respond(low!, id, "request")),
             high: yield* tagOf(joins.respond(high!, id, "request")),
             none: yield* tagOf(joins.respond(none!, id, "request")),
             fits: yield* joins.respond(fits!, id, "request").pipe(Effect.as("ok")),
           };
-          // A player who left can still see it, but can't ask again once out of range.
           yield* joins.leave(fits!, id);
           yield* db.update(playSession).set({ levelMax: "3.5" }).where(eq(playSession.id, id));
           const narrowed = yield* tagOf(joins.respond(fits!, id, "request"));
@@ -391,7 +381,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
           const id = yield* makeSession(db, host!, { kind: "doubles" });
           yield* db.insert(block).values({ blockerId: blocker!.id, blockedId: host!.id });
           const request = yield* tagOf(joins.respond(blocker!, id, "request"));
-          // A request already in when the block lands (Safety.block also removes it).
           yield* joins.respond(blocked!, id, "request");
           yield* db.insert(block).values({ blockerId: host!.id, blockedId: blocked!.id });
           const approve = yield* tagOf(joins.approve(host!, id, blocked!.id));
@@ -410,7 +399,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
           .update(playSession)
           .set({ status: "confirmed" })
           .where(eq(playSession.id, hosted));
-        // A session the blocked player hosts loses the blocker too.
         const theirs = yield* makeSession(db, guest!, { kind: "doubles", invited: [host!] });
         const unrelated = yield* makeSession(db, bystander!, {
           kind: "doubles",
@@ -441,7 +429,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
   });
 
   describe("notifications", () => {
-    /** Notices about the session, with players named instead of ids. */
     const heard = (id: string, players: ReadonlyArray<SessionUser>) =>
       sent.about(`/sessions/${id}`).map((notice) => ({
         to: notice.to.map((to) => players.find((p) => p.id === to)?.name ?? to).sort(),
@@ -466,7 +453,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
           const [host, guest] = players;
           const id = yield* makeSession(db, host!, { invited: [guest!] });
           yield* joins.respond(guest!, id, "accept");
-          // The guest filled the last spot, so only the host needs telling.
           expect(heard(id, players)).toEqual([{ to: ["P0"], title: "Session confirmed" }]);
         }),
       );

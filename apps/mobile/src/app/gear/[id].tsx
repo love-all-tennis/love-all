@@ -10,7 +10,6 @@ import { useNow } from "@/features/sessions/use-sessions";
 
 const openPlayer = (id: string) => router.push({ pathname: "/players/[id]", params: { id } });
 
-/** Reports the review itself, so moderators see what was written. */
 const reportReview = (review: EquipmentReview) =>
   router.push({
     pathname: "/gear/report",

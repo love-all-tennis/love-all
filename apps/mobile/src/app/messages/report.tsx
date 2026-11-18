@@ -19,7 +19,6 @@ export default function ReportMessageSheet() {
       author={{ id: authorId, name }}
       title="Report message"
       subject={`${name}'s message`}
-      // The conversation is gone for both of us now.
       afterBlock={() => router.dismissTo("/messages")}
     />
   );

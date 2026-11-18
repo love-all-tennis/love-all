@@ -12,7 +12,6 @@ export default function ReportPlayerSheet() {
       author={{ id, name }}
       title={`Report ${name}`}
       subject={name}
-      // They're hidden from me now: close the sheet and their profile.
       afterBlock={() => router.dismissTo("/players")}
     />
   );

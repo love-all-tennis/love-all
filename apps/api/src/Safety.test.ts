@@ -28,15 +28,14 @@ const signedOut = Layer.succeed(
   Authentication.of(() => Effect.fail(new Unauthorized({ message: "Sign in to continue" }))),
 );
 
-/** An in-memory `Safety` that knows two other players. `Safety.db.test.ts` covers the real one. */
 const makeSafety = () => {
   const known = new Set(["u_alex", "u_jo"]);
   const blocks = new Map<string, Date>();
   const reports: Array<unknown> = [];
-  const check = (
+  const check: (
     id: string,
     verb: string,
-  ): Effect.Effect<void, CannotTargetSelf | TargetNotFound> =>
+  ) => Effect.Effect<void, CannotTargetSelf | TargetNotFound> = (id, verb) =>
     id === sam.id
       ? Effect.fail(new CannotTargetSelf({ message: `You can't ${verb} yourself` }))
       : known.has(id)

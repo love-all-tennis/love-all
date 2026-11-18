@@ -1,16 +1,9 @@
-/**
- * The create and edit session form, kept free of React Native so it can be
- * unit tested. Screens hold a `SessionDraft`; `draftErrors` checks it, and
- * `toNewSession` and `toSessionPatch` turn it into what the API takes.
- */
-
 import {
   defaultSpots,
   HITTING_SPOTS_MAX,
   HITTING_SPOTS_MIN,
   SESSION_NOTES_MAX,
   type LatLng,
-  type NewSession,
   type Ntrp,
   type Session,
   type SessionKind,
@@ -62,31 +55,31 @@ export type SessionDraft = {
 export type DraftField = "when" | "courtName" | "notes";
 export type DraftErrors = Partial<Record<DraftField, string>>;
 
-const pad = (n: number): string => String(n).padStart(2, "0");
+const pad = (n: number) => String(n).padStart(2, "0");
 
 /** A date's local calendar day, "YYYY-MM-DD". */
-export const dayKey = (date: Date): string =>
+export const dayKey = (date: Date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
 /** A date's local time of day, "HH:MM". */
-export const timeKey = (date: Date): string => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+export const timeKey = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 
 /** The moment a local day and time name. */
-export const startsAtOf = (day: string, time: string): Date => {
+export const startsAtOf = (day: string, time: string) => {
   const [y = 0, m = 1, d = 1] = day.split("-").map(Number);
   const [hh = 0, mm = 0] = time.split(":").map(Number);
   return new Date(y, m - 1, d, hh, mm);
 };
 
-const levelIndex = (level: Ntrp): number => NTRP_LEVELS.indexOf(level);
-const levelAt = (index: number): Ntrp =>
+const levelIndex = (level: Ntrp) => NTRP_LEVELS.indexOf(level);
+const levelAt = (index: number) =>
   NTRP_LEVELS[Math.min(Math.max(index, 0), NTRP_LEVELS.length - 1)]!;
 
 /**
  * A new form: half a level either side of my NTRP (any level if I haven't
  * set one), open to nearby players, 90 minutes, no day or time picked yet.
  */
-export const emptyDraft = (myLevel: Ntrp | null, kind: SessionKind = "singles"): SessionDraft => {
+export const emptyDraft = (myLevel: Ntrp | null, kind: SessionKind = "singles") => {
   const at = myLevel ? levelIndex(myLevel) : -1;
   return {
     kind,
@@ -100,11 +93,11 @@ export const emptyDraft = (myLevel: Ntrp | null, kind: SessionKind = "singles"):
     spots: defaultSpots(kind),
     visibility: "open",
     notes: "",
-  };
+  } satisfies SessionDraft;
 };
 
 /** The form for editing a saved session. */
-export const draftFromSession = (session: Session): SessionDraft => ({
+export const draftFromSession = (session: Session) => ({
   kind: session.kind,
   day: dayKey(session.startsAt),
   time: timeKey(session.startsAt),
@@ -119,7 +112,7 @@ export const draftFromSession = (session: Session): SessionDraft => ({
 });
 
 /** Changes the kind, and resets spots to what that kind has. */
-export const setKind = (draft: SessionDraft, kind: SessionKind): SessionDraft => ({
+export const setKind = (draft: SessionDraft, kind: SessionKind) => ({
   ...draft,
   kind,
   spots: defaultSpots(kind),
@@ -129,11 +122,7 @@ export const setKind = (draft: SessionDraft, kind: SessionKind): SessionDraft =>
  * Sets one end of the level range (null for no bound). If it would cross the
  * other end, the other end moves with it, so the range is never empty.
  */
-export const setLevelBound = (
-  draft: SessionDraft,
-  bound: "min" | "max",
-  level: Ntrp | null,
-): SessionDraft => {
+export const setLevelBound = (draft: SessionDraft, bound: "min" | "max", level: Ntrp | null) => {
   if (bound === "min") {
     const crosses = level && draft.levelMax && levelIndex(draft.levelMax) < levelIndex(level);
     return { ...draft, levelMin: level, levelMax: crosses ? level : draft.levelMax };
@@ -143,7 +132,7 @@ export const setLevelBound = (
 };
 
 /** What's wrong with the form, by field. Empty when it can be sent. */
-export const draftErrors = (draft: SessionDraft, now: Date): DraftErrors => {
+export const draftErrors = (draft: SessionDraft, now: Date) => {
   const errors: { -readonly [K in DraftField]?: string } = {};
   if (!draft.day || !draft.time) errors.when = "Pick a day and a start time";
   else if (startsAtOf(draft.day, draft.time).getTime() <= now.getTime())
@@ -157,12 +146,12 @@ export const draftErrors = (draft: SessionDraft, now: Date): DraftErrors => {
   return errors;
 };
 
-export const hasErrors = (errors: DraftErrors): boolean => Object.keys(errors).length > 0;
+export const hasErrors = (errors: DraftErrors) => Object.keys(errors).length > 0;
 
-const notesOf = (draft: SessionDraft): string | null => draft.notes.trim() || null;
+const notesOf = (draft: SessionDraft) => draft.notes.trim() || null;
 
 /** The `POST /sessions` body. Call only once `draftErrors` is empty. */
-export const toNewSession = (draft: SessionDraft): NewSession => ({
+export const toNewSession = (draft: SessionDraft) => ({
   kind: draft.kind,
   startsAt: startsAtOf(draft.day!, draft.time!),
   durationMinutes: draft.durationMinutes,
@@ -175,14 +164,14 @@ export const toNewSession = (draft: SessionDraft): NewSession => ({
   notes: notesOf(draft),
 });
 
-const samePoint = (a: LatLng | null, b: LatLng | null): boolean =>
+const samePoint = (a: LatLng | null, b: LatLng | null) =>
   a === b || (a !== null && b !== null && a.lat === b.lat && a.lng === b.lng);
 
 /**
  * The `PATCH /sessions/:id` body: only what changed from the saved session,
  * so an untouched form sends nothing and the start time isn't re-checked.
  */
-export const toSessionPatch = (draft: SessionDraft, saved: Session): SessionPatch => {
+export const toSessionPatch = (draft: SessionDraft, saved: Session) => {
   const next = toNewSession(draft);
   const patch: { -readonly [K in keyof SessionPatch]: SessionPatch[K] } = {};
   if (next.startsAt.getTime() !== saved.startsAt.getTime()) patch.startsAt = next.startsAt;
@@ -202,7 +191,7 @@ export const toSessionPatch = (draft: SessionDraft, saved: Session): SessionPatc
  * Days the picker offers: today and the next `DAYS_AHEAD - 1`. A saved day
  * outside that window (when editing) is added so it still shows as picked.
  */
-export const dayOptions = (now: Date, include: string | null = null): ReadonlyArray<string> => {
+export const dayOptions = (now: Date, include: string | null = null) => {
   const days = Array.from({ length: DAYS_AHEAD }, (_, i) =>
     dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + i)),
   );
@@ -213,7 +202,7 @@ export const dayOptions = (now: Date, include: string | null = null): ReadonlyAr
  * Start times the picker offers, every 30 minutes from 6 AM to 9:30 PM. A
  * saved time off that grid (when editing) is added so it still shows.
  */
-export const timeOptions = (include: string | null = null): ReadonlyArray<string> => {
+export const timeOptions = (include: string | null = null) => {
   const times = Array.from(
     { length: 32 },
     (_, i) => `${pad(6 + Math.floor(i / 2))}:${i % 2 ? "30" : "00"}`,
@@ -222,7 +211,7 @@ export const timeOptions = (include: string | null = null): ReadonlyArray<string
 };
 
 /** Which part of the day a "HH:MM" start falls in, for grouping the time picker. */
-export const dayPartOf = (time: string): "Morning" | "Afternoon" | "Evening" => {
+export const dayPartOf = (time: string) => {
   const hour = Number(time.split(":")[0]);
   return hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
 };

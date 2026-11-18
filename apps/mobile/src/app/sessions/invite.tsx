@@ -22,7 +22,7 @@ type Loaded =
       readonly nearby: ReadonlyArray<InviteCandidate>;
     };
 
-const metaOf = (p: InviteCandidate): string =>
+const metaOf = (p: InviteCandidate) =>
   [levelLabel(p.ntrp), distanceLabel(p.distanceKm)].filter(Boolean).join(" · ");
 
 /** The host picks players to invite: people they follow first, then players nearby. */
@@ -43,7 +43,6 @@ export default function InviteScreen() {
         fetchFollows(),
       ]);
       if (!session) throw new Error("missing");
-      // Nearby is a bonus: without a home point the list is just who I follow.
       const nearby = await searchPlayers(defaultFilters(me.profile)).catch(() => null);
       return inviteCandidates({
         session,

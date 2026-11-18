@@ -25,7 +25,6 @@ const signedOut = Layer.succeed(
   Authentication.of(() => Effect.fail(new Unauthorized({ message: "Sign in to continue" }))),
 );
 
-/** An in-memory `Notifications` that keeps tokens by owner. `Notifications.db.test.ts` covers the real one. */
 const makeNotifications = () => {
   const tokens = new Map<string, NewDevice & { userId: string }>();
   const layer = Layer.succeed(

@@ -15,12 +15,6 @@ import { Safety } from "./Safety";
 import { Sessions } from "./Sessions";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
-/**
- * Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set.
- *
- * Players and courts are near Tromsø, Norway, away from the points other test
- * files use, so parallel test files never show up in each other's lists.
- */
 const sent = makeNotificationsMemory();
 const TestLayer = Layer.mergeAll(
   Sessions.layer,
@@ -29,20 +23,20 @@ const TestLayer = Layer.mergeAll(
 ).pipe(Layer.provide(sent.layer), Layer.provideMerge(Db.layer));
 
 const HOME = { lat: 69.65, lng: 18.96 };
-/** About 1.1 km per 0.01 degrees of latitude. */
 const north = (hundredths: number) => ({ lat: HOME.lat + hundredths / 100, lng: HOME.lng });
 
 const inDays = (days: number) => new Date(Date.now() + days * 86_400_000);
 
-const singles = (overrides: Partial<NewSession> = {}): NewSession => ({
-  kind: "singles",
-  startsAt: inDays(2),
-  durationMinutes: 90,
-  courtName: "Tromsø tennis club, court 2",
-  courtPoint: HOME,
-  visibility: "open",
-  ...overrides,
-});
+const singles = (overrides: Partial<NewSession> = {}) =>
+  ({
+    kind: "singles",
+    startsAt: inDays(2),
+    durationMinutes: 90,
+    courtName: "Tromsø tennis club, court 2",
+    courtPoint: HOME,
+    visibility: "open",
+    ...overrides,
+  }) satisfies NewSession;
 
 type Services = {
   db: Db["Service"];
@@ -51,10 +45,6 @@ type Services = {
   safety: Safety["Service"];
 };
 
-/**
- * Creates throwaway players with the given profiles (null for none), runs
- * `f`, then deletes them, which deletes their sessions too.
- */
 const withPlayers = <A, E>(
   patches: ReadonlyArray<ProfilePatch | null>,
   f: (players: ReadonlyArray<SessionUser>, services: Services) => Effect.Effect<A, E>,
@@ -91,10 +81,11 @@ const withPlayers = <A, E>(
     );
   }).pipe(Effect.provide(TestLayer), Effect.runPromise);
 
-const player = (ntrp: ProfilePatch["ntrp"] = "3.5", homePoint = HOME): ProfilePatch => ({
-  homePoint,
-  ntrp,
-});
+const player = (ntrp: ProfilePatch["ntrp"] = "3.5", homePoint = HOME) =>
+  ({
+    homePoint,
+    ntrp,
+  }) satisfies ProfilePatch;
 
 describe.skipIf(!process.env.DATABASE_URL)("Sessions.create", () => {
   it("creates a session with the host as its first accepted player", async () => {
@@ -162,7 +153,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Sessions.update", () => {
       levelMax: null,
       notes: null,
     });
-    // With no pin, the distance comes from the host's home point.
     expect(updated.distanceKm).toBe(1);
   });
 
@@ -240,7 +230,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Sessions.update", () => {
       "InvalidSession",
       "InvalidSession",
     ]);
-    // Three accepted players fill three spots.
     expect(result.filled).toMatchObject({ spots: 3, acceptedCount: 3, status: "confirmed" });
   });
 
@@ -348,7 +337,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Sessions.list", () => {
       ([me, host, blockedHost, farHost, filler], { db, safety, sessions }) =>
         Effect.gen(function* () {
           const near = yield* sessions.create(host!, singles({ courtPoint: north(5) }));
-          // No pin: located at the host's home point.
           const unpinned = yield* sessions.create(
             host!,
             singles({ courtPoint: null, startsAt: inDays(3) }),
@@ -400,7 +388,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Sessions.list", () => {
             .update(playSession)
             .set({ startsAt: inDays(-1) })
             .where(eq(playSession.id, yesterday.id));
-          // Not mine: an open session I'm not in, and one I was invited to by a player who then blocked me.
           yield* sessions.create(host!, singles());
           const blockedInvite = yield* sessions.create(blockedHost!, singles());
           yield* sessions.invite(blockedHost!, blockedInvite.id, { playerIds: [me!.id] });
@@ -515,7 +502,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Sessions.invite", () => {
           const full = yield* Effect.flip(
             sessions.invite(host!, session.id, { playerIds: [other!.id] }),
           );
-          // Nothing was written by the failed calls.
           const rows = yield* db
             .select({ userId: playSessionParticipant.userId })
             .from(playSessionParticipant)

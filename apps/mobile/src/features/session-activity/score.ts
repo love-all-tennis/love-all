@@ -8,12 +8,6 @@ import {
   type SetScore,
 } from "@love-all/domain";
 
-/**
- * Score entry for a singles or doubles session, kept free of React so it
- * can be tested. The player recording the score is always on side a, so the
- * form reads "You" against "Them".
- */
-
 /** One set as typed: games (or tiebreak points) for my side and theirs. */
 export type SetDraft = { readonly mine: string; readonly theirs: string };
 
@@ -31,34 +25,30 @@ export const MAX_SETS = 3;
 const emptySet: SetDraft = { mine: "", theirs: "" };
 
 /** Two empty sets: most matches go two or three. */
-export const emptyScoreDraft = (): ScoreDraft => ({
-  sets: [emptySet, emptySet],
-  thirdIsTiebreak: true,
-  partnerId: null,
-});
+export const emptyScoreDraft = () =>
+  ({
+    sets: [emptySet, emptySet],
+    thirdIsTiebreak: true,
+    partnerId: null,
+  }) satisfies ScoreDraft;
 
-export const addSet = (draft: ScoreDraft): ScoreDraft =>
+export const addSet = (draft: ScoreDraft) =>
   draft.sets.length >= MAX_SETS ? draft : { ...draft, sets: [...draft.sets, emptySet] };
 
 /** Removes the last set, keeping at least one. */
-export const removeLastSet = (draft: ScoreDraft): ScoreDraft =>
+export const removeLastSet = (draft: ScoreDraft) =>
   draft.sets.length <= 1 ? draft : { ...draft, sets: draft.sets.slice(0, -1) };
 
 /** Keeps digits only, at most two, so the field can't hold anything else. */
-export const cleanGames = (text: string): string => text.replace(/\D/g, "").slice(0, 2);
+export const cleanGames = (text: string) => text.replace(/\D/g, "").slice(0, 2);
 
-export const setGames = (
-  draft: ScoreDraft,
-  index: number,
-  side: keyof SetDraft,
-  text: string,
-): ScoreDraft => ({
+export const setGames = (draft: ScoreDraft, index: number, side: keyof SetDraft, text: string) => ({
   ...draft,
   sets: draft.sets.map((set, i) => (i === index ? { ...set, [side]: cleanGames(text) } : set)),
 });
 
 /** The label for a set's row: "Set 2", or "Match tiebreak" for a tiebreak decider. */
-export const setLabel = (draft: ScoreDraft, index: number): string =>
+export const setLabel = (draft: ScoreDraft, index: number) =>
   index === 2 && draft.thirdIsTiebreak ? "Match tiebreak" : `Set ${index + 1}`;
 
 /** Who played: the recorder, the other accepted players, and the session kind. */
@@ -82,13 +72,10 @@ export type ScoreCheck =
   | { readonly ok: false; readonly errors: ScoreErrors };
 
 /** Whether the session has exactly the players a result needs: 2 for singles, 4 for doubles. */
-export const hasFullSides = (ctx: ScoreContext): boolean =>
+export const hasFullSides = (ctx: ScoreContext) =>
   ctx.others.length + 1 === (ctx.kind === "doubles" ? 4 : 2);
 
-const sides = (
-  ctx: ScoreContext,
-  partnerId: string | null,
-): { sideA: string[]; sideB: string[] } | string => {
+const sides = (ctx: ScoreContext, partnerId: string | null) => {
   if (!hasFullSides(ctx)) {
     return ctx.kind === "doubles"
       ? "A doubles score needs four players in the session"
@@ -102,7 +89,7 @@ const sides = (
   };
 };
 
-const setError = (draft: ScoreDraft, index: number): string | undefined => {
+const setError = (draft: ScoreDraft, index: number) => {
   const { mine, theirs } = draft.sets[index]!;
   const label = setLabel(draft, index);
   if (mine === "" || theirs === "") return `Enter both scores for ${label.toLowerCase()}`;
@@ -118,24 +105,23 @@ const setError = (draft: ScoreDraft, index: number): string | undefined => {
  * `POST /sessions/:id/result`. Set errors come first; the match-level check
  * (the domain's `checkMatchScore`) only runs once every set is valid.
  */
-export const checkScore = (draft: ScoreDraft, ctx: ScoreContext): ScoreCheck => {
+export const checkScore = (draft: ScoreDraft, ctx: ScoreContext) => {
   const setErrors = draft.sets.map((_, i) => setError(draft, i));
   const who = sides(ctx, draft.partnerId);
   const partner = typeof who === "string" ? who : undefined;
   let match: string | undefined;
-  const sets = draft.sets.map((s): SetScore => [Number(s.mine), Number(s.theirs)]);
+  const sets = draft.sets.map((s) => [Number(s.mine), Number(s.theirs)] satisfies SetScore);
   if (setErrors.every((e) => e === undefined)) {
     const verdict = checkMatchScore(sets);
     if (verdict !== true) match = matchMessage(sets);
   }
   if (setErrors.some((e) => e !== undefined) || partner || match || typeof who === "string") {
-    return { ok: false, errors: { sets: setErrors, partner, match } };
+    return { ok: false, errors: { sets: setErrors, partner, match } } satisfies ScoreCheck;
   }
-  return { ok: true, result: { ...who, sets } };
+  return { ok: true, result: { ...who, sets } } satisfies ScoreCheck;
 };
 
-/** The domain's message, in the app's words. Only called on sets that are each valid. */
-const matchMessage = (sets: ReadonlyArray<SetScore>): string => {
+const matchMessage = (sets: ReadonlyArray<SetScore>) => {
   let a = 0;
   let b = 0;
   for (const [i, [x, y]] of sets.entries()) {
@@ -147,7 +133,7 @@ const matchMessage = (sets: ReadonlyArray<SetScore>): string => {
 };
 
 /** "6–4, 3–6, 10–7", from side a's point of view, or flipped for side b. */
-export const formatSets = (sets: ReadonlyArray<SetScore>, from: ResultSide = "a"): string =>
+export const formatSets = (sets: ReadonlyArray<SetScore>, from: ResultSide = "a") =>
   sets.map(([a, b]) => (from === "a" ? `${a}–${b}` : `${b}–${a}`)).join(", ");
 
 export type ResultPlayer = { readonly id: string; readonly displayName: string };
@@ -157,7 +143,7 @@ export const sideNames = (
   ids: ReadonlyArray<string>,
   players: ReadonlyArray<ResultPlayer>,
   meId: string | null,
-): string =>
+) =>
   ids
     .map((id) =>
       id === meId ? "You" : (players.find((p) => p.id === id)?.displayName ?? "A player"),
@@ -180,14 +166,14 @@ export type ResultView = {
   readonly canRerecord: boolean;
 };
 
-const sideOf = (result: SessionResult, id: string): ResultSide | null =>
+const sideOf = (result: SessionResult, id: string) =>
   result.sideA.includes(id) ? "a" : result.sideB.includes(id) ? "b" : null;
 
 export const resultView = (
   result: SessionResult,
   players: ReadonlyArray<ResultPlayer>,
   meId: string | null,
-): ResultView => {
+) => {
   const winners = result.winner === "a" ? result.sideA : result.sideB;
   const winnerNames = sideNames(winners, players, meId);
   const score = formatSets(result.sets, result.winner);
@@ -225,18 +211,17 @@ export type RecordableSession = {
 };
 
 /** Singles and doubles, not cancelled, started, and I'm in it. */
-export const canRecordScore = (session: RecordableSession, now: Date): boolean =>
+export const canRecordScore = (session: RecordableSession, now: Date) =>
   session.kind !== "hitting" &&
   session.status !== "cancelled" &&
   session.me?.state === "accepted" &&
   session.startsAt.getTime() <= now.getTime();
 
 /** Whether a player can see and write a session's comments: the host and accepted players. */
-export const canUseComments = (me: { readonly state: string } | null): boolean =>
-  me?.state === "accepted";
+export const canUseComments = (me: { readonly state: string } | null) => me?.state === "accepted";
 
 /** Whether a session has started, so it belongs under Past rather than My sessions. */
-export const isPastSession = (session: { readonly startsAt: Date }, now: Date): boolean =>
+export const isPastSession = (session: { readonly startsAt: Date }, now: Date) =>
   session.startsAt.getTime() <= now.getTime();
 
 /**
@@ -244,7 +229,7 @@ export const isPastSession = (session: { readonly startsAt: Date }, now: Date): 
  * 6–4, 6–4" or "Lost 4–6, 4–6" once confirmed, "Score to confirm" when it
  * waits on me, otherwise null.
  */
-export const pastScoreLine = (result: SessionResult | null, meId: string | null): string | null => {
+export const pastScoreLine = (result: SessionResult | null, meId: string | null) => {
   if (!result || !meId) return null;
   const mine = sideOf(result, meId);
   if (!mine) return null;

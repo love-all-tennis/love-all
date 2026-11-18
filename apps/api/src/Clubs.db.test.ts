@@ -6,24 +6,16 @@ import { Clubs } from "./Clubs";
 import { Db } from "./Db";
 import { block, club, clubReview, metro, profile, user } from "./db/schema";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = Clubs.layer.pipe(Layer.provideMerge(Db.layer));
 
 interface World {
   readonly players: ReadonlyArray<SessionUser>;
   readonly clubs: Clubs["Service"];
   readonly db: Db["Service"];
-  /** Where this test's players live: a random spot in the South Pacific nobody else uses. */
   readonly home: LatLng;
-  /** A point `km` east of home. */
   readonly near: (km: number) => LatLng;
 }
 
-/**
- * Creates `count` players living at a random spot in the open ocean (so club
- * lists don't mix between tests), runs `f`, then deletes the players and
- * every club near that spot.
- */
 const withClubs = <A, E>(count: number, f: (world: World) => Effect.Effect<A, E>) =>
   Effect.gen(function* () {
     const db = yield* Db;
@@ -32,7 +24,6 @@ const withClubs = <A, E>(count: number, f: (world: World) => Effect.Effect<A, E>
       lat: Math.round((-55 + Math.random() * 10) * 100) / 100,
       lng: Math.round((-140 + Math.random() * 20) * 100) / 100,
     };
-    // One degree of longitude is about 111 km × cos(latitude).
     const kmPerLng = 111.32 * Math.cos((home.lat * Math.PI) / 180);
     const near = (km: number) => ({ lat: home.lat, lng: home.lng + km / kmPerLng });
     const players = Array.from({ length: count }, (_, i) => {

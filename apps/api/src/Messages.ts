@@ -17,7 +17,7 @@ import {
   ProfileRequired,
   type SessionUser,
 } from "@love-all/domain";
-import { type SQL, and, count, desc, eq, gte, inArray, isNotNull, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { Context, Effect, Layer, Option } from "effect";
 import { Db } from "./Db";
 import { notBlocked } from "./db/blocks";
@@ -28,7 +28,6 @@ import { messages as notices } from "./notifications/messages";
 
 const HOUR_MS = 3_600_000;
 
-/** The pair in the order `conversation` stores it. */
 const pairOf = (a: string, b: string) =>
   a < b ? { userLowId: a, userHighId: b } : { userLowId: b, userHighId: a };
 
@@ -78,18 +77,15 @@ export class Messages extends Context.Service<
       const db = yield* Db;
       const notifications = yield* Notifications;
 
-      /** The other player's id in a conversation row, from the viewer's side. */
       const otherId = (viewer: SessionUser) =>
         sql<string>`case when ${conversation.userLowId} = ${viewer.id} then ${conversation.userHighId} else ${conversation.userLowId} end`;
 
-      /** Conversations the viewer can see: theirs, with nobody blocked either way. */
-      const visibleTo = (viewer: SessionUser): SQL =>
+      const visibleTo = (viewer: SessionUser) =>
         and(
           or(eq(conversation.userLowId, viewer.id), eq(conversation.userHighId, viewer.id)),
           notBlocked(viewer.id, otherId(viewer)),
         )!;
 
-      /** Messages from the other player that the viewer hasn't read. Needs the member join. */
       const unreadCount = (viewer: SessionUser) =>
         sql<number>`(
           select count(*)::int from ${directMessage}
@@ -122,10 +118,7 @@ export class Messages extends Context.Service<
 
       type ConversationRow = Effect.Success<ReturnType<typeof selectConversations>>[number];
 
-      const toMessage = (
-        viewer: SessionUser,
-        row: typeof directMessage.$inferSelect,
-      ): DirectMessage =>
+      const toMessage = (viewer: SessionUser, row: typeof directMessage.$inferSelect) =>
         new DirectMessage({
           id: row.id,
           conversationId: row.conversationId,
@@ -135,7 +128,6 @@ export class Messages extends Context.Service<
           createdAt: row.createdAt,
         });
 
-      /** The latest message of each conversation in `ids`. */
       const lastMessages = (viewer: SessionUser, ids: ReadonlyArray<string>) =>
         ids.length === 0
           ? Effect.succeed(new Map<string, DirectMessage>())
@@ -165,7 +157,6 @@ export class Messages extends Context.Service<
           createdAt: row.createdAt,
         });
 
-      /** A conversation the viewer can see, with its last message, or undefined. */
       const findConversation = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           if (!isUuid(id)) return undefined;
@@ -184,7 +175,6 @@ export class Messages extends Context.Service<
           ),
         );
 
-      /** Reads back a conversation just opened. It can only vanish if a block lands meanwhile. */
       const requireOpened = (viewer: SessionUser, id: string, playerId: string) =>
         findConversation(viewer, id).pipe(
           Effect.flatMap((found) =>
@@ -252,7 +242,6 @@ export class Messages extends Context.Service<
             if (playerId === viewer.id) {
               return yield* new CannotMessageSelf({ message: "You can't message yourself" });
             }
-            // The other player must have a profile and not be blocked either way.
             const [other] = yield* db
               .select({ id: profile.userId })
               .from(profile)
@@ -298,7 +287,6 @@ export class Messages extends Context.Service<
             const id = yield* db
               .transaction((tx) =>
                 Effect.gen(function* () {
-                  // Two players opening at once both land on the same row.
                   const [created] = yield* tx
                     .insert(conversation)
                     .values({ ...pair, startedById: viewer.id })
@@ -381,7 +369,6 @@ export class Messages extends Context.Service<
             const row = yield* db
               .transaction((tx) =>
                 Effect.gen(function* () {
-                  // One time for all three, so my read mark covers my own message exactly.
                   const now = new Date();
                   const [message] = yield* tx
                     .insert(directMessage)
@@ -409,7 +396,6 @@ export class Messages extends Context.Service<
                 }),
               )
               .pipe(Effect.orDie);
-            // Tell the other player, once the message is saved (`notify` also skips blocked players).
             const [me] = yield* db
               .select({ name: sql<string>`coalesce(${profile.displayName}, ${user.name})` })
               .from(user)

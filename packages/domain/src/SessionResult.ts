@@ -15,13 +15,13 @@ export const ResultSide = Schema.Literals(["a", "b"]);
 export type ResultSide = typeof ResultSide.Type;
 
 /** Whether a finished set looks like a normal set to 6: 6-0 to 6-4, 7-5 or 7-6. */
-export const isRegularSet = ([a, b]: SetScore): boolean => {
+export const isRegularSet = ([a, b]: SetScore) => {
   const [won, lost] = a > b ? [a, b] : [b, a];
   return (won === 6 && lost <= 4) || (won === 7 && (lost === 5 || lost === 6));
 };
 
 /** Whether a set is a match tiebreak: first to 10, win by 2. */
-export const isMatchTiebreak = ([a, b]: SetScore): boolean => {
+export const isMatchTiebreak = ([a, b]: SetScore) => {
   const [won, lost] = a > b ? [a, b] : [b, a];
   return won === 10 ? lost <= 8 : won > 10 && won - lost === 2;
 };
@@ -31,7 +31,7 @@ export const isMatchTiebreak = ([a, b]: SetScore): boolean => {
  * One-set matches are fine. A match tiebreak can only be the deciding third
  * set. No sets after a side has won two.
  */
-export const checkMatchScore = (sets: ReadonlyArray<SetScore>): string | true => {
+export const checkMatchScore = (sets: ReadonlyArray<SetScore>) => {
   if (sets.length < 1 || sets.length > 3) return "A match has one to three sets";
   let a = 0;
   let b = 0;
@@ -49,16 +49,16 @@ export const checkMatchScore = (sets: ReadonlyArray<SetScore>): string | true =>
 };
 
 /** Which side won: the one that took more sets. Only call it on a valid score. */
-export const winningSide = (sets: ReadonlyArray<SetScore>): ResultSide => {
+export const winningSide = (sets: ReadonlyArray<SetScore>) => {
   const a = sets.filter(([x, y]) => x > y).length;
-  return a * 2 > sets.length ? "a" : "b";
+  const side: ResultSide = a * 2 > sets.length ? "a" : "b";
+  return side;
 };
 
 /** Valid set scores for a finished match, side a first in each set. */
 export const MatchScore = Schema.Array(SetScore).check(Schema.makeFilter(checkMatchScore));
 export type MatchScore = typeof MatchScore.Type;
 
-/** The players on one side: one for singles, two for doubles. */
 const Side = Schema.Array(PlayerId).check(Schema.isBetweenLength(1, 2));
 
 const distinctPlayers = Schema.makeFilter(

@@ -39,7 +39,6 @@ export default function PlayerScreen() {
   const { data: session } = authClient.useSession();
   const [attempt, setAttempt] = useState(0);
   const key = `${id}:${attempt}`;
-  // Tagged with the request it answers, so a new id or a retry shows loading.
   const [loaded, setLoaded] = useState<{ key: string; state: Loaded } | null>(null);
   const state: Loaded = loaded?.key === key ? loaded.state : { kind: "loading" };
   const setState = (next: Loaded) => setLoaded({ key, state: next });
@@ -101,7 +100,6 @@ export default function PlayerScreen() {
     try {
       const refusal = await blockPlayer(player.id);
       if (refusal) setNotice(refusal);
-      // They're hidden from me now, so leave their profile.
       else router.back();
     } catch {
       setNotice("Couldn't block them. Check your connection and try again.");
@@ -113,7 +111,6 @@ export default function PlayerScreen() {
   const title = state.kind === "ready" ? state.player.displayName : "";
 
   return (
-    // The stack's native header sits above, so only pad the other edges.
     <Screen edges={["left", "right", "bottom"]}>
       <Stack.Screen options={{ title }} />
       {state.kind === "loading" ? <Loading label="Loading profile" /> : null}

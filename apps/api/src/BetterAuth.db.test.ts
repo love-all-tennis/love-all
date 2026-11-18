@@ -5,7 +5,6 @@ import { BetterAuth } from "./BetterAuth";
 import { Db } from "./Db";
 import { account, session, user } from "./db/schema";
 
-/** Better Auth on the real auth tables, through the Effect SQL adapter. */
 describe.skipIf(!process.env.DATABASE_URL)("BetterAuth on Effect SQL", () => {
   it("signs up and in, and Drizzle reads back what auth wrote", async () => {
     const email = `test_${crypto.randomUUID()}@Example.com`;
@@ -56,8 +55,6 @@ describe.skipIf(!process.env.DATABASE_URL)("BetterAuth on Effect SQL", () => {
     expect(result.sessions.map((s) => s.token)).toEqual(
       expect.arrayContaining([result.signedUp.token, result.signedIn.token]),
     );
-    // Sessions last 7 days. Drizzle reads `timestamp` as UTC, so this only
-    // holds if the adapter stored UTC whatever the session time zone.
     const expiresAt = result.found!.session.expiresAt.getTime();
     const week = 7 * 24 * 60 * 60 * 1000;
     expect(Math.abs(expiresAt - (result.before + week))).toBeLessThan(60_000);

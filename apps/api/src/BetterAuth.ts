@@ -18,7 +18,6 @@ const list = (name: string) =>
 
 export const TrustedOrigins = list("TRUSTED_ORIGINS").pipe(Config.withDefault(["loveall://"]));
 
-/** Google is on when GOOGLE_CLIENT_ID (comma-separated) and GOOGLE_CLIENT_SECRET are set. */
 const GoogleConfig = Config.all({
   clientIds: list("GOOGLE_CLIENT_ID"),
   clientSecret: Config.Redacted("GOOGLE_CLIENT_SECRET"),
@@ -30,7 +29,6 @@ const GoogleConfig = Config.all({
   Config.option,
 );
 
-/** Apple is on when APPLE_CLIENT_ID (comma-separated) and APPLE_CLIENT_SECRET are set. */
 const AppleConfig = Config.all({
   clientIds: list("APPLE_CLIENT_ID"),
   clientSecret: Config.Redacted("APPLE_CLIENT_SECRET"),

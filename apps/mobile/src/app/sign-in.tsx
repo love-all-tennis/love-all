@@ -9,10 +9,11 @@ import { authClient } from "@/lib/auth-client";
 
 type FieldErrors = { email?: string; password?: string };
 
-const check = (email: string, password: string): FieldErrors => ({
-  ...(email.trim() ? {} : { email: "Enter the email you signed up with" }),
-  ...(password ? {} : { password: "Enter your password" }),
-});
+const check = (email: string, password: string) =>
+  ({
+    ...(email.trim() ? {} : { email: "Enter the email you signed up with" }),
+    ...(password ? {} : { password: "Enter your password" }),
+  }) satisfies FieldErrors;
 
 export default function SignInScreen() {
   const [email, setEmail] = useState("");
@@ -20,7 +21,6 @@ export default function SignInScreen() {
   const [tried, setTried] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Validate on submit, then live once a field has shown an error.
   const fieldErrors = tried ? check(email, password) : {};
 
   const submit = async () => {
@@ -28,8 +28,6 @@ export default function SignInScreen() {
     if (Object.keys(check(email, password)).length > 0) return;
     setSubmitting(true);
     setError(null);
-    // Only the sign-up screen asks the age question; anyone new who signs in
-    // here is asked on the confirm-age screen.
     rememberAdultConfirmation(false);
     try {
       const result = await authClient.signIn.email({ email: email.trim(), password });
@@ -40,7 +38,6 @@ export default function SignInScreen() {
             : (result.error.message ?? "Couldn't sign in. Try again."),
         );
       }
-      // On success the session changes and the root layout opens the app.
     } catch {
       setError("Couldn't reach Love All. Check your connection and try again.");
     } finally {

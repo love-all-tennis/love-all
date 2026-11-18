@@ -44,7 +44,6 @@ export default function EditSessionScreen() {
   }
 
   const saved = state.session;
-  // Start from the saved session until the host changes something.
   const current = draft ?? draftFromSession(saved);
   const errors = tried ? draftErrors(current, now) : {};
 

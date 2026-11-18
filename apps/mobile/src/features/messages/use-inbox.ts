@@ -32,7 +32,6 @@ export function useInbox() {
       })
       .catch(() => {
         if (mine !== generation.current) return;
-        // Keep what's up; only show the error when there's nothing to show.
         setState((s) => (s?.status === "ready" ? s : { status: "error", items: [], cursor: null }));
       });
   }, []);
@@ -50,7 +49,6 @@ export function useInbox() {
           s ? { ...s, items: mergeById(s.items, page.items), cursor: page.nextCursor } : s,
         );
       })
-      // A failed next page leaves the list as it was; scrolling again retries.
       .catch(() => undefined)
       .finally(() => setLoadingMore(false));
   }, [state, loadingMore]);

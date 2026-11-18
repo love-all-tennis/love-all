@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect";
-import { type PushMessage, PushSender, type PushTicket } from "../PushSender";
+import { type PushMessage, PushSender } from "../PushSender";
 
 /**
  * A `PushSender` that keeps what it was given instead of calling Expo.
@@ -14,7 +14,7 @@ export const makePushSenderMemory = (gone: ReadonlySet<string> = new Set()) => {
       send: (messages) =>
         Effect.sync(() => {
           sent.push(...messages);
-          return messages.map((message): PushTicket =>
+          return messages.map((message) =>
             gone.has(message.to)
               ? { status: "error", details: { error: "DeviceNotRegistered" } }
               : { status: "ok" },

@@ -18,7 +18,6 @@ import {
   type SessionDraft,
 } from "./form";
 
-// Tuesday, Nov 17 2026, 10:00 local.
 const now = new Date(2026, 10, 17, 10, 0);
 
 const filled: SessionDraft = {

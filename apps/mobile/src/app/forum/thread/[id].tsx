@@ -61,7 +61,6 @@ export default function ThreadScreen() {
   const [posting, setPosting] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  // "5 min ago" is measured from when the thread opened; a new reply reads "Just now".
   const [now] = useState(() => new Date());
 
   useEffect(() => {
@@ -138,7 +137,6 @@ export default function ThreadScreen() {
     }
   };
 
-  /** Updates my reaction straight away, and puts it back if the server says no. */
   const react = (target: "thread" | "post", targetId: string, kind: ForumReactionKind) => {
     if (state.status !== "ready") return;
     const before =
@@ -224,7 +222,6 @@ export default function ThreadScreen() {
       },
     );
 
-  /** Reports the thread or reply itself, so moderators see what was written. */
   const report = (type: "thread" | "post", postId: string, author: ForumAuthor) =>
     router.push({
       pathname: "/forum/report",

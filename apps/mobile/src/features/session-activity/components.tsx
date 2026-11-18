@@ -27,10 +27,8 @@ import { canRecordScore, pastScoreLine, resultView } from "./score";
 
 const NETWORK = "Check your connection and try again.";
 
-/** Asks before something that can't be undone, on native and web. */
 const confirmDestructive = (title: string, message: string, action: string, run: () => void) => {
   if (Platform.OS === "web") {
-    // react-native-web has no Alert.
     if (globalThis.confirm?.(`${title}\n\n${message}`)) run();
     return;
   }
@@ -71,7 +69,6 @@ export function SessionComments({
   const [posting, setPosting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  // "5 min ago" is measured from when the section opened; a new comment reads "Just now".
   const [now] = useState(() => new Date());
 
   useEffect(() => {
@@ -312,7 +309,6 @@ export function SessionScore({
   onRecord: () => void;
 }) {
   const enabled = session.kind !== "hitting" && session.me?.state === "accepted";
-  // A confirm or dispute lands through onResultChanged.
   const { state, reload } = useSessionResult(session.id, enabled);
   const [busy, setBusy] = useState<"confirm" | "dispute" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -357,7 +353,6 @@ export function SessionScore({
       const outcome = await respondToResult(session.id, response);
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
-        // It changed under me: show what's there now.
         reload();
       }
     } catch {

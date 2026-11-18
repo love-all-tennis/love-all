@@ -24,7 +24,6 @@ const signedOut = Layer.succeed(
   Authentication.of(() => Effect.fail(new Unauthorized({ message: "Sign in to continue" }))),
 );
 
-/** An in-memory `Accounts` that records who confirmed their age. */
 const makeAccounts = () => {
   const confirmed: Array<string> = [];
   const layer = Layer.succeed(
@@ -38,7 +37,6 @@ const makeAccounts = () => {
 
 const makeClient = HttpApiTest.groups(Api, ["me"]);
 
-/** Runs requests against the real handlers in memory, with the given auth state. */
 const run = <A, E>(
   auth: Layer.Layer<Authentication>,
   request: (client: Effect.Success<typeof makeClient>) => Effect.Effect<A, E>,

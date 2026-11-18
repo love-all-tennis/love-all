@@ -6,10 +6,8 @@ import { Db } from "./Db";
 import { user } from "./db/schema";
 import { Profiles } from "./Profiles";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = Profiles.layer.pipe(Layer.provideMerge(Db.layer));
 
-/** Creates a throwaway account, runs `f` as that player, then deletes the account. */
 const asNewPlayer = <A, E>(
   f: (player: SessionUser, profiles: Profiles["Service"]) => Effect.Effect<A, E>,
   name = "Sam",
@@ -123,7 +121,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Profiles", () => {
     ];
     expect(result.saved).toEqual(expected);
     expect(result.me.availability).toEqual(expected);
-    // Saving availability before onboarding creates the profile.
     expect(result.me.profile?.displayName).toBe("Sam");
   });
 

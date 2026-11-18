@@ -50,7 +50,6 @@ export default function ConversationScreen() {
   const [now] = useState(() => new Date());
   const generation = useRef(0);
 
-  /** Loads the newest page and merges it in, then marks the conversation read. */
   const refresh = useCallback(() => {
     const mine = ++generation.current;
     fetchMessages(id)
@@ -134,7 +133,6 @@ export default function ConversationScreen() {
       setState((s) =>
         s.status === "ready" ? { ...s, messages: mergeMessages(s.messages, [outcome.ok]) } : s,
       );
-      // Picks up anything they sent meanwhile.
       refresh();
     } catch {
       setProblem(`Couldn't send your message. ${NETWORK}`);
@@ -149,7 +147,6 @@ export default function ConversationScreen() {
   const openProfile = () =>
     other && router.push({ pathname: "/players/[id]", params: { id: other.id } });
 
-  /** Their messages can be reported: it goes to the moderators with the message attached. */
   const offerReport = (message: DirectMessage) => {
     if (!other) return;
     const report = () =>

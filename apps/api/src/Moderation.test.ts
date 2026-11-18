@@ -27,7 +27,6 @@ const as = (viewer: SessionUser) =>
     Authentication.of((httpEffect) => Effect.provideService(httpEffect, CurrentUser, viewer)),
   );
 
-/** An in-memory `Moderation` that records calls. `Moderation.db.test.ts` covers the real one. */
 const makeModeration = () => {
   const calls: Array<string> = [];
   const gate = (viewer: SessionUser, call: string) =>

@@ -9,7 +9,6 @@ import { Messages } from "./Messages";
 import { Safety } from "./Safety";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const sent = makeNotificationsMemory();
 const TestLayer = Layer.mergeAll(
   Messages.layer,
@@ -23,11 +22,6 @@ interface World {
   readonly db: Db["Service"];
 }
 
-/**
- * Creates `count` players (all with profiles, except those in
- * `withoutProfile`), runs `f`, then deletes the accounts, which cascades to
- * their conversations and messages.
- */
 const withPlayers = <A, E>(
   setup: { readonly count: number; readonly withoutProfile?: ReadonlyArray<number> },
   f: (world: World) => Effect.Effect<A, E>,
@@ -109,7 +103,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Opening conversations", () => {
           for (const other of others.slice(0, CONVERSATIONS_PER_HOUR)) {
             yield* messages.openConversation(me!, other.id);
           }
-          // Opening an existing one again is fine; a new one is not.
           yield* messages.openConversation(me!, others[0]!.id);
           return yield* Effect.flip(messages.openConversation(me!, others.at(-1)!.id));
         }),
@@ -154,12 +147,10 @@ describe.skipIf(!process.env.DATABASE_URL)("Sending and reading", () => {
         return { before, after, theirs };
       }),
     );
-    // C wrote last, so C comes first.
     expect(result.before.items.map((c) => c.unreadCount)).toEqual([1, 2]);
     expect(result.before.unreadConversations).toBe(2);
     expect(result.after.items.map((c) => c.unreadCount)).toEqual([0, 0]);
     expect(result.after.unreadConversations).toBe(0);
-    // My own messages are never unread for me.
     expect(result.theirs.items[0]!.unreadCount).toBe(0);
   });
 

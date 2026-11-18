@@ -32,21 +32,19 @@ import { displayKm } from "./players/cursor";
 
 const DAY_MS = 86_400_000;
 
-/** How an author is shown: their profile name, or their account name before they have a profile. */
 const authorName = sql<string>`coalesce(${profile.displayName}, ${user.name})`;
 
-const toLngLat = (point: LatLng): LngLat => ({ x: point.lng, y: point.lat });
-const toLatLng = (point: LngLat): LatLng => ({ lat: point.y, lng: point.x });
+const toLngLat = (point: LatLng) => ({ x: point.lng, y: point.lat });
+const toLatLng = (point: LngLat) => ({ lat: point.y, lng: point.x });
 
 const pointSql = (point: LngLat) => sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)`;
 
 interface Ratings {
   readonly summary: ClubRatingSummary;
-  /** Reviews giving 1..5 stars, in that order. */
   readonly counts: ReadonlyArray<number>;
 }
 
-const noRatings = (): Ratings => ({
+const noRatings = () => ({
   summary: { average: null, count: 0 },
   counts: [0, 0, 0, 0, 0],
 });
@@ -101,12 +99,11 @@ export class Clubs extends Context.Service<
             Effect.orDie,
           );
 
-      /** Metres from `home` to the club, or null when I have no home point. */
       const distanceFrom = (home: LngLat | null) =>
         (home
           ? sql`ST_Distance(${club.point}::geography, ${pointSql(home)}::geography)`
           : sql`null::float8`
-        ).mapWith((value): number | null => (value === null ? null : Number(value)));
+        ).mapWith((value) => (value === null ? null : Number(value)));
 
       const selectClubs = (home: LngLat | null) =>
         db
@@ -124,7 +121,6 @@ export class Clubs extends Context.Service<
 
       type ClubRow = Effect.Success<ReturnType<typeof selectClubs>>[number];
 
-      /** Star counts for each club in `ids`, from reviews I can see. */
       const ratingsFor = (viewer: SessionUser, ids: ReadonlyArray<string>) =>
         ids.length === 0
           ? Effect.succeed(new Map<string, Ratings>())
@@ -364,7 +360,6 @@ export class Clubs extends Context.Service<
           Effect.gen(function* () {
             yield* clubExists(id);
             const body = input.body ?? null;
-            // A moderator's `hidden_at` stays put when the author edits.
             yield* db
               .insert(clubReview)
               .values({ clubId: id, authorId: viewer.id, rating: input.rating, body })

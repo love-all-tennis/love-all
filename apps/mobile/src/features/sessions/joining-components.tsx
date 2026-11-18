@@ -17,10 +17,9 @@ import {
 import { sendJoinChange } from "./joining-api";
 
 /** Asks before cancelling, since players can't undo it. Named for the action, never "OK". */
-export const confirmCancel = (session: JoinFacts, onConfirm: () => void): void => {
+export const confirmCancel = (session: JoinFacts, onConfirm: () => void) => {
   const { title, body } = cancelPrompt(session);
   if (Platform.OS === "web") {
-    // react-native-web has no Alert.
     if (globalThis.confirm?.(`${title}\n\n${body}`)) onConfirm();
     return;
   }
@@ -57,7 +56,7 @@ export const useJoinChanges = ({
   /** Shows a session in place, with no request. */
   replace: (next: Session) => void;
   reload: () => void;
-}): JoinChanges => {
+}) => {
   const [pending, setPending] = useState<PendingChange>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const running = useRef(false);
@@ -85,7 +84,7 @@ export const useJoinChanges = ({
     }
   };
 
-  return { pending, notice, run: (change) => void run(change) };
+  return { pending, notice, run: (change) => void run(change) } satisfies JoinChanges;
 };
 
 const isPending = (pending: PendingChange, kind: JoinChange["kind"], userId?: string) =>

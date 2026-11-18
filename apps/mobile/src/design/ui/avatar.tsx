@@ -8,7 +8,7 @@ import { Text } from "./text";
 export type AvatarSize = keyof typeof sizes.avatar;
 
 /** The initials for a name: "Sam Lee" is "SL". */
-export const initialsOf = (name: string): string =>
+export const initialsOf = (name: string) =>
   name
     .split(/\s+/)
     .filter(Boolean)

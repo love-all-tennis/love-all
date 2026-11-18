@@ -6,21 +6,15 @@ import { Db } from "./Db";
 import { block, equipment, equipmentReview, profile, user } from "./db/schema";
 import { Equipment } from "./Equipment";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = Equipment.layer.pipe(Layer.provideMerge(Db.layer));
 
 interface World {
   readonly players: ReadonlyArray<SessionUser>;
   readonly gear: Equipment["Service"];
   readonly db: Db["Service"];
-  /** A brand only this test uses, so catalog searches aren't mixed with other tests. */
   readonly brand: string;
 }
 
-/**
- * Creates `count` players with 4.0 profiles, runs `f`, then deletes them and
- * every item under this test's brand.
- */
 const withGear = <A, E>(count: number, f: (world: World) => Effect.Effect<A, E>) =>
   Effect.gen(function* () {
     const db = yield* Db;
@@ -161,7 +155,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment reviews", () => {
       Effect.gen(function* () {
         const item = yield* gear.create(me!, { kind: "strings", brand, model: "RPM Blast" });
         yield* gear.saveReview(me!, item.id, { rating: 4 });
-        // A few milliseconds apart, so the newest-first order is certain.
         yield* gear.saveReview(a!, item.id, { rating: 5, body: "Spin!" });
         yield* Effect.sleep("5 millis");
         yield* gear.saveReview(b!, item.id, { rating: 2, body: "Dies fast" });

@@ -187,10 +187,6 @@ export function SessionForm({
   );
 }
 
-/**
- * The court's optional map pin: found from the court name, or taken from
- * where the host is standing. Courts are public, so the pin is kept as is.
- */
 function CourtPin({
   draft,
   onChange,

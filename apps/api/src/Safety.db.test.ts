@@ -12,7 +12,6 @@ import { Profiles } from "./Profiles";
 import { Safety } from "./Safety";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = Layer.mergeAll(
   Safety.layer.pipe(Layer.provideMerge(Forum.layer)),
   Players.layer,
@@ -20,7 +19,6 @@ const TestLayer = Layer.mergeAll(
   Follows.layer,
 ).pipe(Layer.provide(makeNotificationsMemory().layer), Layer.provideMerge(Db.layer));
 
-/** Creates `count` throwaway accounts, runs `f` with them, then deletes them. */
 const withPlayers = <A, E>(
   count: number,
   f: (
@@ -173,7 +171,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
         const ownPost = yield* Effect.flip(
           safety.report(alex!, { targetType: "forum_post", targetId: post!.id, reason: "spam" }),
         );
-        // Once hidden by a moderator, it can't be reported again.
         yield* db.update(forumPost).set({ hiddenAt: new Date() }).where(eq(forumPost.id, post!.id));
         const hidden = yield* Effect.flip(
           safety.report(sam!, { targetType: "forum_post", targetId: post!.id, reason: "spam" }),
@@ -222,7 +219,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
         const players = yield* Players;
         const profiles = yield* Profiles;
         const follows = yield* Follows;
-        // Reykjavik, far from the points other test files search around.
         for (const [i, p] of [sam!, alex!, jo!].entries()) {
           yield* profiles.update(p, { homePoint: { lat: 64.14 + i / 100, lng: -21.94 } });
         }

@@ -59,15 +59,12 @@ function NearbyPlayers() {
       .then((loaded) => {
         if (!live) return;
         setMe(loaded);
-        // Start from my own radius and level, unless I've already changed the filters.
         if (!filters) setPlayerFilters(defaultFilters(loaded.profile));
       })
-      // Without my profile the list still works, from the widest defaults.
       .catch(() => live && !filters && setPlayerFilters(defaultFilters(null)));
     return () => {
       live = false;
     };
-    // Runs once, to load my profile and the starting filters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -163,7 +160,6 @@ function FollowedList() {
     };
   }, []);
 
-  // Reload on focus, so following or unfollowing on a profile shows up here.
   useFocusEffect(load);
 
   return (

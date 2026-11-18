@@ -1,8 +1,3 @@
-/**
- * Where a tapped push notification goes. The API puts an app route in the
- * notification's `data.url`; only routes the app knows are followed, so a
- * malformed or unexpected payload just opens the app.
- */
 const ROUTES = [/^\/sessions\/[\w-]+$/, /^\/forum\/thread\/[\w-]+$/, /^\/messages\/[\w-]+$/];
 
 export type NotificationRoute =
@@ -10,7 +5,7 @@ export type NotificationRoute =
   | `/forum/thread/${string}`
   | `/messages/${string}`;
 
-export function notificationRoute(data: unknown): NotificationRoute | null {
+export function notificationRoute(data: unknown) {
   if (typeof data !== "object" || data === null || !("url" in data)) return null;
   const { url } = data;
   if (typeof url !== "string") return null;

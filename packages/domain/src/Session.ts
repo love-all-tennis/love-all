@@ -47,11 +47,11 @@ export const HITTING_SPOTS_MIN = 2;
 export const HITTING_SPOTS_MAX = 4;
 
 /** Spots a session of this kind has when the host doesn't pick. */
-export const defaultSpots = (kind: SessionKind): number =>
+export const defaultSpots = (kind: SessionKind) =>
   kind === "doubles" ? DOUBLES_SPOTS : kind === "singles" ? SINGLES_SPOTS : HITTING_SPOTS_MIN;
 
 /** Whether `spots` is allowed for `kind`. */
-export const spotsFitKind = (kind: SessionKind, spots: number): boolean =>
+export const spotsFitKind = (kind: SessionKind, spots: number) =>
   kind === "hitting"
     ? spots >= HITTING_SPOTS_MIN && spots <= HITTING_SPOTS_MAX
     : spots === defaultSpots(kind);
@@ -151,24 +151,17 @@ const sessionFields = {
   startsAt: SessionTime,
   durationMinutes: Schema.Int,
   courtName: Schema.String,
-  /** The court's map pin, as the host dropped it. */
   courtPoint: Schema.NullOr(LatLng),
   levelMin: Schema.NullOr(Ntrp),
   levelMax: Schema.NullOr(Ntrp),
   spots: Schema.Int,
-  /** Accepted players, host included. Spots left is `spots - acceptedCount`. */
   acceptedCount: Schema.Int,
-  /** Players who asked to join and wait on the host. Counted only for the host; 0 for everyone else. */
   requestCount: Schema.Int,
   visibility: SessionVisibility,
   status: SessionStatus,
   notes: Schema.NullOr(Schema.String),
   host: SessionPlayer,
   me: Schema.NullOr(MySessionPlace),
-  /**
-   * Whole kilometres (at least 1) from my home point to the court pin, or to
-   * the host's home point when there is no pin. Null when either is missing.
-   */
   distanceKm: Schema.NullOr(Schema.Int),
 };
 

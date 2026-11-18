@@ -37,7 +37,6 @@ const alex = new PlayerProfile({
   distanceKm: 3,
 });
 
-/** A stub `Players` that records each search query, to test the HTTP layer. */
 const makePlayers = () => {
   const queries: Array<PlayersQuery> = [];
   const layer = Layer.succeed(

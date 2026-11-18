@@ -1,9 +1,3 @@
-import type {
-  Conversation,
-  ConversationsPage,
-  DirectMessage,
-  MessagesPage,
-} from "@love-all/domain";
 import { Effect } from "effect";
 
 import { callApi } from "@/lib/api";
@@ -20,11 +14,11 @@ const refuse = (refusal: string) => Effect.succeed<{ refusal: string }>({ refusa
 /** Shown when a conversation is gone: blocked either way, or not mine. */
 export const GONE = "This conversation isn't available any more.";
 
-export const fetchInbox = (cursor?: string): Promise<ConversationsPage> =>
+export const fetchInbox = (cursor?: string) =>
   callApi((api) => api.messages.listConversations({ query: cursor ? { cursor } : {} }));
 
 /** The conversation and a page of messages, or null when it's gone. */
-export const fetchMessages = (id: string, cursor?: string): Promise<MessagesPage | null> =>
+export const fetchMessages = (id: string, cursor?: string) =>
   callApi((api) =>
     api.messages
       .listMessages({ params: { id }, query: cursor ? { cursor } : {} })
@@ -32,7 +26,7 @@ export const fetchMessages = (id: string, cursor?: string): Promise<MessagesPage
   );
 
 /** Opens my conversation with a player, starting one if there's none. */
-export const openConversation = (playerId: string): Promise<Outcome<Conversation>> =>
+export const openConversation = (playerId: string) =>
   callApi((api) =>
     api.messages.openConversation({ payload: { playerId } }).pipe(
       Effect.map((ok) => ({ ok })),
@@ -45,7 +39,7 @@ export const openConversation = (playerId: string): Promise<Outcome<Conversation
     ),
   );
 
-export const sendMessage = (id: string, body: string): Promise<Outcome<DirectMessage>> =>
+export const sendMessage = (id: string, body: string) =>
   callApi((api) =>
     api.messages.send({ params: { id }, payload: { body } }).pipe(
       Effect.map((ok) => ({ ok })),
@@ -57,7 +51,7 @@ export const sendMessage = (id: string, body: string): Promise<Outcome<DirectMes
   );
 
 /** Marks the conversation read. A gone conversation has nothing left to read. */
-export const markRead = (id: string): Promise<void> =>
+export const markRead = (id: string) =>
   callApi((api) =>
     api.messages
       .markRead({ params: { id } })

@@ -4,11 +4,10 @@ import {
   type CleanedWhere,
   type CustomAdapter,
   createAdapterFactory,
-  type DBAdapter,
 } from "better-auth/adapters";
 import { PgTypes } from "@effect/sql-pg";
 import { Context, Effect } from "effect";
-import { SqlClient, type Statement } from "effect/sql";
+import { SqlClient } from "effect/sql";
 
 /**
  * The tables and columns Better Auth uses are the snake_case of its model and
@@ -18,7 +17,6 @@ import { SqlClient, type Statement } from "effect/sql";
 export const toSnakeCase = (name: string) =>
   name.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
 
-/** `LIKE` treats `%`, `_` and `\` as special, so a search for them must escape them. */
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, "\\$&");
 
 /**
@@ -39,13 +37,12 @@ export const effectSqlAdapter = (
   const sql = Context.get(services, SqlClient.SqlClient);
   let betterAuthOptions: BetterAuthOptions | undefined;
 
-  /** A query runner. Inside a transaction it carries the transaction's connection. */
   type Run = <A>(effect: Effect.Effect<A, unknown, SqlClient.SqlClient>) => Promise<A>;
 
   const param = (value: unknown) => (value instanceof Date ? PgTypes.timestamp(value) : value);
 
-  const createCustomAdapter =
-    (run: Run): Parameters<typeof createAdapterFactory>[0]["adapter"] =>
+  const createCustomAdapter: (run: Run) => Parameters<typeof createAdapterFactory>[0]["adapter"] =
+    (run) =>
     ({ getFieldName, getDefaultModelName, schema }) => {
       const keyOf = (model: string, modelKey: string | undefined) =>
         modelKey ?? getDefaultModelName(model);
@@ -53,7 +50,6 @@ export const effectSqlAdapter = (
         sql(toSnakeCase(getFieldName({ model: modelKey, field })));
       const table = (model: string) => sql(toSnakeCase(model));
 
-      /** `column AS "fieldName"` for each field asked for, or all of them. */
       const selection = (modelKey: string, select?: ReadonlyArray<string>) => {
         const fields =
           select && select.length > 0
@@ -69,7 +65,7 @@ export const effectSqlAdapter = (
         );
       };
 
-      const condition = (modelKey: string, where: CleanedWhere): Statement.Fragment => {
+      const condition = (modelKey: string, where: CleanedWhere) => {
         const target = column(modelKey, where.field);
         const { value } = where;
         const insensitive =
@@ -114,7 +110,6 @@ export const effectSqlAdapter = (
         }
       };
 
-      /** ANDed conditions, then ORed ones, as Better Auth's own adapters read them. */
       const whereClause = (modelKey: string, where: ReadonlyArray<CleanedWhere> | undefined) => {
         if (!where || where.length === 0) return sql.literal("TRUE");
         const ands = where.filter((w) => w.connector !== "OR").map((w) => condition(modelKey, w));
@@ -130,7 +125,6 @@ export const effectSqlAdapter = (
           .filter(([, value]) => value !== undefined)
           .map(([field, value]) => sql`${column(modelKey, field)} = ${param(value)}`);
 
-      /** The id of the first row matching `where`, so single-row writes touch one row. */
       const firstId = (model: string, modelKey: string, where: ReadonlyArray<CleanedWhere>) =>
         sql`${column(modelKey, "id")} IN (SELECT ${column(modelKey, "id")} FROM ${table(model)} WHERE ${whereClause(modelKey, where)} LIMIT 1)`;
 
@@ -215,7 +209,6 @@ export const effectSqlAdapter = (
             ),
           );
         },
-        // Native atomic versions, so Better Auth skips its read-then-write fallbacks.
         consumeOne: ({ model, modelKey, where }) => {
           const key = keyOf(model, modelKey);
           return run(
@@ -233,8 +226,6 @@ export const effectSqlAdapter = (
             }),
             ...assignments(key, set ?? {}),
           ];
-          // `where` is repeated outside the subquery so Postgres re-checks the
-          // guard against the row it locks, if another writer got there first.
           return run(
             sql`UPDATE ${table(model)} SET ${sql.csv(changes)} WHERE ${whereClause(key, where)} AND ${firstId(model, key, where)} RETURNING ${selection(key)}`.pipe(
               Effect.map(first),
@@ -253,14 +244,12 @@ export const effectSqlAdapter = (
     supportsDates: true,
     supportsBooleans: true,
     supportsNumericIds: true,
-    // Better Auth stores JSON and arrays as text, which keeps the codecs simple.
     supportsJSON: false,
     supportsArrays: false,
     transaction: (callback) =>
       Effect.runPromiseWith(services)(
         sql.withTransaction(
           Effect.gen(function* () {
-            // These services carry the transaction's connection.
             const inTransaction = yield* Effect.context<SqlClient.SqlClient>();
             const trx = createAdapterFactory({
               config: { ...config, transaction: false },
@@ -277,7 +266,7 @@ export const effectSqlAdapter = (
     adapter: createCustomAdapter(Effect.runPromiseWith(services)),
   });
 
-  return (options: BetterAuthOptions): DBAdapter<BetterAuthOptions> => {
+  return (options: BetterAuthOptions) => {
     betterAuthOptions = options;
     return factory(options);
   };

@@ -8,7 +8,7 @@ import { StepScreen } from "@/features/profile/components";
 import { roundPoint, stepError, type HomeArea } from "@/features/profile/draft";
 import { useProfileDraft } from "@/features/profile/draft-context";
 
-const describe = (area: HomeArea): string =>
+const describe = (area: HomeArea) =>
   area.kind === "city" ? area.label : "Near your current location";
 
 /** Step 2: where they play from, as a city or a pin from their location. */
@@ -51,7 +51,6 @@ export default function HomeAreaScreen() {
     try {
       const { granted } = await Location.requestForegroundPermissionsAsync();
       if (!granted) return setPinProblem("Location is off for Love All. Type your city instead.");
-      // Low accuracy is plenty: we only keep about 1 km.
       const { coords } = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Low,
       });

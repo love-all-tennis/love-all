@@ -16,7 +16,6 @@ export function usePushNotifications() {
   const { data: session } = authClient.useSession();
   const userId = session?.user.id;
 
-  // Register again for each account that signs in on this phone.
   useEffect(() => {
     if (!userId) return;
     registerForPush().catch((error: unknown) => {
@@ -29,7 +28,6 @@ export function usePushNotifications() {
     if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
     const route = notificationRoute(response.notification.request.content.data);
     if (route) router.push(route);
-    // Handled: don't open it again on the next render or launch.
     Notifications.clearLastNotificationResponse();
   }, [response]);
 }

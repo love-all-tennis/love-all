@@ -7,23 +7,11 @@ import { user } from "./db/schema";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 
-/**
- * Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set.
- *
- * Players live near Dunedin, New Zealand, far from the Detroit points other
- * test files use, so tests running in parallel never show up in each other's
- * searches.
- */
 const TestLayer = Layer.mergeAll(Players.layer, Profiles.layer).pipe(Layer.provideMerge(Db.layer));
 
 const HOME = { lat: -45.87, lng: 170.5 };
-/** About 1.1 km per 0.01 degrees of latitude. */
 const north = (hundredths: number) => ({ lat: HOME.lat + hundredths / 100, lng: HOME.lng });
 
-/**
- * Creates throwaway players with the given profiles, runs `f`, then deletes
- * them. The first player is the one searching.
- */
 const withPlayers = <A, E>(
   patches: ReadonlyArray<ProfilePatch | null>,
   f: (
@@ -40,7 +28,6 @@ const withPlayers = <A, E>(
     const people = patches.map(
       (_, i) =>
         new SessionUser({
-          // Zero-padded so ids sort in creation order, which the tie-break relies on.
           id: `test_${run}_${String(i).padStart(2, "0")}`,
           name: `Player ${i}`,
           email: `test_${run}_${i}@example.com`,
@@ -69,11 +56,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
     const result = await withPlayers(
       [
         { homePoint: HOME, searchRadiusKm: 10 },
-        { displayName: "Far", homePoint: north(50) }, // ~56 km
+        { displayName: "Far", homePoint: north(50) },
         { displayName: "Near", homePoint: north(1), ntrp: "3.5", playsSingles: true },
-        { displayName: "Mid", homePoint: north(5) }, // ~5.6 km
-        { displayName: "Nowhere" }, // no home point
-        null, // no profile at all
+        { displayName: "Mid", homePoint: north(5) },
+        { displayName: "Nowhere" },
+        null,
       ],
       ([me], players) => players.search(me!, {}),
     );

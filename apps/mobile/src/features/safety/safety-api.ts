@@ -3,7 +3,6 @@ import { Effect } from "effect";
 
 import { callApi } from "@/lib/api";
 
-/** What went wrong, in words a player can act on, or null when it worked. */
 type Outcome = string | null;
 
 const refusals = {
@@ -12,7 +11,7 @@ const refusals = {
 };
 
 /** Blocks a player. They disappear from search, follows and their profile for both of us. */
-export const blockPlayer = (id: string): Promise<Outcome> =>
+export const blockPlayer = (id: string) =>
   callApi((api) =>
     api.safety.block({ params: { id } }).pipe(Effect.as<Outcome>(null), Effect.catchTags(refusals)),
   );
@@ -27,7 +26,7 @@ export const sendReport = (
   targetId: string,
   reason: ReportReason,
   details: string,
-): Promise<Outcome> =>
+) =>
   callApi((api) =>
     api.safety
       .report({

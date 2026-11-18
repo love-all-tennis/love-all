@@ -3,11 +3,6 @@ import { Effect, Layer } from "effect";
 import { roundHomePoint } from "../db/geo";
 import { Profiles } from "../Profiles";
 
-/**
- * An in-memory `Profiles` for handler tests. It follows the same rules as the
- * database version (create on first write, rounded home point) but never
- * assigns a metro. `Profiles.db.test.ts` covers the real one.
- */
 type ProfileFields = ConstructorParameters<typeof Profile>[0];
 
 export const ProfilesMemory = Layer.sync(Profiles, () => {
@@ -24,7 +19,7 @@ export const ProfilesMemory = Layer.sync(Profiles, () => {
         }),
     );
 
-  const ensure = (user: SessionUser): ProfileFields =>
+  const ensure = (user: SessionUser) =>
     profiles.get(user.id) ?? {
       displayName: user.name,
       photoUrl: null,

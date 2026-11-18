@@ -1,9 +1,4 @@
 /**
- * What each push notification says. Pure functions, so the wording is tested
- * without a database. Every notice opens the screen it is about.
- */
-
-/**
  * Times in notifications are shown in the launch metro's time zone. The API
  * doesn't know each phone's zone, and every v1 player is in Detroit. Revisit
  * when a metro in another zone launches (store a zone on `metro`).
@@ -43,7 +38,6 @@ export const timeLabel = (date: Date) =>
     minute: "2-digit",
   }).format(date);
 
-/** "singles on Sat, Nov 22 at 9:00 AM" */
 const sessionLabel = (s: SessionFacts) => `${kindName[s.kind]} on ${whenLabel(s.startsAt)}`;
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
@@ -58,11 +52,12 @@ interface Message {
   readonly url: string;
 }
 
-const about = (s: SessionFacts, title: string, body: string): Message => ({
-  title,
-  body,
-  url: sessionUrl(s.id),
-});
+const about = (s: SessionFacts, title: string, body: string) =>
+  ({
+    title,
+    body,
+    url: sessionUrl(s.id),
+  }) satisfies Message;
 
 export const messages = {
   invited: (s: SessionFacts, host: string) =>

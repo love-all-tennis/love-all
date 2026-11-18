@@ -30,10 +30,7 @@ const doubles: ScoreContext = {
   others: [{ id: SAM }, { id: ALEX }, { id: JO }],
 };
 
-const draftOf = (
-  sets: ReadonlyArray<[string, string]>,
-  extra: Partial<ScoreDraft> = {},
-): ScoreDraft => ({
+const draftOf = (sets: ReadonlyArray<[string, string]>, extra: Partial<ScoreDraft> = {}) => ({
   ...emptyScoreDraft(),
   sets: sets.map(([mine, theirs]) => ({ mine, theirs })),
   ...extra,
@@ -136,7 +133,6 @@ describe("checkScore", () => {
       { thirdIsTiebreak: false },
     );
     expect(checkScore(draft, singles).ok).toBe(true);
-    // The same 7-6 isn't a match tiebreak.
     expect(checkScore({ ...draft, thirdIsTiebreak: true }, singles).ok).toBe(false);
   });
 
