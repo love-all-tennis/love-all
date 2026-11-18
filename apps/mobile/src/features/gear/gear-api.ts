@@ -1,13 +1,10 @@
 import type {
-  EquipmentDetail,
   EquipmentKind,
-  EquipmentPage,
-  EquipmentReview,
+  EquipmentQuery,
   EquipmentReviewInput,
-  EquipmentReviewsPage,
   NewEquipment,
 } from "@love-all/domain";
-import { Effect } from "effect";
+import { Effect, type Types } from "effect";
 
 import { callApi } from "@/lib/api";
 
@@ -24,21 +21,22 @@ export const fetchCatalog = (filter: {
   readonly kind: EquipmentKind | null;
   readonly q: string;
   readonly cursor?: string;
-}): Promise<EquipmentPage> => {
+}) => {
   const q = filter.q.trim();
-  return callApi((api) =>
-    api.equipment.list({
-      query: {
-        ...(filter.kind ? { kind: filter.kind } : {}),
-        ...(q ? { q: q.slice(0, 100) } : {}),
-        ...(filter.cursor ? { cursor: filter.cursor } : {}),
-      },
-    }),
-  );
+
+  const query: Types.Mutable<EquipmentQuery> = {};
+
+  if (filter.kind) query.kind = filter.kind;
+
+  if (q) query.q = q.slice(0, 100);
+
+  if (filter.cursor) query.cursor = filter.cursor;
+
+  return callApi((api) => api.equipment.list({ query }));
 };
 
 /** The item with its ratings and my review, or null when it's gone. */
-export const fetchItem = (id: string): Promise<EquipmentDetail | null> =>
+export const fetchItem = (id: string) =>
   callApi((api) =>
     api.equipment
       .get({ params: { id } })
@@ -46,7 +44,7 @@ export const fetchItem = (id: string): Promise<EquipmentDetail | null> =>
   );
 
 /** A page of other players' reviews, or null when the item is gone. */
-export const fetchReviews = (id: string, cursor?: string): Promise<EquipmentReviewsPage | null> =>
+export const fetchReviews = (id: string, cursor?: string) =>
   callApi((api) =>
     api.equipment
       .listReviews({ params: { id }, query: cursor ? { cursor } : {} })
@@ -57,12 +55,10 @@ export const fetchReviews = (id: string, cursor?: string): Promise<EquipmentRevi
  * Adds an item. When the catalog already has it, resolves to `{ existing }`
  * with its id, so the screen can open it instead.
  */
-export const addItem = (
-  input: NewEquipment,
-): Promise<Outcome<EquipmentDetail> | { readonly existing: string }> =>
+export const addItem = (input: NewEquipment) =>
   callApi((api) =>
     api.equipment.create({ payload: input }).pipe(
-      Effect.map((ok): Outcome<EquipmentDetail> | { readonly existing: string } => ({ ok })),
+      Effect.map((ok) => ({ ok })),
       Effect.catchTags({
         EquipmentExists: (e) => Effect.succeed({ existing: e.id }),
         EquipmentRateLimited: (e) => Effect.succeed({ refusal: e.message }),
@@ -70,16 +66,13 @@ export const addItem = (
     ),
   );
 
-export const saveReview = (
-  id: string,
-  input: EquipmentReviewInput,
-): Promise<Outcome<EquipmentReview>> =>
+export const saveReview = (id: string, input: EquipmentReviewInput) =>
   callApi((api) =>
     api.equipment.saveReview({ params: { id }, payload: input }).pipe(
-      Effect.map((ok): Outcome<EquipmentReview> => ({ ok })),
+      Effect.map((ok) => ({ ok })),
       Effect.catchTag("EquipmentNotFound", () => Effect.succeed({ refusal: GONE })),
     ),
   );
 
-export const deleteReview = (id: string): Promise<void> =>
+export const deleteReview = (id: string) =>
   callApi((api) => api.equipment.deleteReview({ params: { id } }));

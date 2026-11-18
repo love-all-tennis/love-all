@@ -5,7 +5,6 @@ import { Db } from "../Db";
 import { roundHomePoint } from "./geo";
 import { availability, metro, playSession, playSessionParticipant, profile, user } from "./schema";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const run = <A, E>(effect: Effect.Effect<A, E, Db>) =>
   effect.pipe(Effect.provide(Db.layer), Effect.runPromise);
 
@@ -19,6 +18,7 @@ const withPlayer = <A, E>(f: (userId: string) => Effect.Effect<A, E, Db>) =>
     const db = yield* Db;
     const id = `test_${crypto.randomUUID()}`;
     yield* db.insert(user).values({ id, name: "Sam", email: `${id}@example.com` });
+
     return yield* f(id).pipe(Effect.ensuring(Effect.orDie(db.delete(user).where(eq(user.id, id)))));
   });
 
@@ -27,6 +27,7 @@ describe.skipIf(!process.env.DATABASE_URL)("core tables", () => {
     const [detroit] = await run(
       withDb((db) => db.select().from(metro).where(eq(metro.slug, "detroit"))),
     );
+
     expect(detroit).toMatchObject({ name: "Detroit", radiusKm: 60 });
     expect(detroit?.centerPoint.x).toBeCloseTo(-83.0458);
     expect(detroit?.centerPoint.y).toBeCloseTo(42.3314);
@@ -37,10 +38,12 @@ describe.skipIf(!process.env.DATABASE_URL)("core tables", () => {
       withPlayer((userId) =>
         Effect.gen(function* () {
           const db = yield* Db;
+
           const [detroit] = yield* db
             .select({ id: metro.id })
             .from(metro)
             .where(eq(metro.slug, "detroit"));
+
           const [row] = yield* db
             .insert(profile)
             .values({
@@ -52,20 +55,24 @@ describe.skipIf(!process.env.DATABASE_URL)("core tables", () => {
               playsSingles: true,
             })
             .returning();
+
           yield* db.insert(availability).values({
             profileId: row!.id,
             weekday: 2,
             startTime: "18:00",
             endTime: "21:00",
           });
+
           const blocks = yield* db
             .select()
             .from(availability)
             .where(eq(availability.profileId, row!.id));
+
           return { row: row!, blocks };
         }),
       ),
     );
+
     expect(saved.row.homePoint).toEqual({ x: -83.14, y: 42.49 });
     expect(saved.blocks).toHaveLength(1);
   });
@@ -80,6 +87,7 @@ describe.skipIf(!process.env.DATABASE_URL)("core tables", () => {
         ).pipe(Effect.flip),
       ),
     );
+
     expect(error._tag).toBe("EffectDrizzleQueryError");
     expect(JSON.stringify(error.cause)).toContain("profile_home_point_rounded");
   });
@@ -93,6 +101,7 @@ describe.skipIf(!process.env.DATABASE_URL)("core tables", () => {
           .limit(1),
       ),
     );
+
     expect(row?.inRange).toBe(true);
   });
 
@@ -106,7 +115,6 @@ describe.skipIf(!process.env.DATABASE_URL)("core tables", () => {
       visibility: "open" as const,
     };
 
-    /** The constraint each bad row trips, or "ok" when the insert works. */
     const tryInsert = (overrides: Partial<typeof playSession.$inferInsert>) =>
       withPlayer((hostId) =>
         withDb((db) =>
@@ -149,24 +157,29 @@ describe.skipIf(!process.env.DATABASE_URL)("core tables", () => {
                 .insert(playSession)
                 .values({ ...base, hostId })
                 .returning({ id: playSession.id });
+
               const sessionId = session!.id;
               yield* db
                 .insert(playSessionParticipant)
                 .values({ sessionId, userId: hostId, role: "host", state: "accepted" });
+
               const duplicate = yield* db
                 .insert(playSessionParticipant)
                 .values({ sessionId, userId: hostId, state: "invited" })
                 .pipe(Effect.flip);
+
               const invitedHost = yield* db
                 .update(playSessionParticipant)
                 .set({ state: "invited" })
                 .where(eq(playSessionParticipant.sessionId, sessionId))
                 .pipe(Effect.flip);
+
               return [duplicate, invitedHost].map((e) => JSON.stringify(e.cause));
             }),
           ),
         ),
       );
+
       expect(errors[0]).toContain("play_session_participant_pkey");
       expect(errors[1]).toContain("play_session_participant_host_accepted");
     });

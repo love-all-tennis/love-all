@@ -15,6 +15,7 @@ export class Accounts extends Context.Service<
     Accounts,
     Effect.gen(function* () {
       const db = yield* Db;
+
       return Accounts.of({
         confirmAdult: (userId) =>
           db

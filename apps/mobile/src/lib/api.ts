@@ -8,14 +8,8 @@ import { apiUrl } from "./config";
 
 const isWeb = Platform.OS === "web";
 
-/**
- * The session cookie to send. Native builds keep it in the secure store and
- * attach it by hand. On the web the browser holds it (and the secure store
- * doesn't exist), so requests go out with `credentials: "include"` instead.
- */
 const sessionCookie = isWeb ? Effect.succeed("") : Effect.promise(() => authClient.getCookie());
 
-/** Typed client generated from the shared API definition. */
 const makeClient = HttpApiClient.make(Api, {
   transformClient: (client) =>
     client.pipe(
@@ -23,6 +17,7 @@ const makeClient = HttpApiClient.make(Api, {
         sessionCookie.pipe(
           Effect.map((cookie) => {
             const withUrl = HttpClientRequest.prependUrl(request, apiUrl);
+
             return cookie ? HttpClientRequest.setHeader(withUrl, "cookie", cookie) : withUrl;
           }),
         ),
@@ -39,7 +34,7 @@ export type ApiClient = Effect.Success<typeof makeClient>;
  * @example
  * const me = await callApi((api) => api.me.get())
  */
-export const callApi = <A, E>(request: (api: ApiClient) => Effect.Effect<A, E>): Promise<A> =>
+export const callApi = <A, E>(request: (api: ApiClient) => Effect.Effect<A, E>) =>
   makeClient.pipe(
     Effect.flatMap(request),
     Effect.provide(FetchHttpClient.layer),

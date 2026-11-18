@@ -1,4 +1,4 @@
-import type { Club, ClubReview, ClubReviewsPage, ClubSummary, NewClub } from "@love-all/domain";
+import type { NewClub } from "@love-all/domain";
 import { Effect } from "effect";
 
 import { callApi } from "@/lib/api";
@@ -15,9 +15,7 @@ const refuse = (refusal: string) => Effect.succeed<{ refusal: string }>({ refusa
 const GONE = "This club is no longer listed.";
 
 /** Clubs near my home point, or `needsHome` when I haven't set one. */
-export const fetchClubs = (
-  q: string,
-): Promise<{ readonly clubs: ReadonlyArray<ClubSummary> } | { readonly needsHome: true }> =>
+export const fetchClubs = (q: string) =>
   callApi((api) =>
     api.clubs.list({ query: q ? { q } : {} }).pipe(
       Effect.map((clubs) => ({ clubs })),
@@ -26,7 +24,7 @@ export const fetchClubs = (
   );
 
 /** The club, or null when it's gone. */
-export const fetchClub = (id: string): Promise<Club | null> =>
+export const fetchClub = (id: string) =>
   callApi((api) =>
     api.clubs
       .get({ params: { id } })
@@ -34,7 +32,7 @@ export const fetchClub = (id: string): Promise<Club | null> =>
   );
 
 /** A page of the club's reviews, or null when the club is gone. */
-export const fetchReviews = (id: string, cursor?: string): Promise<ClubReviewsPage | null> =>
+export const fetchReviews = (id: string, cursor?: string) =>
   callApi((api) =>
     api.clubs
       .listReviews({ params: { id }, query: cursor ? { cursor } : {} })
@@ -45,9 +43,7 @@ export const fetchReviews = (id: string, cursor?: string): Promise<ClubReviewsPa
  * Adds a club. When the same name is already pinned nearby, resolves to
  * `{ existing }` with that club, so the screen can offer to open it.
  */
-export const createClub = (
-  input: NewClub,
-): Promise<Outcome<Club> | { readonly existing: { readonly id: string; readonly name: string } }> =>
+export const createClub = (input: NewClub) =>
   callApi((api) =>
     api.clubs.create({ payload: input }).pipe(
       Effect.map((ok) => ({ ok })),
@@ -59,6 +55,7 @@ export const createClub = (
   );
 
 type ReviewListener = (clubId: string) => void;
+
 const reviewListeners = new Set<ReviewListener>();
 
 /**
@@ -66,9 +63,12 @@ const reviewListeners = new Set<ReviewListener>();
  * the review sheet closes (form sheets don't reliably refocus the screen
  * under them).
  */
-export const onReviewChanged = (listener: ReviewListener): (() => void) => {
+export const onReviewChanged = (listener: ReviewListener) => {
   reviewListeners.add(listener);
-  return () => reviewListeners.delete(listener);
+
+  return () => {
+    reviewListeners.delete(listener);
+  };
 };
 
 /** Tells an open club page to reload, after a change made somewhere else (blocking a reviewer, say). */
@@ -79,7 +79,7 @@ export const announce = (clubId: string) => {
 export const saveReview = (
   clubId: string,
   input: { readonly rating: number; readonly body: string | null },
-): Promise<Outcome<ClubReview>> =>
+) =>
   callApi((api) =>
     api.clubs.saveReview({ params: { id: clubId }, payload: input }).pipe(
       Effect.tap(() => Effect.sync(() => announce(clubId))),
@@ -88,7 +88,7 @@ export const saveReview = (
     ),
   );
 
-export const deleteReview = (clubId: string): Promise<Outcome<null>> =>
+export const deleteReview = (clubId: string) =>
   callApi((api) =>
     api.clubs.deleteReview({ params: { id: clubId } }).pipe(
       Effect.tap(() => Effect.sync(() => announce(clubId))),

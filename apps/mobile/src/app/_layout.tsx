@@ -32,7 +32,6 @@ export default function RootLayout() {
   const fontsReady = useAppFonts();
   const ready = !isPending && fontsReady;
 
-  // Keep the native splash screen up until the stored session and the fonts are ready.
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
@@ -42,7 +41,7 @@ export default function RootLayout() {
   const signedIn = session != null;
   const confirmedAdult = session?.user.adultConfirmedAt != null;
   const base = scheme === "dark" ? DarkTheme : DefaultTheme;
-  // Native headers, sheets and the navigation container take the app's palette.
+
   const theme = {
     ...base,
     colors: {
@@ -55,6 +54,7 @@ export default function RootLayout() {
       notification: palette.danger,
     },
   };
+
   const header: NativeStackNavigationOptions = {
     headerShown: true,
     headerShadowVisible: false,
@@ -67,6 +67,7 @@ export default function RootLayout() {
       color: palette.text,
     },
   };
+
   const sheet: NativeStackNavigationOptions = {
     ...header,
     presentation: "formSheet",

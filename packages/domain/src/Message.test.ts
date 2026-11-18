@@ -25,6 +25,7 @@ describe("NewReport for a message", () => {
       targetId: "9b2f6c1e-3d4a-4b5c-8d6e-7f8091a2b3c4",
       reason: "spam",
     };
+
     expect(Schema.decodeUnknownExit(NewReport)(report)._tag).toBe("Success");
   });
 });

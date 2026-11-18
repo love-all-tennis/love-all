@@ -67,6 +67,7 @@ describe("dayLabel", () => {
 describe("threadItems", () => {
   it("puts a day heading after the oldest message of each day", () => {
     const now = new Date(2026, 10, 17, 15, 0);
+
     const items = threadItems(
       [
         message("3", new Date(2026, 10, 17, 10, 0)),
@@ -75,6 +76,7 @@ describe("threadItems", () => {
       ],
       now,
     );
+
     expect(items.map((i) => (i.kind === "day" ? i.label : i.kind))).toEqual([
       "message",
       "message",

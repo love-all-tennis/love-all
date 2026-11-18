@@ -9,20 +9,24 @@ export const SetScore = Schema.Tuple([
   Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 99 })),
   Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 99 })),
 ]);
+
 export type SetScore = typeof SetScore.Type;
 
 export const ResultSide = Schema.Literals(["a", "b"]);
+
 export type ResultSide = typeof ResultSide.Type;
 
 /** Whether a finished set looks like a normal set to 6: 6-0 to 6-4, 7-5 or 7-6. */
-export const isRegularSet = ([a, b]: SetScore): boolean => {
+export const isRegularSet = ([a, b]: SetScore) => {
   const [won, lost] = a > b ? [a, b] : [b, a];
+
   return (won === 6 && lost <= 4) || (won === 7 && (lost === 5 || lost === 6));
 };
 
 /** Whether a set is a match tiebreak: first to 10, win by 2. */
-export const isMatchTiebreak = ([a, b]: SetScore): boolean => {
+export const isMatchTiebreak = ([a, b]: SetScore) => {
   const [won, lost] = a > b ? [a, b] : [b, a];
+
   return won === 10 ? lost <= 8 : won > 10 && won - lost === 2;
 };
 
@@ -31,40 +35,49 @@ export const isMatchTiebreak = ([a, b]: SetScore): boolean => {
  * One-set matches are fine. A match tiebreak can only be the deciding third
  * set. No sets after a side has won two.
  */
-export const checkMatchScore = (sets: ReadonlyArray<SetScore>): string | true => {
+export const checkMatchScore = (sets: ReadonlyArray<SetScore>) => {
   if (sets.length < 1 || sets.length > 3) return "A match has one to three sets";
   let a = 0;
   let b = 0;
+
   for (const [i, set] of sets.entries()) {
     if (a === 2 || b === 2) return "No sets after a side has won two";
     const deciding = i === 2 && a === 1 && b === 1;
+
     if (!isRegularSet(set) && !(deciding && isMatchTiebreak(set))) {
       return `Set ${i + 1} (${set[0]}-${set[1]}) isn't a finished set`;
     }
+
     if (set[0] > set[1]) a++;
     else b++;
   }
+
   if (a === b) return "The match has no winner";
+
   return true;
 };
 
 /** Which side won: the one that took more sets. Only call it on a valid score. */
-export const winningSide = (sets: ReadonlyArray<SetScore>): ResultSide => {
+export const winningSide = (sets: ReadonlyArray<SetScore>) => {
   const a = sets.filter(([x, y]) => x > y).length;
-  return a * 2 > sets.length ? "a" : "b";
+  const side: ResultSide = a * 2 > sets.length ? "a" : "b";
+
+  return side;
 };
 
 /** Valid set scores for a finished match, side a first in each set. */
 export const MatchScore = Schema.Array(SetScore).check(Schema.makeFilter(checkMatchScore));
+
 export type MatchScore = typeof MatchScore.Type;
 
-/** The players on one side: one for singles, two for doubles. */
 const Side = Schema.Array(PlayerId).check(Schema.isBetweenLength(1, 2));
 
 const distinctPlayers = Schema.makeFilter(
   (r: { readonly sideA: ReadonlyArray<string>; readonly sideB: ReadonlyArray<string> }) => {
     const all = [...r.sideA, ...r.sideB];
+
     if (r.sideA.length !== r.sideB.length) return "Both sides need the same number of players";
+
     return new Set(all).size === all.length || "A player can only be on one side, once";
   },
 );
@@ -79,16 +92,19 @@ export const NewSessionResult = Schema.Struct({
   sideB: Side,
   sets: MatchScore,
 }).check(distinctPlayers);
+
 export type NewSessionResult = typeof NewSessionResult.Type;
 
 /** `pending` until a player on the other side confirms or disputes it. */
 export const SessionResultStatus = Schema.Literals(["pending", "confirmed", "disputed"]);
+
 export type SessionResultStatus = typeof SessionResultStatus.Type;
 
 /** `POST /sessions/:id/result/confirm` body. */
 export const ResultResponse = Schema.Struct({
   response: Schema.Literals(["confirm", "dispute"]),
 });
+
 export type ResultResponse = typeof ResultResponse.Type;
 
 /** The score of a singles or doubles session, as recorded by one of its players. */
@@ -114,6 +130,7 @@ export const CommentBody = Schema.String.check(
 
 /** `POST /sessions/:id/comments` body. */
 export const NewSessionComment = Schema.Struct({ body: CommentBody });
+
 export type NewSessionComment = typeof NewSessionComment.Type;
 
 export const SessionCommentId = Schema.String.check(Schema.isUUID());

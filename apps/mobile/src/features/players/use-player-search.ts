@@ -14,14 +14,12 @@ export type PlayerSearch = {
   readonly refresh: () => void;
 };
 
-/** What came back for one set of filters (and one refresh). */
 type Results = {
   readonly filters: PlayerFilters;
   readonly generation: number;
   readonly status: "ready" | "needsHomePoint" | "error";
   readonly players: ReadonlyArray<PlayerSummary>;
   readonly cursor: string | null;
-  /** The cursor of the page being fetched now, if any. */
   readonly loadingCursor: string | null;
 };
 
@@ -30,7 +28,7 @@ type Results = {
  * filters starts over from the first page. Results are tagged with the
  * filters they answer, so a slow response for old filters is never shown.
  */
-export function usePlayerSearch(filters: PlayerFilters | null): PlayerSearch {
+export function usePlayerSearch(filters: PlayerFilters | null) {
   const [generation, setGeneration] = useState(0);
   const [results, setResults] = useState<Results | null>(null);
 
@@ -53,6 +51,7 @@ export function usePlayerSearch(filters: PlayerFilters | null): PlayerSearch {
         );
       })
       .catch(() => live && setResults({ ...base, status: "error", players: [], cursor: null }));
+
     return () => {
       live = false;
     };
@@ -64,16 +63,19 @@ export function usePlayerSearch(filters: PlayerFilters | null): PlayerSearch {
   const loadMore = useCallback(() => {
     if (!current || current.status !== "ready" || !current.cursor || current.loadingCursor) return;
     const cursor = current.cursor;
+
     const isSame = (r: Results | null): r is Results =>
       r !== null && r.filters === current.filters && r.generation === current.generation;
+
     setResults((r) => (isSame(r) ? { ...r, loadingCursor: cursor } : r));
     searchPlayers(current.filters, cursor)
       .then((result) => {
         setResults((r) => {
           if (!isSame(r) || r.loadingCursor !== cursor) return r;
+
           if (result.kind !== "page") return { ...r, loadingCursor: null };
-          // A player can move between pages if they change their profile meanwhile.
           const seen = new Set(r.players.map((p) => p.id));
+
           return {
             ...r,
             players: [...r.players, ...result.page.items.filter((p) => !seen.has(p.id))],
@@ -82,7 +84,6 @@ export function usePlayerSearch(filters: PlayerFilters | null): PlayerSearch {
           };
         });
       })
-      // A failed next page leaves the list as it was; scrolling again retries.
       .catch(() =>
         setResults((r) =>
           isSame(r) && r.loadingCursor === cursor ? { ...r, loadingCursor: null } : r,

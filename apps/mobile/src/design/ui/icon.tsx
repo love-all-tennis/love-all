@@ -21,6 +21,7 @@ export type IconProps = {
  */
 export function Icon({ ios, md, size = "md", color = "textMuted" }: IconProps) {
   const palette = useColors();
+
   return (
     <SymbolView
       name={{ ios, android: md, web: md }}

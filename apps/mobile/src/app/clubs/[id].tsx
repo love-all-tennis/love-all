@@ -52,14 +52,13 @@ export default function ClubScreen() {
             : { status: "missing" },
         );
       })
-      // Keep what's up after a review changes; only show the error when there's nothing to show.
       .catch(() => live && setState((s) => (s.status === "ready" ? s : { status: "error" })));
+
     return () => {
       live = false;
     };
   }, [id, generation]);
 
-  // Saving or deleting my review in the sheet reloads the page underneath.
   useEffect(() => onReviewChanged((clubId) => clubId === id && setGeneration((g) => g + 1)), [id]);
 
   const retry = () => {
@@ -111,6 +110,7 @@ export default function ClubScreen() {
   const mine = club.myReview;
   const others = state.reviews.filter((review) => !review.mine);
   const distance = distanceLabel(club.distanceKm);
+
   const openReview = () =>
     router.push({ pathname: "/clubs/review", params: { id: club.id, name: club.name } });
 

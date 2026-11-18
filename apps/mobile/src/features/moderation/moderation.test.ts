@@ -25,6 +25,7 @@ const fields: Fields = {
   createdAt: new Date(),
   resolvedAt: null,
 };
+
 const base = new ModerationReport(fields);
 
 const with_ = (patch: Partial<Fields>) => new ModerationReport({ ...fields, ...patch });
@@ -50,6 +51,7 @@ describe("reportActions", () => {
       resolution: "content_hidden",
       subject: { id: "u_alex", displayName: "Alex", suspended: true },
     });
+
     expect(reportActions(report)).toMatchObject({
       hide: false,
       unhide: true,
@@ -78,6 +80,7 @@ describe("reportActions", () => {
       threadId: null,
       clubId: "3b9b6d5e-2f4c-4c55-9d8a-0a8f1d1c2b3a",
     } as const;
+
     expect(reportActions(with_(review))).toMatchObject({
       hide: true,
       openThread: false,
@@ -96,6 +99,7 @@ describe("reportActions", () => {
       threadId: null,
       equipmentId: "4b9b6d5e-2f4c-4c55-9d8a-0a8f1d1c2b3a",
     } as const;
+
     expect(reportActions(with_(review))).toMatchObject({
       hide: true,
       openThread: false,

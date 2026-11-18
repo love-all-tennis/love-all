@@ -17,13 +17,15 @@ import {
 import { sendJoinChange } from "./joining-api";
 
 /** Asks before cancelling, since players can't undo it. Named for the action, never "OK". */
-export const confirmCancel = (session: JoinFacts, onConfirm: () => void): void => {
+export const confirmCancel = (session: JoinFacts, onConfirm: () => void) => {
   const { title, body } = cancelPrompt(session);
+
   if (Platform.OS === "web") {
-    // react-native-web has no Alert.
     if (globalThis.confirm?.(`${title}\n\n${body}`)) onConfirm();
+
     return;
   }
+
   Alert.alert(title, body, [
     { text: "Keep session", style: "cancel" },
     { text: "Cancel session", style: "destructive", onPress: onConfirm },
@@ -57,7 +59,7 @@ export const useJoinChanges = ({
   /** Shows a session in place, with no request. */
   replace: (next: Session) => void;
   reload: () => void;
-}): JoinChanges => {
+}) => {
   const [pending, setPending] = useState<PendingChange>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const running = useRef(false);
@@ -68,13 +70,17 @@ export const useJoinChanges = ({
     const before = session;
     setPending(change);
     setNotice(null);
+
     if (myId && isOptimistic(change)) replace(applyChange(session, change, myId));
+
     try {
       const refusal = await sendJoinChange(session.id, change);
+
       if (refusal) {
         replace(before);
         setNotice(refusal);
       }
+
       reload();
     } catch {
       replace(before);
@@ -85,7 +91,7 @@ export const useJoinChanges = ({
     }
   };
 
-  return { pending, notice, run: (change) => void run(change) };
+  return { pending, notice, run: (change) => void run(change) } satisfies JoinChanges;
 };
 
 const isPending = (pending: PendingChange, kind: JoinChange["kind"], userId?: string) =>
@@ -109,6 +115,7 @@ export function SessionJoinActions({
   const action = viewerAction(session, now);
   const busy = pending !== null;
   const host = session.host.displayName;
+
   const body = (() => {
     switch (action.kind) {
       case "answerInvite":
@@ -185,6 +192,7 @@ export function SessionJoinActions({
   })();
 
   if (!body && !notice) return null;
+
   return (
     <View style={styles.actions}>
       <ErrorBanner>{notice}</ErrorBanner>
@@ -226,8 +234,10 @@ export function JoinRequests({
 }) {
   if (viewerAction(session, now).kind !== "host") return null;
   const requests = pendingRequests(session);
+
   if (requests.length === 0) return null;
   const full = session.acceptedCount >= session.spots;
+
   return (
     <Section
       label="Asked to join"
@@ -265,6 +275,7 @@ function RequestRow({
   onOpenPlayer: (id: string) => void;
 }) {
   const busy = pending !== null;
+
   return (
     <Card style={styles.request}>
       <View style={styles.row}>

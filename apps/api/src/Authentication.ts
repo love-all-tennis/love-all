@@ -17,17 +17,23 @@ export const AuthenticationLive = Layer.effect(
   Authentication,
   Effect.gen(function* () {
     const auth = yield* BetterAuth;
+
     return Authentication.of(
       Effect.fn("Authentication")(function* (httpEffect) {
         const request = yield* HttpServerRequest.HttpServerRequest;
+
         const session = yield* Effect.tryPromise(() =>
+          // WARNING: Node gives single-valued strings for every header Better Auth reads here.
           auth.api.getSession({ headers: new Headers(request.headers as Record<string, string>) }),
         ).pipe(Effect.orDie);
+
         if (!session) {
           return yield* new Unauthorized({ message: "Sign in to continue" });
         }
+
         const { id, name, email, role } = session.user;
         const user = new SessionUser({ id, name, email, role: isRole(role) ? role : "player" });
+
         return yield* Effect.provideService(httpEffect, CurrentUser, user);
       }),
     );

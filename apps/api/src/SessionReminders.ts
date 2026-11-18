@@ -8,7 +8,6 @@ import { messages } from "./notifications/messages";
 /** How long before a session starts its players get the "starting soon" push. */
 export const REMINDER_LEAD_MINUTES = 60;
 
-/** How often the API looks for sessions that are due a reminder. */
 const CHECK_EVERY = "1 minute";
 
 /**
@@ -57,12 +56,14 @@ export class SessionReminders extends Context.Service<
                 and ${playSessionParticipant.state} = 'accepted'
             )`,
           });
+
         for (const session of due) {
           yield* notifications.notify({
             to: session.players,
             ...messages.reminder(session),
           });
         }
+
         return due.length;
       }).pipe(Effect.orDie, Effect.withSpan("SessionReminders.sendDue"));
 

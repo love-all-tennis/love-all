@@ -26,6 +26,7 @@ describe("auth config", () => {
       APPLE_CLIENT_SECRET: "apple-jwt",
       APPLE_APP_BUNDLE_IDENTIFIER: "app.loveall",
     });
+
     expect(providers).toEqual({
       google: {
         clientIds: ["web.apps.googleusercontent.com", "ios.apps.googleusercontent.com"],

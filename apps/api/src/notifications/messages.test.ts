@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { messages, truncate, whenLabel } from "./messages";
 
-// 9:00 AM in Detroit (EST, UTC-5) on Saturday, Nov 21 2026.
 const session = {
   id: "s1",
   kind: "singles" as const,
@@ -33,6 +32,7 @@ describe("notification messages", () => {
       "Jo",
       `Try a  multifilament.\n${"x".repeat(200)}`,
     );
+
     expect(notice.title).toBe('Jo replied to "Best strings for a 3.5?"');
     expect(notice.body.startsWith("Try a multifilament. x")).toBe(true);
     expect(notice.body).toHaveLength(140);

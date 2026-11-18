@@ -1,3 +1,4 @@
+import { Match } from "effect";
 import type { Session, SessionComment, SessionResult, SessionSummary } from "@love-all/domain";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -27,13 +28,13 @@ import { canRecordScore, pastScoreLine, resultView } from "./score";
 
 const NETWORK = "Check your connection and try again.";
 
-/** Asks before something that can't be undone, on native and web. */
 const confirmDestructive = (title: string, message: string, action: string, run: () => void) => {
   if (Platform.OS === "web") {
-    // react-native-web has no Alert.
     if (globalThis.confirm?.(`${title}\n\n${message}`)) run();
+
     return;
   }
+
   Alert.alert(title, message, [
     { text: "Cancel", style: "cancel" },
     { text: action, style: "destructive", onPress: run },
@@ -71,7 +72,6 @@ export function SessionComments({
   const [posting, setPosting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  // "5 min ago" is measured from when the section opened; a new comment reads "Just now".
   const [now] = useState(() => new Date());
 
   useEffect(() => {
@@ -81,6 +81,7 @@ export function SessionComments({
         (page) => live && setState({ status: "ready", items: page.items, cursor: page.nextCursor }),
       )
       .catch(() => live && setState({ status: "error" }));
+
     return () => {
       live = false;
     };
@@ -89,6 +90,7 @@ export function SessionComments({
   const loadMore = async () => {
     if (state.status !== "ready" || !state.cursor) return;
     setLoadingMore(true);
+
     try {
       const page = await fetchComments(sessionId, state.cursor);
       setState((s) =>
@@ -107,15 +109,20 @@ export function SessionComments({
 
   const send = async () => {
     setTried(true);
+
     if (commentError(draft)) return;
     setPosting(true);
     setProblem(null);
+
     try {
       const outcome = await postComment(sessionId, draft.trim());
+
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
+
         return;
       }
+
       setDraft("");
       setTried(false);
       setState((s) =>
@@ -156,48 +163,51 @@ export function SessionComments({
       <Text variant="heading" accessibilityRole="header">
         Comments
       </Text>
-      {state.status === "loading" ? (
-        <Text color="textMuted">Loading comments…</Text>
-      ) : state.status === "error" ? (
-        <View style={styles.group}>
-          <Text color="textMuted">Couldn't load comments. {NETWORK}</Text>
-          <Button
-            label="Try again"
-            variant="secondary"
-            size="small"
-            onPress={() => {
-              setState({ status: "loading" });
-              setGeneration((g) => g + 1);
-            }}
-          />
-        </View>
-      ) : (
-        <View style={styles.group}>
-          {state.items.length === 0 && (
-            <Text color="textMuted">
-              No comments yet. Share the court number or who's bringing balls.
-            </Text>
-          )}
-          {state.items.map((comment) => (
-            <CommentRow
-              key={comment.id}
-              comment={comment}
-              mine={comment.author.id === meId}
-              when={timeAgo(comment.createdAt, now)}
-              deleting={deleting === comment.id}
-              onDelete={() => remove(comment)}
-            />
-          ))}
-          {state.cursor && (
+      {Match.value(state).pipe(
+        Match.when({ status: "loading" }, () => <Text color="textMuted">Loading comments…</Text>),
+        Match.when({ status: "error" }, () => (
+          <View style={styles.group}>
+            <Text color="textMuted">Couldn't load comments. {NETWORK}</Text>
             <Button
-              label="Show more comments"
-              variant="quiet"
+              label="Try again"
+              variant="secondary"
               size="small"
-              loading={loadingMore}
-              onPress={() => void loadMore()}
+              onPress={() => {
+                setState({ status: "loading" });
+                setGeneration((g) => g + 1);
+              }}
             />
-          )}
-        </View>
+          </View>
+        )),
+        Match.when({ status: "ready" }, (state) => (
+          <View style={styles.group}>
+            {state.items.length === 0 && (
+              <Text color="textMuted">
+                No comments yet. Share the court number or who's bringing balls.
+              </Text>
+            )}
+            {state.items.map((comment) => (
+              <CommentRow
+                key={comment.id}
+                comment={comment}
+                mine={comment.author.id === meId}
+                when={timeAgo(comment.createdAt, now)}
+                deleting={deleting === comment.id}
+                onDelete={() => remove(comment)}
+              />
+            ))}
+            {state.cursor && (
+              <Button
+                label="Show more comments"
+                variant="quiet"
+                size="small"
+                loading={loadingMore}
+                onPress={() => void loadMore()}
+              />
+            )}
+          </View>
+        )),
+        Match.exhaustive,
       )}
       <ErrorBanner>{problem}</ErrorBanner>
       {!closed && (
@@ -274,16 +284,20 @@ type ResultState =
 /** The session's score, reloaded whenever the screen comes back into view. */
 export function useSessionResult(sessionId: string, enabled: boolean) {
   const [state, setState] = useState<ResultState>({ status: "loading" });
+
   const reload = useCallback(() => {
     if (!enabled) return () => {};
+
     let live = true;
     fetchResult(sessionId)
       .then((result) => live && setState({ status: "ready", result }))
       .catch(() => live && setState((s) => (s.status === "ready" ? s : { status: "error" })));
+
     return () => {
       live = false;
     };
   }, [sessionId, enabled]);
+
   useFocusEffect(reload);
   useEffect(
     () =>
@@ -292,6 +306,7 @@ export function useSessionResult(sessionId: string, enabled: boolean) {
       }),
     [sessionId],
   );
+
   return { state, reload };
 }
 
@@ -312,14 +327,15 @@ export function SessionScore({
   onRecord: () => void;
 }) {
   const enabled = session.kind !== "hitting" && session.me?.state === "accepted";
-  // A confirm or dispute lands through onResultChanged.
   const { state, reload } = useSessionResult(session.id, enabled);
   const [busy, setBusy] = useState<"confirm" | "dispute" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
   if (!enabled) return null;
   const recordable = canRecordScore(session, now);
+
   if (state.status === "loading") return null;
+
   if (state.status === "error") {
     return (
       <View style={styles.section}>
@@ -333,8 +349,10 @@ export function SessionScore({
   }
 
   const result = state.result;
+
   if (!result) {
     if (!recordable) return null;
+
     return (
       <View style={styles.section}>
         <Text variant="heading" accessibilityRole="header">
@@ -353,11 +371,12 @@ export function SessionScore({
   const respond = async (response: "confirm" | "dispute") => {
     setBusy(response);
     setProblem(null);
+
     try {
       const outcome = await respondToResult(session.id, response);
+
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
-        // It changed under me: show what's there now.
         reload();
       }
     } catch {
@@ -448,11 +467,15 @@ export function PastScore({ session, meId }: { session: SessionSummary; meId: st
     session.kind !== "hitting" &&
     session.status !== "cancelled" &&
     session.me?.state === "accepted";
+
   const { state } = useSessionResult(session.id, enabled);
+
   if (!enabled || state.status !== "ready") return null;
   const line = pastScoreLine(state.result, meId);
+
   if (!line) return null;
   const toConfirm = state.result?.status === "pending";
+
   return toConfirm ? (
     <View style={styles.pastTag}>
       <Tag label={line} tone="clay" />

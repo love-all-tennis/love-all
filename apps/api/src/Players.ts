@@ -43,15 +43,10 @@ export class Players extends Context.Service<
       const geographyOf = (point: LngLat) =>
         sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)::geography`;
 
-      /** Metres from `point` to the profile's home point, on the spheroid. */
       const distanceFrom = (point: LngLat) =>
         sql`ST_Distance(${profile.homePoint}::geography, ${geographyOf(point)})`;
 
-      /**
-       * Who the viewer may see. Every query about other players goes through
-       * this list, so visibility rules (such as blocks) are added here once.
-       */
-      const visibleTo = (viewer: SessionUser): Array<SQL> => [
+      const visibleTo = (viewer: SessionUser) => [
         notBlocked(viewer.id, profile.userId),
         notSuspended(profile.userId),
       ];
@@ -78,11 +73,13 @@ export class Players extends Context.Service<
       const search = (viewer: SessionUser, query: PlayersQuery) =>
         Effect.gen(function* () {
           const me = yield* viewerHome(viewer).pipe(Effect.orDie);
+
           if (!me?.homePoint) {
             return yield* new HomePointRequired({
               message: "Set your home location to find players near you",
             });
           }
+
           const cursor =
             query.cursor === undefined
               ? undefined
@@ -99,6 +96,7 @@ export class Players extends Context.Service<
           const radiusKm = query.radiusKm ?? me.searchRadiusKm;
           const limit = query.limit ?? PLAYERS_PAGE_DEFAULT;
           const distance = distanceFrom(me.homePoint).mapWith(Number);
+
           const conditions: Array<SQL | undefined> = [
             ...visibleTo(viewer),
             ne(profile.userId, viewer.id),
@@ -113,7 +111,6 @@ export class Players extends Context.Service<
               sql`(${distance}, ${profile.userId}) > (${cursor.distanceM}::float8, ${cursor.id})`,
           ];
 
-          // One extra row tells us whether there is another page.
           const rows = yield* db
             .select({ ...summaryColumns, distanceM: distance })
             .from(profile)
@@ -125,6 +122,7 @@ export class Players extends Context.Service<
 
           const page = rows.slice(0, limit);
           const last = page.at(-1);
+
           return new PlayersPage({
             items: page.map(
               ({ distanceM, ...row }) =>
@@ -140,22 +138,24 @@ export class Players extends Context.Service<
       const get = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           const me = yield* viewerHome(viewer).pipe(Effect.orDie);
+
           const [row] = yield* db
             .select({
               ...summaryColumns,
               profileId: profile.id,
               bio: profile.bio,
-              // Null when either of us has no home point.
               distanceM: (me?.homePoint ? distanceFrom(me.homePoint) : sql`null::float8`).mapWith(
-                (value): number | null => (value === null ? null : Number(value)),
+                (value) => (value === null ? null : Number(value)),
               ),
             })
             .from(profile)
             .leftJoin(metro, eq(metro.id, profile.metroId))
             .where(and(eq(profile.userId, id), ...visibleTo(viewer)))
             .pipe(Effect.orDie);
+
           if (!row) return yield* new PlayerNotFound({ id });
           const { profileId, distanceM, ...rest } = row;
+
           return new PlayerProfile({
             ...rest,
             availability: yield* loadAvailability(db, profileId).pipe(Effect.orDie),

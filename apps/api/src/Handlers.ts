@@ -23,8 +23,8 @@ export const SystemHandlers = HttpApiBuilder.group(
   "system",
   Effect.fn(function* (handlers) {
     const db = yield* Db;
+
     return handlers.handle("health", () =>
-      // A round trip to Postgres, so the host's health check covers the database too.
       db.execute(sql`select 1`).pipe(Effect.as({ status: "ok" as const }), Effect.orDie),
     );
   }),
@@ -36,6 +36,7 @@ export const MeHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const accounts = yield* Accounts;
     const profiles = yield* Profiles;
+
     return handlers
       .handle("get", () => Effect.flatMap(CurrentUser, profiles.get))
       .handle("update", ({ payload }) =>
@@ -55,6 +56,7 @@ export const FollowsHandlers = HttpApiBuilder.group(
   "follows",
   Effect.fn(function* (handlers) {
     const follows = yield* Follows;
+
     return handlers
       .handle("list", () => Effect.flatMap(CurrentUser, follows.list))
       .handle("follow", ({ params }) =>
@@ -71,6 +73,7 @@ export const PlayersHandlers = HttpApiBuilder.group(
   "players",
   Effect.fn(function* (handlers) {
     const players = yield* Players;
+
     return handlers
       .handle("search", ({ query }) =>
         Effect.flatMap(CurrentUser, (viewer) => players.search(viewer, query)),
@@ -86,6 +89,7 @@ export const SafetyHandlers = HttpApiBuilder.group(
   "safety",
   Effect.fn(function* (handlers) {
     const safety = yield* Safety;
+
     return handlers
       .handle("block", ({ params }) =>
         Effect.flatMap(CurrentUser, (user) => safety.block(user, params.id)),
@@ -106,6 +110,7 @@ export const SessionsHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const sessions = yield* Sessions;
     const joins = yield* SessionJoins;
+
     return handlers
       .handle("create", ({ payload }) =>
         Effect.flatMap(CurrentUser, (viewer) => sessions.create(viewer, payload)),
@@ -145,6 +150,7 @@ export const SessionActivityHandlers = HttpApiBuilder.group(
   "sessionActivity",
   Effect.fn(function* (handlers) {
     const activity = yield* SessionActivity;
+
     return handlers
       .handle("listComments", ({ params, query }) =>
         Effect.flatMap(CurrentUser, (user) => activity.listComments(user, params.id, query)),
@@ -172,6 +178,7 @@ export const ForumHandlers = HttpApiBuilder.group(
   "forum",
   Effect.fn(function* (handlers) {
     const forum = yield* Forum;
+
     return handlers
       .handle("listCategories", () => Effect.flatMap(CurrentUser, forum.listCategories))
       .handle("listThreads", ({ query }) =>
@@ -212,6 +219,7 @@ export const ModerationHandlers = HttpApiBuilder.group(
   "moderation",
   Effect.fn(function* (handlers) {
     const moderation = yield* Moderation;
+
     return handlers
       .handle("listReports", ({ query }) =>
         Effect.flatMap(CurrentUser, (user) => moderation.listReports(user, query)),
@@ -241,6 +249,7 @@ export const DevicesHandlers = HttpApiBuilder.group(
   "devices",
   Effect.fn(function* (handlers) {
     const notifications = yield* Notifications;
+
     return handlers
       .handle("register", ({ payload }) =>
         Effect.flatMap(CurrentUser, (user) => notifications.register(user, payload)),
@@ -256,6 +265,7 @@ export const MessagesHandlers = HttpApiBuilder.group(
   "messages",
   Effect.fn(function* (handlers) {
     const messages = yield* Messages;
+
     return handlers
       .handle("listConversations", ({ query }) =>
         Effect.flatMap(CurrentUser, (user) => messages.listConversations(user, query)),
@@ -280,6 +290,7 @@ export const EquipmentHandlers = HttpApiBuilder.group(
   "equipment",
   Effect.fn(function* (handlers) {
     const gear = yield* Equipment;
+
     return handlers
       .handle("list", ({ query }) => Effect.flatMap(CurrentUser, (user) => gear.list(user, query)))
       .handle("create", ({ payload }) =>
@@ -305,6 +316,7 @@ export const ClubsHandlers = HttpApiBuilder.group(
   "clubs",
   Effect.fn(function* (handlers) {
     const clubs = yield* Clubs;
+
     return handlers
       .handle("list", ({ query }) => Effect.flatMap(CurrentUser, (user) => clubs.list(user, query)))
       .handle("create", ({ payload }) =>

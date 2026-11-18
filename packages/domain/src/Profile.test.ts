@@ -40,6 +40,7 @@ describe("Availability", () => {
       { weekday: 2, startTime: "18:00", endTime: "21:00" },
       { weekday: 7, startTime: "09:00", endTime: "12:00" },
     ];
+
     expect(decodeAvailability(blocks)).toEqual(blocks);
   });
 
@@ -85,6 +86,7 @@ describe("Availability", () => {
       startTime: `${String(Math.floor(i / 7)).padStart(2, "0")}:00`,
       endTime: `${String(Math.floor(i / 7)).padStart(2, "0")}:30`,
     }));
+
     expect(() => decodeAvailability(blocks)).toThrow();
   });
 });

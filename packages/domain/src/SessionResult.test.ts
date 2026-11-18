@@ -9,8 +9,10 @@ import {
 } from "./SessionResult";
 
 const score = Schema.decodeUnknownExit(MatchScore);
-const ok = (sets: unknown) => expect(score(sets)._tag).toBe("Success");
-const bad = (sets: unknown) => expect(score(sets)._tag).toBe("Failure");
+const ok = (sets: ReadonlyArray<ReadonlyArray<number>>) => expect(score(sets)._tag).toBe("Success");
+
+const bad = (sets: ReadonlyArray<ReadonlyArray<number>>) =>
+  expect(score(sets)._tag).toBe("Failure");
 
 describe("MatchScore", () => {
   it("accepts normal two- and three-set matches", () => {
@@ -127,6 +129,7 @@ describe("winningSide", () => {
 
 describe("NewSessionResult", () => {
   const decode = Schema.decodeUnknownExit(NewSessionResult);
+
   const sets = [
     [6, 4],
     [6, 3],

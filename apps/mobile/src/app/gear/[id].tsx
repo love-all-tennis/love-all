@@ -10,7 +10,6 @@ import { useNow } from "@/features/sessions/use-sessions";
 
 const openPlayer = (id: string) => router.push({ pathname: "/players/[id]", params: { id } });
 
-/** Reports the review itself, so moderators see what was written. */
 const reportReview = (review: EquipmentReview) =>
   router.push({
     pathname: "/gear/report",
@@ -32,6 +31,7 @@ export default function GearItemScreen() {
       </Screen>
     );
   }
+
   if (state.status === "missing" || state.status === "error") {
     return (
       <Screen edges={["left", "right", "bottom"]}>
@@ -53,6 +53,7 @@ export default function GearItemScreen() {
   }
 
   const { item, reviews } = state;
+
   return (
     <Screen scroll={false} edges={["left", "right", "bottom"]}>
       <Stack.Screen options={{ title: "" }} />

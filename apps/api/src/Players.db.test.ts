@@ -7,23 +7,11 @@ import { user } from "./db/schema";
 import { Players } from "./Players";
 import { Profiles } from "./Profiles";
 
-/**
- * Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set.
- *
- * Players live near Dunedin, New Zealand, far from the Detroit points other
- * test files use, so tests running in parallel never show up in each other's
- * searches.
- */
 const TestLayer = Layer.mergeAll(Players.layer, Profiles.layer).pipe(Layer.provideMerge(Db.layer));
 
 const HOME = { lat: -45.87, lng: 170.5 };
-/** About 1.1 km per 0.01 degrees of latitude. */
 const north = (hundredths: number) => ({ lat: HOME.lat + hundredths / 100, lng: HOME.lng });
 
-/**
- * Creates throwaway players with the given profiles, runs `f`, then deletes
- * them. The first player is the one searching.
- */
 const withPlayers = <A, E>(
   patches: ReadonlyArray<ProfilePatch | null>,
   f: (
@@ -37,17 +25,19 @@ const withPlayers = <A, E>(
     const profiles = yield* Profiles;
     const service = yield* Players;
     const run = crypto.randomUUID().slice(0, 8);
+
     const people = patches.map(
       (_, i) =>
         new SessionUser({
-          // Zero-padded so ids sort in creation order, which the tie-break relies on.
           id: `test_${run}_${String(i).padStart(2, "0")}`,
           name: `Player ${i}`,
           email: `test_${run}_${i}@example.com`,
           role: "player",
         }),
     );
+
     yield* db.insert(user).values(people.map(({ id, name, email }) => ({ id, name, email })));
+
     const cleanup = Effect.orDie(
       db.delete(user).where(
         inArray(
@@ -56,10 +46,12 @@ const withPlayers = <A, E>(
         ),
       ),
     );
+
     return yield* Effect.gen(function* () {
       for (const [i, patch] of patches.entries()) {
         if (patch) yield* profiles.update(people[i]!, patch);
       }
+
       return yield* f(people, service, profiles);
     }).pipe(Effect.ensuring(cleanup));
   }).pipe(Effect.provide(TestLayer), Effect.runPromise);
@@ -69,14 +61,15 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
     const result = await withPlayers(
       [
         { homePoint: HOME, searchRadiusKm: 10 },
-        { displayName: "Far", homePoint: north(50) }, // ~56 km
+        { displayName: "Far", homePoint: north(50) },
         { displayName: "Near", homePoint: north(1), ntrp: "3.5", playsSingles: true },
-        { displayName: "Mid", homePoint: north(5) }, // ~5.6 km
-        { displayName: "Nowhere" }, // no home point
-        null, // no profile at all
+        { displayName: "Mid", homePoint: north(5) },
+        { displayName: "Nowhere" },
+        null,
       ],
       ([me], players) => players.search(me!, {}),
     );
+
     expect(result.items.map((p) => [p.displayName, p.distanceKm])).toEqual([
       ["Near", 1],
       ["Mid", 6],
@@ -96,6 +89,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
       [{ homePoint: HOME, searchRadiusKm: 1 }, { homePoint: north(5) }, { homePoint: north(50) }],
       ([me], players) => players.search(me!, { radiusKm: 20 }),
     );
+
     expect(result.items).toHaveLength(1);
   });
 
@@ -117,8 +111,10 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
           both: players.search(me!, { levelMax: "3.5", plays: "doubles" }),
         }),
     );
+
     const names = (page: { items: ReadonlyArray<{ displayName: string }> }) =>
       page.items.map((p) => p.displayName);
+
     expect(names(result.range)).toEqual(["3.5", "4.0"]);
     expect(names(result.atLeast)).toEqual(["4.0", "4.5"]);
     expect(names(result.doubles)).toEqual(["3.0", "3.5", "4.5", "unrated"]);
@@ -139,14 +135,17 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
         Effect.gen(function* () {
           const pages = [];
           let cursor: string | undefined;
+
           do {
             const page = yield* players.search(me!, cursor ? { limit: 2, cursor } : { limit: 2 });
             pages.push(page.items.map((p) => p.displayName));
             cursor = page.nextCursor ?? undefined;
           } while (cursor);
+
           return pages;
         }),
     );
+
     expect(result).toEqual([["b", "c"], ["d", "a"], ["e"]]);
   });
 
@@ -159,6 +158,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
           players.search(without!, {}).pipe(Effect.flip),
         ]),
     );
+
     expect(errors.map((e) => e._tag)).toEqual(["HomePointRequired", "HomePointRequired"]);
   });
 
@@ -166,6 +166,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
     const error = await withPlayers([{ homePoint: HOME }], ([me], players) =>
       players.search(me!, { cursor: "garbage" }).pipe(Effect.flip),
     );
+
     expect(error._tag).toBe("InvalidCursor");
   });
 });
@@ -180,9 +181,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.get", () => {
             { weekday: 6, startTime: "09:00", endTime: "11:00" },
             { weekday: 2, startTime: "18:00", endTime: "20:00" },
           ]);
+
           return yield* players.get(me!, alex!.id);
         }),
     );
+
     expect(result).toMatchObject({
       displayName: "Alex",
       bio: "Loves to rally",
@@ -201,6 +204,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.get", () => {
       ([me, placed, unplaced], players) =>
         Effect.all([players.get(me!, placed!.id), players.get(placed!, unplaced!.id)]),
     );
+
     expect(result.map((p) => p.distanceKm)).toEqual([null, null]);
   });
 
@@ -211,6 +215,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.get", () => {
         players.get(me!, noProfile!.id).pipe(Effect.flip),
       ]),
     );
+
     expect(errors.map((e) => e._tag)).toEqual(["PlayerNotFound", "PlayerNotFound"]);
   });
 });

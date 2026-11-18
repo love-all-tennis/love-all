@@ -4,8 +4,9 @@ import type {
   SessionPatch,
   SessionScope,
   SessionsPage,
+  SessionsQuery,
 } from "@love-all/domain";
-import { Effect } from "effect";
+import { Effect, type Types } from "effect";
 
 import { callApi } from "@/lib/api";
 
@@ -17,18 +18,23 @@ export type SessionsResult =
   | { readonly kind: "page"; readonly page: SessionsPage }
   | { readonly kind: "needsHomePoint" };
 
-export const listSessions = (scope: SessionScope, cursor?: string): Promise<SessionsResult> =>
-  callApi((api) =>
-    api.sessions.list({ query: { scope, ...(cursor ? { cursor } : {}) } }).pipe(
-      Effect.map((page): SessionsResult => ({ kind: "page", page })),
+export const listSessions = (scope: SessionScope, cursor?: string) => {
+  const query: Types.Mutable<SessionsQuery> = { scope };
+
+  if (cursor) query.cursor = cursor;
+
+  return callApi((api) =>
+    api.sessions.list({ query }).pipe(
+      Effect.map((page) => ({ kind: "page", page }) satisfies SessionsResult),
       Effect.catchTag("HomePointRequired", () =>
         Effect.succeed<SessionsResult>({ kind: "needsHomePoint" }),
       ),
     ),
   );
+};
 
 /** A session with its players, or null when it doesn't exist or I can't see it. */
-export const fetchSession = (id: string): Promise<Session | null> =>
+export const fetchSession = (id: string) =>
   callApi((api) =>
     api.sessions
       .get({ params: { id } })
@@ -40,10 +46,10 @@ export type SaveResult =
   | { readonly kind: "saved"; readonly session: Session }
   | { readonly kind: "refused"; readonly message: string };
 
-const saved = (session: Session): SaveResult => ({ kind: "saved", session });
+const saved = (session: Session) => ({ kind: "saved", session }) satisfies SaveResult;
 const refused = (message: string) => Effect.succeed<SaveResult>({ kind: "refused", message });
 
-export const createSession = (session: NewSession): Promise<SaveResult> =>
+export const createSession = (session: NewSession) =>
   callApi((api) =>
     api.sessions.create({ payload: session }).pipe(
       Effect.map(saved),
@@ -54,7 +60,7 @@ export const createSession = (session: NewSession): Promise<SaveResult> =>
     ),
   );
 
-export const updateSession = (id: string, patch: SessionPatch): Promise<SaveResult> =>
+export const updateSession = (id: string, patch: SessionPatch) =>
   callApi((api) =>
     api.sessions.update({ params: { id }, payload: patch }).pipe(
       Effect.map(saved),
@@ -67,7 +73,7 @@ export const updateSession = (id: string, patch: SessionPatch): Promise<SaveResu
     ),
   );
 
-export const invitePlayers = (id: string, playerIds: ReadonlyArray<string>): Promise<SaveResult> =>
+export const invitePlayers = (id: string, playerIds: ReadonlyArray<string>) =>
   callApi((api) =>
     api.sessions.invite({ params: { id }, payload: { playerIds: [...playerIds] } }).pipe(
       Effect.map(saved),

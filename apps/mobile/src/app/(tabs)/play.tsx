@@ -25,7 +25,6 @@ import { authClient } from "@/lib/auth-client";
 const openSession = (id: string) => router.push({ pathname: "/sessions/[id]", params: { id } });
 const newSession = () => router.push("/sessions/new");
 
-/** My sessions is split by time: still to come, and Past (started, with their scores). */
 type Segment = "mine" | "past" | "nearby";
 
 /** Matches and hitting sessions: mine (hosting, invited, playing), past ones, and open ones nearby. */
@@ -57,7 +56,6 @@ export default function PlayScreen() {
           onPress={newSession}
         />
       </View>
-      {/* Keyed, so each segment keeps its own list and reloads when it's shown. */}
       <SessionList key={segment} segment={segment} />
     </Screen>
   );
@@ -71,10 +69,11 @@ function SessionList({ segment }: { segment: Segment }) {
   const { data: auth } = authClient.useSession();
   const meId = auth?.user.id ?? null;
   const sections = listSections(segment, list.sessions, now);
-  // `mine` comes upcoming first, then past, so page on until past ones show up.
   const { status, hasMore, loadingMore, loadMore } = list;
+
   const needsMore =
     segment === "past" && status === "ready" && sections.length === 0 && hasMore && !loadingMore;
+
   useEffect(() => {
     if (needsMore) loadMore();
   }, [needsMore, loadMore]);
@@ -157,27 +156,23 @@ function SessionList({ segment }: { segment: Segment }) {
 
 type ListSection = { readonly title: string | null; readonly data: ReadonlyArray<SessionSummary> };
 
-/**
- * My sessions shows upcoming ones, with invites and requests waiting on me in
- * a short group at the top. Past and Nearby are plain lists. Empty groups are
- * left out, so an empty list shows its empty state.
- */
-const listSections = (
-  segment: Segment,
-  sessions: ReadonlyArray<SessionSummary>,
-  now: Date,
-): ReadonlyArray<ListSection> => {
+const listSections = (segment: Segment, sessions: ReadonlyArray<SessionSummary>, now: Date) => {
   const plain = (data: ReadonlyArray<SessionSummary>) =>
     data.length > 0 ? [{ title: null, data }] : [];
+
   if (segment === "nearby") return plain(sessions);
+
   if (segment === "past") return plain(sessions.filter((s) => isPastSession(s, now)));
   const upcoming = sessions.filter((s) => !isPastSession(s, now));
   const { needsAnswer, rest } = groupMySessions(upcoming, now);
   const sections: Array<ListSection> = [];
+
   if (needsAnswer.length > 0) sections.push({ title: "Needs your answer", data: needsAnswer });
+
   if (rest.length > 0) {
     sections.push({ title: needsAnswer.length > 0 ? "All sessions" : null, data: rest });
   }
+
   return sections;
 };
 

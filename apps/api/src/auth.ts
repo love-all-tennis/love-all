@@ -4,6 +4,7 @@ import { APIError } from "better-auth/api";
 
 /** Who a user is to the app. Admins can use the moderation endpoints. */
 export const roles = ["player", "admin"] as const;
+
 export type Role = (typeof roles)[number];
 
 /**
@@ -34,7 +35,6 @@ export interface AuthOptions {
   readonly socialProviders?: SocialProviders;
 }
 
-/** Apple posts the OAuth callback back to us from its own origin. */
 const appleOrigin = "https://appleid.apple.com";
 
 /**
@@ -45,12 +45,12 @@ const appleOrigin = "https://appleid.apple.com";
  */
 export const makeAuth = (options: AuthOptions) => {
   const { google, apple } = options.socialProviders ?? {};
+
   return betterAuth({
     database: options.database,
     databaseHooks: {
       session: {
         create: {
-          // Suspended players can't sign in. Suspending also deletes their sessions.
           before: async (session) => {
             if (await options.isSuspended(session.userId)) {
               throw APIError.from("FORBIDDEN", {
@@ -82,13 +82,11 @@ export const makeAuth = (options: AuthOptions) => {
           type: [...roles],
           required: false,
           defaultValue: "player",
-          // Never settable from sign-up or update-user; admins are promoted in the database.
           input: false,
         },
         adultConfirmedAt: {
           type: "date",
           required: false,
-          // Set by POST /me/adult-confirmation, never from sign-up or update-user.
           input: false,
         },
       },

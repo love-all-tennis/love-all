@@ -22,7 +22,7 @@ type Loaded =
       readonly nearby: ReadonlyArray<InviteCandidate>;
     };
 
-const metaOf = (p: InviteCandidate): string =>
+const metaOf = (p: InviteCandidate) =>
   [levelLabel(p.ntrp), distanceLabel(p.distanceKm)].filter(Boolean).join(" · ");
 
 /** The host picks players to invite: people they follow first, then players nearby. */
@@ -42,9 +42,10 @@ export default function InviteScreen() {
         fetchMe(),
         fetchFollows(),
       ]);
+
       if (!session) throw new Error("missing");
-      // Nearby is a bonus: without a home point the list is just who I follow.
       const nearby = await searchPlayers(defaultFilters(me.profile)).catch(() => null);
+
       return inviteCandidates({
         session,
         myId: me.user.id,
@@ -54,6 +55,7 @@ export default function InviteScreen() {
     })()
       .then((lists) => live && setLoaded({ kind: "ready", ...lists }))
       .catch(() => live && setLoaded({ kind: "error" }));
+
     return () => {
       live = false;
     };
@@ -63,8 +65,10 @@ export default function InviteScreen() {
     if (picked.length === 0) return setNotice("Pick at least one player to invite.");
     setSaving(true);
     setNotice(null);
+
     try {
       const result = await invitePlayers(id, picked);
+
       if (result.kind === "refused") return setNotice(result.message);
       router.back();
     } catch {
@@ -80,6 +84,7 @@ export default function InviteScreen() {
         <Loading label="Loading players" />
       </Screen>
     );
+
   if (loaded.kind === "error") {
     return (
       <Screen edges={["left", "right"]}>
@@ -109,6 +114,7 @@ export default function InviteScreen() {
           onPress={() => {
             setNotice(null);
             const next = toggleInvite(picked, player.id);
+
             if (next === picked)
               setNotice(`You can invite up to ${MAX_INVITES_PER_REQUEST} players at a time.`);
             setPicked(next);

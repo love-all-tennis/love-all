@@ -1,10 +1,5 @@
 import type { MySessionPlace, SessionStatus, SessionVisibility } from "@love-all/domain";
 
-/**
- * Joining and leaving, worked out from what the API says about a session and
- * my place in it. No React here, so it can be unit tested.
- */
-
 /** The fields of a session (summary or detail) that decide what I can do. */
 export type JoinFacts = {
   readonly status: SessionStatus;
@@ -16,9 +11,9 @@ export type JoinFacts = {
   readonly me: MySessionPlace | null;
 };
 
-export const spotsLeft = (s: JoinFacts): number => Math.max(0, s.spots - s.acceptedCount);
+export const spotsLeft = (s: JoinFacts) => Math.max(0, s.spots - s.acceptedCount);
 
-const hasStarted = (s: JoinFacts, now: Date): boolean => s.startsAt.getTime() <= now.getTime();
+const hasStarted = (s: JoinFacts, now: Date) => s.startsAt.getTime() <= now.getTime();
 
 /**
  * The one thing the detail screen offers me, by where I stand:
@@ -37,12 +32,15 @@ export type ViewerAction =
   | { readonly kind: "host" }
   | { readonly kind: "none"; readonly note: string | null };
 
-export const viewerAction = (s: JoinFacts, now: Date): ViewerAction => {
+export const viewerAction = (s: JoinFacts, now: Date) => {
   if (s.status === "cancelled") return { kind: "none", note: "This session was cancelled." };
+
   if (hasStarted(s, now)) return { kind: "none", note: "This session has already started." };
   const full = spotsLeft(s) === 0;
   const me = s.me;
+
   if (me?.role === "host") return { kind: "host" };
+
   switch (me?.state) {
     case "invited":
       return { kind: "answerInvite", full };
@@ -60,13 +58,15 @@ export const viewerAction = (s: JoinFacts, now: Date): ViewerAction => {
           note: me ? "You left this session. It's invite only." : "This session is invite only.",
         };
       }
+
       if (full) return { kind: "none", note: "Every spot is taken." };
+
       return { kind: "askToJoin" };
   }
 };
 
 /** Whether a session in My sessions waits on me: an invite, or requests to my session. */
-export const needsMyAnswer = (s: JoinFacts, now: Date): boolean =>
+export const needsMyAnswer = (s: JoinFacts, now: Date) =>
   s.status !== "cancelled" &&
   !hasStarted(s, now) &&
   (s.me?.state === "invited" || (s.me?.role === "host" && s.requestCount > 0));
@@ -75,14 +75,13 @@ export const needsMyAnswer = (s: JoinFacts, now: Date): boolean =>
  * Splits My sessions into the "Needs your answer" group, soonest first, and
  * the rest in the order the API sent them.
  */
-export const groupMySessions = <S extends JoinFacts>(
-  sessions: ReadonlyArray<S>,
-  now: Date,
-): { readonly needsAnswer: ReadonlyArray<S>; readonly rest: ReadonlyArray<S> } => {
+export const groupMySessions = <S extends JoinFacts>(sessions: ReadonlyArray<S>, now: Date) => {
   const needsAnswer: Array<S> = [];
   const rest: Array<S> = [];
+
   for (const s of sessions) (needsMyAnswer(s, now) ? needsAnswer : rest).push(s);
   needsAnswer.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+
   return { needsAnswer, rest };
 };
 
@@ -104,7 +103,7 @@ export type JoinChange =
  * fail for lack of a spot. Accepting and approving wait for the server, since
  * someone else may have just taken the last spot.
  */
-export const isOptimistic = (change: JoinChange): boolean =>
+export const isOptimistic = (change: JoinChange) =>
   change.kind !== "accept" && change.kind !== "approve";
 
 type Participant = { readonly player: { readonly id: string }; readonly state: string };
@@ -115,7 +114,7 @@ export type JoinDetail = JoinFacts & {
   readonly participants: ReadonlyArray<Participant>;
 };
 
-const withStatus = <S extends JoinDetail>(s: S, acceptedCount: number): S => ({
+const withStatus = <S extends JoinDetail>(s: S, acceptedCount: number) => ({
   ...s,
   acceptedCount,
   status: s.status === "cancelled" ? s.status : acceptedCount >= s.spots ? "confirmed" : "open",
@@ -125,7 +124,7 @@ const setParticipant = <S extends JoinDetail>(
   s: S,
   userId: string,
   state: MySessionPlace["state"],
-): S => ({
+) => ({
   ...s,
   participants: s.participants.map((p) => (p.player.id === userId ? { ...p, state } : p)),
 });
@@ -134,11 +133,13 @@ const setParticipant = <S extends JoinDetail>(
  * How the session looks once `change` (made by `myId`) goes through. The
  * screen shows this right away for optimistic changes, then reloads.
  */
-export const applyChange = <S extends JoinDetail>(s: S, change: JoinChange, myId: string): S => {
-  const mine = (state: MySessionPlace["state"]): S => {
+export const applyChange = <S extends JoinDetail>(s: S, change: JoinChange, myId: string) => {
+  const mine = (state: MySessionPlace["state"]) => {
     const next = setParticipant(s, myId, state);
+
     return { ...next, me: next.me && { ...next.me, state } };
   };
+
   switch (change.kind) {
     case "accept":
       return withStatus(mine("accepted"), s.acceptedCount + 1);
@@ -171,11 +172,12 @@ export const applyChange = <S extends JoinDetail>(s: S, change: JoinChange, myId
 /** Players waiting on the host's answer, as the host sees the session. */
 export const pendingRequests = <P extends Participant>(s: {
   readonly participants: ReadonlyArray<P>;
-}): ReadonlyArray<P> => s.participants.filter((p) => p.state === "requested");
+}) => s.participants.filter((p) => p.state === "requested");
 
 /** What the confirm step for cancelling says. */
-export const cancelPrompt = (s: JoinFacts): { readonly title: string; readonly body: string } => {
+export const cancelPrompt = (s: JoinFacts) => {
   const others = s.acceptedCount - 1;
+
   return {
     title: "Cancel this session?",
     body:

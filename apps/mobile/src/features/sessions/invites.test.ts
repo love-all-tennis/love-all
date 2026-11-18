@@ -8,13 +8,15 @@ import { describe, expect, it } from "vite-plus/test";
 import { inviteCandidates, toggleInvite, type InviteCandidate } from "./invites";
 
 const id = () => crypto.randomUUID();
-const person = (name: string): InviteCandidate => ({
-  id: id(),
-  displayName: name,
-  photoUrl: null,
-  ntrp: "3.5",
-  distanceKm: 4,
-});
+
+const person = (name: string) =>
+  ({
+    id: id(),
+    displayName: name,
+    photoUrl: null,
+    ntrp: "3.5",
+    distanceKm: 4,
+  }) satisfies InviteCandidate;
 
 const me = person("Me");
 const ana = person("Ana");
@@ -68,6 +70,7 @@ describe("inviteCandidates", () => {
       followed: [ana, ben],
       nearby: [me, ben, cy, dee],
     });
+
     expect(lists.followed.map((p) => p.displayName)).toEqual(["Ben"]);
     expect(lists.nearby.map((p) => p.displayName)).toEqual(["Cy", "Dee"]);
   });

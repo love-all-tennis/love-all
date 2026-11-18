@@ -13,9 +13,10 @@ const errorCopy = {
 } as const;
 
 type Endpoint = "respond" | "leave" | "cancel" | "approve" | "reject";
+
 type Sent = Effect.Effect<void, Effect.Error<ReturnType<ApiClient["sessions"][Endpoint]>>>;
 
-const send = (api: ApiClient, id: string, change: JoinChange): Sent => {
+const send: (api: ApiClient, id: string, change: JoinChange) => Sent = (api, id, change) => {
   switch (change.kind) {
     case "accept":
     case "decline":
@@ -32,7 +33,6 @@ const send = (api: ApiClient, id: string, change: JoinChange): Sent => {
   }
 };
 
-/** The server's own message fits these: it names what's wrong in the player's words. */
 const own = (e: { readonly message: string }) => Effect.succeed(e.message);
 const copy = (tag: keyof typeof errorCopy) => () => Effect.succeed(errorCopy[tag]);
 
@@ -41,7 +41,7 @@ const copy = (tag: keyof typeof errorCopy) => () => Effect.succeed(errorCopy[tag
  * server said no for a reason the player can understand, otherwise null.
  * Other failures (no connection, a server error) reject.
  */
-export const sendJoinChange = (id: string, change: JoinChange): Promise<string | null> =>
+export const sendJoinChange = (id: string, change: JoinChange) =>
   callApi((api) =>
     send(api, id, change).pipe(
       Effect.as<string | null>(null),

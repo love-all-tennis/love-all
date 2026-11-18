@@ -1,11 +1,4 @@
-import type {
-  ForumCategory,
-  ForumPost,
-  ForumReactionKind,
-  ForumThread,
-  ForumThreadPage,
-  ForumThreadsPage,
-} from "@love-all/domain";
+import type { ForumReactionKind } from "@love-all/domain";
 import { Effect } from "effect";
 
 import { callApi } from "@/lib/api";
@@ -21,14 +14,10 @@ const refuse = (refusal: string) => Effect.succeed<{ refusal: string }>({ refusa
 
 const GONE = "This thread is no longer available.";
 
-export const fetchCategories = (): Promise<ReadonlyArray<ForumCategory>> =>
-  callApi((api) => api.forum.listCategories());
+export const fetchCategories = () => callApi((api) => api.forum.listCategories());
 
 /** A page of a category's threads, or null when the category isn't open to me. */
-export const fetchThreads = (
-  categoryId: string,
-  cursor?: string,
-): Promise<ForumThreadsPage | null> =>
+export const fetchThreads = (categoryId: string, cursor?: string) =>
   callApi((api) =>
     api.forum
       .listThreads({ query: cursor ? { categoryId, cursor } : { categoryId } })
@@ -36,7 +25,7 @@ export const fetchThreads = (
   );
 
 /** The thread with a page of replies, or null when it's gone or hidden from me. */
-export const fetchThread = (id: string, cursor?: string): Promise<ForumThreadPage | null> =>
+export const fetchThread = (id: string, cursor?: string) =>
   callApi((api) =>
     api.forum
       .getThread({ params: { id }, query: cursor ? { cursor } : {} })
@@ -47,7 +36,7 @@ export const createThread = (input: {
   readonly categoryId: string;
   readonly title: string;
   readonly body: string;
-}): Promise<Outcome<ForumThread>> =>
+}) =>
   callApi((api) =>
     api.forum.createThread({ payload: input }).pipe(
       Effect.map((ok) => ({ ok })),
@@ -58,7 +47,7 @@ export const createThread = (input: {
     ),
   );
 
-export const reply = (threadId: string, body: string): Promise<Outcome<ForumPost>> =>
+export const reply = (threadId: string, body: string) =>
   callApi((api) =>
     api.forum.reply({ params: { id: threadId }, payload: { body } }).pipe(
       Effect.map((ok) => ({ ok })),
@@ -69,17 +58,16 @@ export const reply = (threadId: string, body: string): Promise<Outcome<ForumPost
     ),
   );
 
-export const deleteThread = (id: string): Promise<Outcome<null>> =>
+export const deleteThread = (id: string) =>
   callApi((api) =>
     api.forum.deleteThread({ params: { id } }).pipe(
       Effect.as({ ok: null }),
-      // Already gone is what I wanted.
       Effect.catchTag("ForumThreadNotFound", () => Effect.succeed({ ok: null })),
       Effect.catchTag("NotForumAuthor", () => refuse("You can only delete your own threads.")),
     ),
   );
 
-export const deletePost = (id: string): Promise<Outcome<null>> =>
+export const deletePost = (id: string) =>
   callApi((api) =>
     api.forum.deletePost({ params: { id } }).pipe(
       Effect.as({ ok: null }),
@@ -94,9 +82,10 @@ export const setReaction = (
   id: string,
   kind: ForumReactionKind,
   on: boolean,
-): Promise<Outcome<null>> =>
+) =>
   callApi((api) => {
     const params = { id, kind };
+
     if (target === "thread") {
       return (
         on ? api.forum.reactToThread({ params }) : api.forum.unreactToThread({ params })
@@ -105,6 +94,7 @@ export const setReaction = (
         Effect.catchTag("ForumThreadNotFound", () => refuse(GONE)),
       );
     }
+
     return (on ? api.forum.reactToPost({ params }) : api.forum.unreactToPost({ params })).pipe(
       Effect.as({ ok: null }),
       Effect.catchTag("ForumPostNotFound", () => refuse("This reply is no longer there.")),

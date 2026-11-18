@@ -12,6 +12,7 @@ export default function ReportReviewSheet() {
     authorId: string;
     name: string;
   }>();
+
   return (
     <ReportSheet
       targetType="equipment_review"
@@ -19,7 +20,6 @@ export default function ReportReviewSheet() {
       author={{ id: authorId, name }}
       title="Report review"
       subject={`${name}'s review`}
-      // Back to the item, which reloads without their review.
       afterBlock={() => router.back()}
     />
   );

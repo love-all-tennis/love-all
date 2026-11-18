@@ -20,7 +20,6 @@ export interface PushMessage {
   readonly data: { readonly url: string };
 }
 
-/** Expo's answer for one message, in the order the messages were sent. */
 const PushTicket = Schema.Union([
   Schema.Struct({ status: Schema.Literal("ok") }),
   Schema.Struct({
@@ -29,6 +28,7 @@ const PushTicket = Schema.Union([
     details: Schema.optionalKey(Schema.Struct({ error: Schema.optionalKey(Schema.String) })),
   }),
 ]);
+
 export type PushTicket = typeof PushTicket.Type;
 
 const PushResponse = Schema.Struct({ data: Schema.Array(PushTicket) });

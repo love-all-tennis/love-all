@@ -11,9 +11,11 @@ import { PlayerId } from "./Player";
  */
 
 export const ConversationId = Schema.String.check(Schema.isUUID());
+
 export type ConversationId = typeof ConversationId.Type;
 
 export const DirectMessageId = Schema.String.check(Schema.isUUID());
+
 export type DirectMessageId = typeof DirectMessageId.Type;
 
 export const MESSAGE_BODY_MAX = 2000;
@@ -36,6 +38,7 @@ export const ConversationPlayer = Schema.Struct({
   displayName: Schema.String,
   photoUrl: Schema.NullOr(Schema.String),
 });
+
 export type ConversationPlayer = typeof ConversationPlayer.Type;
 
 /** One message. `mine` is true when I sent it. */
@@ -74,6 +77,7 @@ export const ConversationsQuery = {
   cursor: Schema.optionalKey(Schema.String),
   limit: Schema.optionalKey(MessagesPageSize),
 };
+
 export type ConversationsQuery = Schema.Struct<typeof ConversationsQuery>["Type"];
 
 /**
@@ -89,6 +93,7 @@ export class ConversationsPage extends Schema.Class<ConversationsPage>("Conversa
 
 /** `POST /conversations` body: who to talk to. */
 export const NewConversation = Schema.Struct({ playerId: PlayerId });
+
 export type NewConversation = typeof NewConversation.Type;
 
 /** `GET /conversations/:id/messages` query: paging back through older messages. */
@@ -96,6 +101,7 @@ export const MessagesQuery = {
   cursor: Schema.optionalKey(Schema.String),
   limit: Schema.optionalKey(MessagesPageSize),
 };
+
 export type MessagesQuery = Schema.Struct<typeof MessagesQuery>["Type"];
 
 /**
@@ -110,6 +116,7 @@ export class MessagesPage extends Schema.Class<MessagesPage>("MessagesPage")({
 
 /** `POST /conversations/:id/messages` body. */
 export const NewDirectMessage = Schema.Struct({ body: MessageBody });
+
 export type NewDirectMessage = typeof NewDirectMessage.Type;
 
 /** No conversation with that id that I'm in, or a block either way ended it. */

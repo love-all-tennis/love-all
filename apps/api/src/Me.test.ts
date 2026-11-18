@@ -24,21 +24,21 @@ const signedOut = Layer.succeed(
   Authentication.of(() => Effect.fail(new Unauthorized({ message: "Sign in to continue" }))),
 );
 
-/** An in-memory `Accounts` that records who confirmed their age. */
 const makeAccounts = () => {
   const confirmed: Array<string> = [];
+
   const layer = Layer.succeed(
     Accounts,
     Accounts.of({
       confirmAdult: (userId) => Effect.sync(() => void confirmed.push(userId)),
     }),
   );
+
   return { confirmed, layer };
 };
 
 const makeClient = HttpApiTest.groups(Api, ["me"]);
 
-/** Runs requests against the real handlers in memory, with the given auth state. */
 const run = <A, E>(
   auth: Layer.Layer<Authentication>,
   request: (client: Effect.Success<typeof makeClient>) => Effect.Effect<A, E>,
@@ -79,11 +79,13 @@ describe("POST /me/adult-confirmation", () => {
 
   it("fails with Unauthorized when signed out", async () => {
     const accounts = makeAccounts();
+
     const error = await run(
       signedOut,
       (client) => client.me.confirmAdult().pipe(Effect.flip),
       accounts.layer,
     );
+
     expect(error._tag).toBe("Unauthorized");
     expect(accounts.confirmed).toEqual([]);
   });
@@ -100,6 +102,7 @@ describe("PATCH /me", () => {
         },
       }),
     );
+
     expect(me.profile).toMatchObject({
       displayName: "Sam",
       ntrp: "3.5",
@@ -112,6 +115,7 @@ describe("PATCH /me", () => {
     const error = await run(signedOut, (client) =>
       client.me.update({ payload: { bio: "hi" } }).pipe(Effect.flip),
     );
+
     expect(error._tag).toBe("Unauthorized");
   });
 });
@@ -129,9 +133,11 @@ describe("PUT /me/availability", () => {
             { weekday: 2, startTime: "18:00", endTime: "21:00" },
           ],
         });
+
         return yield* client.me.get();
       }),
     );
+
     expect(saved.availability).toEqual([
       { weekday: 2, startTime: "18:00", endTime: "21:00" },
       { weekday: 6, startTime: "09:00", endTime: "12:00" },

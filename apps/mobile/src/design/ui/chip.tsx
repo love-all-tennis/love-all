@@ -18,6 +18,7 @@ const tagColors: Record<TagTone, readonly [fill: ColorRole, label: ColorRole]> =
 export function Tag({ label, tone = "neutral" }: { label: string; tone?: TagTone }) {
   const palette = useColors();
   const [fill, text] = tagColors[tone];
+
   return (
     <View style={[styles.tag, { backgroundColor: palette[fill] }]}>
       <Text variant="label" color={text} numberOfLines={1}>
@@ -38,6 +39,7 @@ export function Chip({
   onPress: () => void;
 }) {
   const palette = useColors();
+
   return (
     <Pressable
       accessibilityRole="checkbox"

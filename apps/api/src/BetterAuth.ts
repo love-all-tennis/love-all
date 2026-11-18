@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { Config, Context, Effect, Layer, Option, Redacted } from "effect";
 import { SqlClient } from "effect/sql";
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- BetterAuth is the Layer that owns makeAuth.
 import { type Auth, makeAuth, type SocialProviders } from "./auth";
 import { Db } from "./Db";
 import { effectSqlAdapter } from "./db/better-auth-adapter";
@@ -18,7 +19,6 @@ const list = (name: string) =>
 
 export const TrustedOrigins = list("TRUSTED_ORIGINS").pipe(Config.withDefault(["loveall://"]));
 
-/** Google is on when GOOGLE_CLIENT_ID (comma-separated) and GOOGLE_CLIENT_SECRET are set. */
 const GoogleConfig = Config.all({
   clientIds: list("GOOGLE_CLIENT_ID"),
   clientSecret: Config.Redacted("GOOGLE_CLIENT_SECRET"),
@@ -30,7 +30,6 @@ const GoogleConfig = Config.all({
   Config.option,
 );
 
-/** Apple is on when APPLE_CLIENT_ID (comma-separated) and APPLE_CLIENT_SECRET are set. */
 const AppleConfig = Config.all({
   clientIds: list("APPLE_CLIENT_ID"),
   clientSecret: Config.Redacted("APPLE_CLIENT_SECRET"),
@@ -67,6 +66,7 @@ export class BetterAuth extends Context.Service<BetterAuth, Auth>()("love-all/Be
       const db = yield* Db;
       const trustedOrigins = yield* TrustedOrigins;
       const socialProviders = yield* SocialProvidersConfig;
+
       return makeAuth({
         database: effectSqlAdapter(services),
         isSuspended: (userId) =>

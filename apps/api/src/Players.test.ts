@@ -37,21 +37,23 @@ const alex = new PlayerProfile({
   distanceKm: 3,
 });
 
-/** A stub `Players` that records each search query, to test the HTTP layer. */
 const makePlayers = () => {
   const queries: Array<PlayersQuery> = [];
+
   const layer = Layer.succeed(
     Players,
     Players.of({
       search: (_viewer, query) =>
         Effect.sync(() => {
           queries.push(query);
+
           return new PlayersPage({ items: [], nextCursor: null });
         }),
       get: (_viewer, id) =>
         id === alex.id ? Effect.succeed(alex) : Effect.fail(new PlayerNotFound({ id })),
     }),
   );
+
   return { queries, layer };
 };
 
@@ -106,6 +108,8 @@ describe("GET /players/:id", () => {
     const error = await run((client) =>
       client.players.get({ params: { id: "u_nobody" } }).pipe(Effect.flip),
     );
-    expect(error).toMatchObject({ _tag: "PlayerNotFound", id: "u_nobody" });
+
+    expect(error).toBeInstanceOf(PlayerNotFound);
+    expect(error).toMatchObject({ id: "u_nobody" });
   });
 });

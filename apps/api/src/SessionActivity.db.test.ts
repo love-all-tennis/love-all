@@ -8,7 +8,6 @@ import { SessionActivity } from "./SessionActivity";
 import { Sessions } from "./Sessions";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
-/** Runs against a migrated Postgres + PostGIS. Skipped when DATABASE_URL is not set. */
 const TestLayer = SessionActivity.layer.pipe(
   Layer.provideMerge(Sessions.layer),
   Layer.provide(makeNotificationsMemory().layer),
@@ -16,23 +15,17 @@ const TestLayer = SessionActivity.layer.pipe(
 );
 
 type Kind = "singles" | "doubles" | "hitting";
+
 type State = "invited" | "requested" | "accepted" | "declined" | "left";
 
 interface Setup {
   readonly kind?: Kind;
-  /** Hours from now; negative means it already started. Defaults to -2. */
   readonly startsInHours?: number;
   readonly status?: "open" | "confirmed" | "cancelled";
   readonly visibility?: "open" | "invite_only";
-  /** States of players 1..n; player 0 is the host. */
   readonly states: ReadonlyArray<State | null>;
 }
 
-/**
- * Creates the host (player 0) plus one account per entry in `states`, a
- * session hosted by player 0 with those participants, runs `f`, then deletes
- * the accounts (which cascades to everything else).
- */
 const withSession = <A, E>(
   setup: Setup,
   f: (
@@ -45,17 +38,22 @@ const withSession = <A, E>(
   Effect.gen(function* () {
     const db = yield* Db;
     const activity = yield* SessionActivity;
+
     const players = Array.from({ length: setup.states.length + 1 }, (_, i) => {
       const id = `test_${crypto.randomUUID()}`;
+
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
+
     const ids = players.map((p) => p.id);
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
+
     return yield* Effect.gen(function* () {
       yield* db
         .insert(profile)
         .values(players.map((p, i) => ({ userId: p.id, displayName: `Player ${i}` })));
       const kind = setup.kind ?? "singles";
+
       const [session] = yield* db
         .insert(playSession)
         .values({
@@ -69,6 +67,7 @@ const withSession = <A, E>(
           status: setup.status ?? "confirmed",
         })
         .returning({ id: playSession.id });
+
       const rows = [
         {
           sessionId: session!.id,
@@ -80,20 +79,23 @@ const withSession = <A, E>(
           state ? [{ sessionId: session!.id, userId: players[i + 1]!.id, state }] : [],
         ),
       ];
+
       yield* db.insert(playSessionParticipant).values(rows);
+
       return yield* f(players, session!.id, activity, db);
     }).pipe(Effect.ensuring(Effect.orDie(db.delete(user).where(inArray(user.id, ids)))));
   }).pipe(Effect.provide(TestLayer), Effect.runPromise);
 
-const singles = (a: SessionUser, b: SessionUser): NewSessionResult => ({
-  sideA: [a.id],
-  sideB: [b.id],
-  sets: [
-    [6, 4],
-    [3, 6],
-    [10, 7],
-  ],
-});
+const singles = (a: SessionUser, b: SessionUser) =>
+  ({
+    sideA: [a.id],
+    sideB: [b.id],
+    sets: [
+      [6, 4],
+      [3, 6],
+      [10, 7],
+    ],
+  }) satisfies NewSessionResult;
 
 describe.skipIf(!process.env.DATABASE_URL)("SessionActivity comments", () => {
   it("lets the host and accepted players post and read, oldest first, with paging", async () => {
@@ -103,13 +105,16 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity comments", () => {
         yield* activity.addComment(sam!, id, { body: "I'll bring balls" });
         yield* activity.addComment(host!, id, { body: "See you there" });
         const first = yield* activity.listComments(sam!, id, { limit: 2 });
+
         const second = yield* activity.listComments(sam!, id, {
           limit: 2,
           cursor: first.nextCursor!,
         });
+
         return { first, second };
       }),
     );
+
     expect(result.first.items.map((c) => c.body)).toEqual(["Court 4", "I'll bring balls"]);
     expect(result.first.items[1]!.author).toMatchObject({ displayName: "Player 1" });
     expect(result.first.nextCursor).toEqual(expect.any(String));
@@ -128,7 +133,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity comments", () => {
           Effect.flip(activity.listComments(stranger!, id, {})),
         ]).pipe(Effect.map((errors) => errors.map((e) => e._tag))),
     );
-    // The stranger can't see an invite-only session at all.
+
     expect(tags).toEqual([
       "NotSessionPlayer",
       "NotSessionPlayer",
@@ -143,6 +148,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity comments", () => {
       ([, stranger], id, activity) =>
         Effect.flip(activity.listComments(stranger!, id, {})).pipe(Effect.map((e) => e._tag)),
     );
+
     expect(tag).toBe("NotSessionPlayer");
   });
 
@@ -155,6 +161,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity comments", () => {
           Effect.flip(activity.listComments(host!, id, { cursor: "not-a-cursor!" })),
         ]).pipe(Effect.map((errors) => errors.map((e) => e._tag))),
     );
+
     expect(tags).toEqual(["SessionClosed", "InvalidCursor"]);
   });
 
@@ -166,9 +173,11 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity comments", () => {
         yield* activity.deleteComment(sam!, comment.id);
         const again = yield* Effect.flip(activity.deleteComment(sam!, comment.id));
         const list = yield* activity.listComments(host!, id, {});
+
         return { notAuthor: notAuthor._tag, again: again._tag, list: list.items };
       }),
     );
+
     expect(result).toEqual({ notAuthor: "NotCommentAuthor", again: "CommentNotFound", list: [] });
   });
 
@@ -185,9 +194,11 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity comments", () => {
             { blockerId: alex!.id, blockedId: host!.id },
           ]);
           const page = yield* activity.listComments(host!, id, {});
+
           return page.items.map((c) => c.body);
         }),
     );
+
     expect(bodies).toEqual(["from Kim"]);
   });
 });
@@ -197,18 +208,24 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity scores", () => {
     const result = await withSession({ states: ["accepted"] }, ([host, sam], id, activity) =>
       Effect.gen(function* () {
         const recorded = yield* activity.recordResult(host!, id, singles(host!, sam!));
+
         const ownSide = yield* Effect.flip(
           activity.respondToResult(host!, id, { response: "confirm" }),
         );
+
         const confirmed = yield* activity.respondToResult(sam!, id, { response: "confirm" });
+
         const again = yield* Effect.flip(
           activity.respondToResult(sam!, id, { response: "dispute" }),
         );
+
         const reRecord = yield* Effect.flip(activity.recordResult(sam!, id, singles(sam!, host!)));
         const read = yield* activity.getResult(sam!, id);
+
         return { recorded, ownSide, confirmed, again, reRecord, read };
       }),
     );
+
     expect(result.recorded).toMatchObject({ status: "pending", winner: "a", respondedBy: null });
     expect(result.ownSide._tag).toBe("NotOnOtherSide");
     expect(result.confirmed.status).toBe("confirmed");
@@ -230,6 +247,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity scores", () => {
       Effect.gen(function* () {
         yield* activity.recordResult(host!, id, singles(host!, sam!));
         const disputed = yield* activity.respondToResult(sam!, id, { response: "dispute" });
+
         const fixed = yield* activity.recordResult(sam!, id, {
           sideA: [sam!.id],
           sideB: [host!.id],
@@ -238,10 +256,13 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity scores", () => {
             [6, 4],
           ],
         });
+
         const confirmed = yield* activity.respondToResult(host!, id, { response: "confirm" });
+
         return { disputed, fixed, confirmed };
       }),
     );
+
     expect(result.disputed.status).toBe("disputed");
     expect(result.fixed).toMatchObject({ status: "pending", winner: "a", respondedBy: null });
     expect(result.confirmed.status).toBe("confirmed");
@@ -256,9 +277,11 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity scores", () => {
             [7, 5],
             [6, 2],
           ];
+
           const oneEach = yield* Effect.flip(
             activity.recordResult(host!, id, { sideA: [host!.id], sideB: [opp1!.id], sets }),
           );
+
           const notAccepted = yield* Effect.flip(
             activity.recordResult(host!, id, {
               sideA: [host!.id, partner!.id],
@@ -266,18 +289,23 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity scores", () => {
               sets,
             }),
           );
+
           yield* activity.recordResult(host!, id, {
             sideA: [host!.id, partner!.id],
             sideB: [opp1!.id, opp2!.id],
             sets,
           });
+
           const partnerTry = yield* Effect.flip(
             activity.respondToResult(partner!, id, { response: "confirm" }),
           );
+
           const confirmed = yield* activity.respondToResult(opp2!, id, { response: "confirm" });
+
           return { oneEach, notAccepted, partnerTry, confirmed };
         }),
     );
+
     expect(result.oneEach._tag).toBe("InvalidResult");
     expect(result.notAccepted._tag).toBe("InvalidResult");
     expect(result.partnerTry._tag).toBe("NotOnOtherSide");
@@ -292,6 +320,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity scores", () => {
           Effect.map((e) => e._tag),
         ),
     );
+
     const hitting = await withSession(
       { kind: "hitting", states: ["accepted"] },
       ([host, sam], id, activity) =>
@@ -299,6 +328,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity scores", () => {
           Effect.map((e) => e._tag),
         ),
     );
+
     const cancelled = await withSession(
       { states: ["accepted"], status: "cancelled" },
       ([host, sam], id, activity) =>
@@ -306,6 +336,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity scores", () => {
           Effect.map((e) => e._tag),
         ),
     );
+
     const notMine = await withSession(
       { kind: "doubles", states: ["accepted", "accepted", "accepted"] },
       ([host, a, b, c], id, activity) =>
@@ -320,6 +351,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity scores", () => {
           }),
         ).pipe(Effect.map((e) => e._tag)),
     );
+
     expect({ future, hitting, cancelled, notMine }).toEqual({
       future: "InvalidResult",
       hitting: "InvalidResult",
@@ -334,13 +366,17 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionActivity scores", () => {
       ([host, , declined], id, activity) =>
         Effect.gen(function* () {
           const none = yield* activity.getResult(host!, id);
+
           const noResult = yield* Effect.flip(
             activity.respondToResult(host!, id, { response: "confirm" }),
           );
+
           const outsider = yield* Effect.flip(activity.getResult(declined!, id));
+
           return { none, noResult: noResult._tag, outsider: outsider._tag };
         }),
     );
+
     expect(result).toEqual({
       none: null,
       noResult: "ResultNotFound",

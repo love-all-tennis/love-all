@@ -31,7 +31,6 @@ import { distanceLabel } from "@/lib/distance";
 
 const openPlayer = (id: string) => router.push({ pathname: "/players/[id]", params: { id } });
 
-/** Who stands where, in the order a player reads them: in, then waiting, then out. */
 const STATE_ORDER = { accepted: 0, requested: 1, invited: 2, declined: 3, left: 4 } as const;
 
 /** One session: when, where, what level, and who's playing. The host can edit and invite. */
@@ -71,28 +70,28 @@ function SessionBody({
   onReplaced,
 }: {
   session: Session;
-  /** Reloads the session after an action that answers with no content. */
   onChanged: () => void;
-  /** Puts in a session an action already returned. */
   onReplaced: (session: Session) => void;
 }) {
   const now = useNow();
   const { data: auth } = authClient.useSession();
   const meId = auth?.user.id ?? null;
+
   const changes = useJoinChanges({
     session,
     myId: auth?.user.id,
     replace: onReplaced,
     reload: onChanged,
   });
+
   const tags = sessionTags(session, now);
   const isHost = session.me?.role === "host";
   const editable = isEditable(session, now);
-  // While the host can still answer, requests get their own section with Approve and Decline.
   const requestsShown = isHost && editable && pendingRequests(session).length > 0;
   const spotsLeft = session.spots - session.acceptedCount;
   const distance = distanceLabel(session.distanceKm);
   const host = session.participants.find((p) => p.role === "host");
+
   const participants = [...session.participants]
     .filter((p) => !(requestsShown && p.state === "requested"))
     .sort(

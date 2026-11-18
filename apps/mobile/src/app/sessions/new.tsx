@@ -25,6 +25,7 @@ export default function NewSessionScreen() {
     inviteId?: string;
     inviteName?: string;
   }>();
+
   const [draft, setDraft] = useState<SessionDraft | null>(null);
   const [tried, setTried] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,8 +36,8 @@ export default function NewSessionScreen() {
     let live = true;
     fetchMe()
       .then((me) => live && setDraft((d) => d ?? emptyDraft(me.profile?.ntrp ?? null)))
-      // Without my profile the form still works, from any level.
       .catch(() => live && setDraft((d) => d ?? emptyDraft(null)));
+
     return () => {
       live = false;
     };
@@ -55,15 +56,19 @@ export default function NewSessionScreen() {
   const submit = async () => {
     setTried(true);
     setNotice(null);
+
     if (hasErrors(draftErrors(draft, new Date()))) return;
     setSaving(true);
+
     try {
       const created = await createSession(toNewSession(draft));
+
       if (created.kind === "refused") return setNotice(created.message);
+
       if (inviteId) {
-        // The session exists now, so a failed invite is retried from its screen, not here.
         await invitePlayers(created.session.id, [inviteId]).catch(() => undefined);
       }
+
       router.replace({ pathname: "/sessions/[id]", params: { id: created.session.id } });
     } catch {
       setNotice("Couldn't save the session. Check your connection and try again.");
