@@ -20,11 +20,15 @@ export function useReports(status: ReportStatus) {
     const mine = ++generation.current;
     fetchReports(status)
       .then((page) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState({ status: "ready", reports: page.items, cursor: page.nextCursor });
       })
       .catch(() => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState((s) =>
           s?.status === "ready" ? s : { status: "error", reports: [], cursor: null },
         );
@@ -34,14 +38,20 @@ export function useReports(status: ReportStatus) {
   useFocusEffect(refresh);
 
   const loadMore = useCallback(() => {
-    if (!state || state.status !== "ready" || !state.cursor || loadingMore) return;
+    if (!state || state.status !== "ready" || !state.cursor || loadingMore) {
+      return;
+    }
     const mine = generation.current;
     setLoadingMore(true);
     fetchReports(status, state.cursor)
       .then((page) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState((s) => {
-          if (!s) return s;
+          if (!s) {
+            return s;
+          }
           const seen = new Set(s.reports.map((r) => r.id));
           return {
             ...s,

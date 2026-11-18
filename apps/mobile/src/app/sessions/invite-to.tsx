@@ -33,7 +33,9 @@ export default function InviteToScreen() {
     let live = true;
     listSessions("mine")
       .then((result) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         const now = new Date();
         const hosting =
           result.kind === "page"
@@ -54,7 +56,9 @@ export default function InviteToScreen() {
     setNotice(null);
     try {
       const result = await invitePlayers(session.id, [playerId]);
-      if (result.kind === "refused") return setNotice(result.message);
+      if (result.kind === "refused") {
+        return setNotice(result.message);
+      }
       router.replace({ pathname: "/sessions/[id]", params: { id: session.id } });
     } catch {
       setNotice("Couldn't send the invite. Check your connection and try again.");
@@ -113,7 +117,7 @@ export default function InviteToScreen() {
         </View>
       ) : (
         <Text color="textMuted">
-          You're not hosting any upcoming sessions with a spot left, so this sets up a new one.
+          {"You're not hosting any upcoming sessions with a spot left, so this sets up a new one."}
         </Text>
       )}
     </Screen>

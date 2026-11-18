@@ -35,7 +35,9 @@ export function Card({
     { backgroundColor: fill, borderColor: tone === "surface" ? palette.border : fill },
     style,
   ];
-  if (!onPress) return <View style={base}>{children}</View>;
+  if (!onPress) {
+    return <View style={base}>{children}</View>;
+  }
   return (
     <Pressable
       accessibilityRole="button"

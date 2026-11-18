@@ -23,6 +23,20 @@ interface ReportSubject {
   readonly content: string | null;
 }
 
+/** Content the reporter can see, written by someone else. */
+const otherAuthor = (
+  viewer: SessionUser,
+  id: string,
+  found: Option.Option<{ readonly authorId: string | null; readonly content: string }>,
+): Effect.Effect<ReportSubject, TargetNotFound | CannotTargetSelf> =>
+  Option.match(found, {
+    onNone: () => Effect.fail(new TargetNotFound({ id })),
+    onSome: ({ authorId, content }) =>
+      authorId === viewer.id
+        ? Effect.fail(new CannotTargetSelf({ message: "You can't report your own post" }))
+        : Effect.succeed({ subjectId: authorId, content }),
+  });
+
 /**
  * Blocks and reports. Hiding blocked players from other queries is done in
  * those queries, with `notBlocked` from `./db/blocks`.
@@ -68,20 +82,6 @@ export class Safety extends Context.Service<
           if (!row) {
             return yield* new TargetNotFound({ id });
           }
-        });
-
-      /** Content the reporter can see, written by someone else. */
-      const otherAuthor = (
-        viewer: SessionUser,
-        id: string,
-        found: Option.Option<{ readonly authorId: string | null; readonly content: string }>,
-      ): Effect.Effect<ReportSubject, TargetNotFound | CannotTargetSelf> =>
-        Option.match(found, {
-          onNone: () => Effect.fail(new TargetNotFound({ id })),
-          onSome: ({ authorId, content }) =>
-            authorId === viewer.id
-              ? Effect.fail(new CannotTargetSelf({ message: "You can't report your own post" }))
-              : Effect.succeed({ subjectId: authorId, content }),
         });
 
       const subjectOf = (

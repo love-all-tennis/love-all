@@ -60,17 +60,23 @@ export const durationLabel = (minutes: number): string => `${minutes} min`;
 export const dayChipLabel = (day: string, now: Date): string => {
   const [y = 0, m = 1, d = 1] = day.split("-").map(Number);
   const date = new Date(y, m - 1, d);
-  if (day === dayKey(now)) return "Today";
-  if (day === dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)))
+  if (day === dayKey(now)) {
+    return "Today";
+  }
+  if (day === dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))) {
     return "Tomorrow";
+  }
   return dateLabel(date);
 };
 
 /** "Any level", "NTRP 3.5", "NTRP 3.0–4.0", "NTRP 3.5 and up", "NTRP 4.0 and below". */
 export const levelRangeLabel = (min: Ntrp | null, max: Ntrp | null): string => {
-  if (!min && !max) return "Any level";
-  if (min && max)
+  if (!min && !max) {
+    return "Any level";
+  }
+  if (min && max) {
     return min === max ? `NTRP ${ntrpLabel(min)}` : `NTRP ${ntrpLabel(min)}–${ntrpLabel(max)}`;
+  }
   return min ? `NTRP ${ntrpLabel(min)} and up` : `NTRP ${ntrpLabel(max!)} and below`;
 };
 
@@ -106,21 +112,29 @@ export const sessionTags = (
   const me = session.me;
   const upcoming = session.status !== "cancelled" && session.startsAt.getTime() > now.getTime();
   const requests = upcoming ? (session.requestCount ?? 0) : 0;
-  if (me?.role === "host" && requests > 0)
+  if (me?.role === "host" && requests > 0) {
     tags.push({ label: requests === 1 ? "1 request" : `${requests} requests`, tone: "clay" });
-  else if (me?.role === "host") tags.push({ label: "Hosting", tone: "neutral" });
-  else if (me?.state === "invited") tags.push({ label: "Invited", tone: "clay" });
-  else if (me?.state === "requested") tags.push({ label: "Asked to join", tone: "clay" });
-  else if (me?.state === "accepted") tags.push({ label: "Playing", tone: "neutral" });
+  } else if (me?.role === "host") {
+    tags.push({ label: "Hosting", tone: "neutral" });
+  } else if (me?.state === "invited") {
+    tags.push({ label: "Invited", tone: "clay" });
+  } else if (me?.state === "requested") {
+    tags.push({ label: "Asked to join", tone: "clay" });
+  } else if (me?.state === "accepted") {
+    tags.push({ label: "Playing", tone: "neutral" });
+  }
 
-  if (session.status === "cancelled") tags.push({ label: "Cancelled", tone: "danger" });
-  else if (session.startsAt.getTime() <= now.getTime())
+  if (session.status === "cancelled") {
+    tags.push({ label: "Cancelled", tone: "danger" });
+  } else if (session.startsAt.getTime() <= now.getTime()) {
     tags.push({ label: "Past", tone: "neutral" });
-  else if (session.status === "confirmed") tags.push({ label: "Confirmed", tone: "accent" });
-  else {
+  } else if (session.status === "confirmed") {
+    tags.push({ label: "Confirmed", tone: "accent" });
+  } else {
     const left = session.spots - session.acceptedCount;
-    if (left > 0)
+    if (left > 0) {
       tags.push({ label: left === 1 ? "1 spot open" : `${left} spots open`, tone: "highlight" });
+    }
   }
   return tags.slice(0, 2);
 };

@@ -121,18 +121,18 @@ describe("Needs your answer", () => {
   });
 });
 
-describe("applyChange", () => {
-  const detail = (fields: Partial<JoinDetail> = {}): JoinDetail => ({
-    ...facts(),
-    host: { id: "host" },
-    participants: [
-      { player: { id: "host" }, state: "accepted" },
-      { player: { id: "me" }, state: "invited" },
-    ],
-    me: { ...player, state: "invited" },
-    ...fields,
-  });
+const detail = (fields: Partial<JoinDetail> = {}): JoinDetail => ({
+  ...facts(),
+  host: { id: "host" },
+  participants: [
+    { player: { id: "host" }, state: "accepted" },
+    { player: { id: "me" }, state: "invited" },
+  ],
+  me: { ...player, state: "invited" },
+  ...fields,
+});
 
+describe("applyChange", () => {
   it("takes a spot on accept, and confirms the session once full", () => {
     const after = applyChange(detail(), { kind: "accept" }, "me");
     expect(after).toMatchObject({

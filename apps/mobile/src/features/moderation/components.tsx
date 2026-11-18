@@ -71,7 +71,7 @@ export function ReportCard({
         {report.details ? (
           <View style={styles.tight}>
             <Text variant="label" color="textMuted">
-              Reporter's note
+              {"Reporter's note"}
             </Text>
             <Text>{report.details}</Text>
           </View>

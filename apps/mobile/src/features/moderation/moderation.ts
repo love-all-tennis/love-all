@@ -58,14 +58,18 @@ export const stateTags = (report: ModerationReport): ReadonlyArray<StateTag> => 
   if (report.status === "resolved" && report.resolution) {
     tags.push({ label: RESOLUTION_LABELS[report.resolution], tone: "neutral" });
   }
-  if (report.hidden) tags.push({ label: "Hidden", tone: "clay" });
+  if (report.hidden) {
+    tags.push({ label: "Hidden", tone: "clay" });
+  }
   if (report.removed) {
     tags.push({
       label: report.targetType === "player" ? "Account deleted" : "Deleted by author",
       tone: "neutral",
     });
   }
-  if (report.subject?.suspended) tags.push({ label: "Suspended", tone: "danger" });
+  if (report.subject?.suspended) {
+    tags.push({ label: "Suspended", tone: "danger" });
+  }
   return tags;
 };
 

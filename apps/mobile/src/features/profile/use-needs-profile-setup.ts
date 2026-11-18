@@ -16,7 +16,9 @@ export function useNeedsProfileSetup(): boolean {
   const [checked, setChecked] = useState<{ userId: string; needs: boolean } | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      return;
+    }
     let live = true;
     fetchMe()
       .then((me) => live && setChecked({ userId, needs: needsSetup(me) }))

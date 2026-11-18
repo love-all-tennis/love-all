@@ -26,7 +26,9 @@ export default function NewGearScreen() {
 
   const save = async () => {
     setTried(true);
-    if (!kind || errors.brand || errors.model) return;
+    if (!kind || errors.brand || errors.model) {
+      return;
+    }
     setSaving(true);
     setProblem(null);
     try {

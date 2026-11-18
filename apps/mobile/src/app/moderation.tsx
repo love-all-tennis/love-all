@@ -46,10 +46,14 @@ export default function ModerationScreen() {
     const subject = report.subject;
     switch (action) {
       case "hide":
-        if (type) run(report, action, () => setHidden(type, report.targetId, true));
+        if (type) {
+          run(report, action, () => setHidden(type, report.targetId, true));
+        }
         return;
       case "unhide":
-        if (type) run(report, action, () => setHidden(type, report.targetId, false));
+        if (type) {
+          run(report, action, () => setHidden(type, report.targetId, false));
+        }
         return;
       case "suspend":
         if (subject) {
@@ -62,7 +66,9 @@ export default function ModerationScreen() {
         }
         return;
       case "unsuspend":
-        if (subject) run(report, action, () => setSuspended(subject.id, false));
+        if (subject) {
+          run(report, action, () => setSuspended(subject.id, false));
+        }
         return;
       case "dismiss":
         run(report, action, () => dismissReport(report.id));
@@ -83,7 +89,9 @@ export default function ModerationScreen() {
         }
         return;
       case "openPlayer":
-        if (subject) router.push({ pathname: "/players/[id]", params: { id: subject.id } });
+        if (subject) {
+          router.push({ pathname: "/players/[id]", params: { id: subject.id } });
+        }
         return;
     }
   };

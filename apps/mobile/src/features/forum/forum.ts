@@ -21,6 +21,11 @@ export const reactionChipLabel = (reaction: ForumReactionCount): string =>
     ? `${REACTION_LABELS[reaction.kind]} ${reaction.count}`
     : REACTION_LABELS[reaction.kind];
 
+export type ToggledReaction = {
+  readonly reactions: ReadonlyArray<ForumReactionCount>;
+  readonly on: boolean;
+};
+
 /**
  * The reactions after I toggle `kind`, before the server answers: my
  * reaction goes on or off and the count follows. Returns whether it's now on.
@@ -28,7 +33,7 @@ export const reactionChipLabel = (reaction: ForumReactionCount): string =>
 export const toggleReaction = (
   reactions: ReadonlyArray<ForumReactionCount>,
   kind: ForumReactionKind,
-): { readonly reactions: ReadonlyArray<ForumReactionCount>; readonly on: boolean } => {
+): ToggledReaction => {
   const current = reactions.find((r) => r.kind === kind);
   const on = !current?.mine;
   return {
@@ -43,16 +48,16 @@ export const toggleReaction = (
 export const replyCountLabel = (count: number): string =>
   count === 0 ? "No replies yet" : count === 1 ? "1 reply" : `${count} replies`;
 
+export type SplitCategories = {
+  readonly local: ReadonlyArray<ForumCategory>;
+  readonly global: ReadonlyArray<ForumCategory>;
+};
+
 /**
  * The Forum tab's two groups: my metro's Local category, then the ones every
  * player sees. Either can be empty (no metro, or nothing loaded yet).
  */
-export const splitCategories = (
-  categories: ReadonlyArray<ForumCategory>,
-): {
-  readonly local: ReadonlyArray<ForumCategory>;
-  readonly global: ReadonlyArray<ForumCategory>;
-} => ({
+export const splitCategories = (categories: ReadonlyArray<ForumCategory>): SplitCategories => ({
   local: categories.filter((c) => c.metroId !== null),
   global: categories.filter((c) => c.metroId === null),
 });
@@ -63,8 +68,12 @@ export const localHeading = (category: ForumCategory): string =>
 
 const lengthError = (text: string, what: string, max: number): string | null => {
   const value = text.trim();
-  if (value.length === 0) return `Write a ${what} first`;
-  if (value.length > max) return `Keep the ${what} to ${max} characters (${value.length} now)`;
+  if (value.length === 0) {
+    return `Write a ${what} first`;
+  }
+  if (value.length > max) {
+    return `Keep the ${what} to ${max} characters (${value.length} now)`;
+  }
   return null;
 };
 
@@ -91,8 +100,10 @@ export const mergeById = <T extends { readonly id: string }>(
 /** What the post menu offers. Report goes to the player report sheet until posts can be reported (#18). */
 export type PostMenuAction = "delete" | "report";
 
-export const postMenuActions = (authorId: string | null, meId: string | null): PostMenuAction[] =>
-  authorId === null ? [] : authorId === meId ? ["delete"] : ["report"];
+export const postMenuActions = (
+  authorId: string | null,
+  meId: string | null,
+): Array<PostMenuAction> => (authorId === null ? [] : authorId === meId ? ["delete"] : ["report"]);
 
 type ThreadFields = ConstructorParameters<typeof ForumThread>[0];
 type PostFields = ConstructorParameters<typeof ForumPost>[0];

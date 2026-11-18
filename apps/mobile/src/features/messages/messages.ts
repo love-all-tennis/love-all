@@ -8,8 +8,10 @@ import { type Conversation, type DirectMessage, MESSAGE_BODY_MAX } from "@love-a
 /** The inbox row's second line: "You: See you at 6" or their message. */
 export const previewLine = (conversation: Conversation): string => {
   const last = conversation.lastMessage;
-  if (!last) return "No messages yet";
-  const text = last.body.replace(/\s+/g, " ").trim();
+  if (!last) {
+    return "No messages yet";
+  }
+  const text = last.body.replaceAll(/\s+/g, " ").trim();
   return last.mine ? `You: ${text}` : text;
 };
 
@@ -24,7 +26,9 @@ export const unreadLabel = (count: number): string =>
 /** Why a message can't be sent yet, or null. The body is trimmed before it goes. */
 export const messageError = (text: string): string | null => {
   const value = text.trim();
-  if (value.length === 0) return "Write a message first";
+  if (value.length === 0) {
+    return "Write a message first";
+  }
   if (value.length > MESSAGE_BODY_MAX) {
     return `Keep a message to ${MESSAGE_BODY_MAX} characters (${value.length} now)`;
   }
@@ -40,14 +44,17 @@ const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDat
 /** "Today", "Yesterday", "Mon, Nov 17", or with the year when it isn't this one. */
 export const dayLabel = (at: Date, now: Date): string => {
   const days = Math.round((startOfDay(now) - startOfDay(at)) / 86_400_000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  return at.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    ...(at.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
-  });
+  if (days === 0) {
+    return "Today";
+  }
+  if (days === 1) {
+    return "Yesterday";
+  }
+  const options: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
+  if (at.getFullYear() !== now.getFullYear()) {
+    options.year = "numeric";
+  }
+  return at.toLocaleDateString("en-US", options);
 };
 
 /** One row in the conversation: a message, or the day heading above a day's first message. */
@@ -87,7 +94,9 @@ export const mergeMessages = (
   more: ReadonlyArray<DirectMessage>,
 ): ReadonlyArray<DirectMessage> => {
   const byId = new Map(current.map((m) => [m.id, m]));
-  for (const m of more) byId.set(m.id, m);
+  for (const m of more) {
+    byId.set(m.id, m);
+  }
   return [...byId.values()].sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1),
   );

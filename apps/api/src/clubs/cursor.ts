@@ -21,7 +21,9 @@ export const encodeReviewsCursor = (cursor: ReviewsCursor): string =>
 
 /** None when the token wasn't made by `encodeReviewsCursor`. */
 export const decodeReviewsCursor = (token: string): Option.Option<ReviewsCursor> => {
-  if (!/^[A-Za-z0-9_-]+$/.test(token)) return Option.none();
+  if (!/^[A-Za-z0-9_-]+$/.test(token)) {
+    return Option.none();
+  }
   return decodeJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([ms, id]) => Number.isInteger(ms) && UUID.test(id)),
     Option.map(([createdAt, id]) => ({ createdAt, id })),
@@ -30,4 +32,4 @@ export const decodeReviewsCursor = (token: string): Option.Option<ReviewsCursor>
 
 /** `%`, `_` and `\` matched literally in an `ilike` pattern. */
 export const likeContains = (text: string): string =>
-  `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  `%${text.replaceAll(/[\\%_]/g, (c) => `\\${c}`)}%`;

@@ -3,9 +3,10 @@ import {
   type ProfilePatch,
   SessionUser,
   type SessionsPage,
+  type SessionsQuery,
 } from "@love-all/domain";
 import { eq, inArray } from "drizzle-orm";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, type Types } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { Db } from "./Db";
 import { playSession, playSessionParticipant, user } from "./db/schema";
@@ -74,7 +75,9 @@ const withPlayers = <A, E>(
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
     return yield* Effect.gen(function* () {
       for (const [i, patch] of patches.entries()) {
-        if (patch) yield* services.profiles.update(players[i]!, patch);
+        if (patch) {
+          yield* services.profiles.update(players[i]!, patch);
+        }
       }
       return yield* f(players, services);
     }).pipe(
@@ -430,15 +433,17 @@ describe.skipIf(!process.env.DATABASE_URL)("Sessions.list", () => {
     const result = await withPlayers([player(), player()], ([me, host], { sessions }) =>
       Effect.gen(function* () {
         const startsAt = inDays(2);
-        for (let i = 0; i < 5; i++) yield* sessions.create(host!, singles({ startsAt }));
+        for (let i = 0; i < 5; i++) {
+          yield* sessions.create(host!, singles({ startsAt }));
+        }
         const seen: Array<string> = [];
         let cursor: string | null = null;
         do {
-          const page: SessionsPage = yield* sessions.list(me!, {
-            scope: "nearby",
-            limit: 2,
-            ...(cursor ? { cursor } : {}),
-          });
+          const query: Types.Mutable<SessionsQuery> = { scope: "nearby", limit: 2 };
+          if (cursor) {
+            query.cursor = cursor;
+          }
+          const page: SessionsPage = yield* sessions.list(me!, query);
           seen.push(...page.items.map((s) => s.id));
           cursor = page.nextCursor;
         } while (cursor);

@@ -45,7 +45,7 @@ export const removeLastSet = (draft: ScoreDraft): ScoreDraft =>
   draft.sets.length <= 1 ? draft : { ...draft, sets: draft.sets.slice(0, -1) };
 
 /** Keeps digits only, at most two, so the field can't hold anything else. */
-export const cleanGames = (text: string): string => text.replace(/\D/g, "").slice(0, 2);
+export const cleanGames = (text: string): string => text.replaceAll(/\D/g, "").slice(0, 2);
 
 export const setGames = (
   draft: ScoreDraft,
@@ -88,14 +88,18 @@ export const hasFullSides = (ctx: ScoreContext): boolean =>
 const sides = (
   ctx: ScoreContext,
   partnerId: string | null,
-): { sideA: string[]; sideB: string[] } | string => {
+): { sideA: Array<string>; sideB: Array<string> } | string => {
   if (!hasFullSides(ctx)) {
     return ctx.kind === "doubles"
       ? "A doubles score needs four players in the session"
       : "A singles score needs two players in the session";
   }
-  if (ctx.kind === "singles") return { sideA: [ctx.meId], sideB: [ctx.others[0]!.id] };
-  if (!partnerId || !ctx.others.some((p) => p.id === partnerId)) return "Pick your partner";
+  if (ctx.kind === "singles") {
+    return { sideA: [ctx.meId], sideB: [ctx.others[0]!.id] };
+  }
+  if (!partnerId || !ctx.others.some((p) => p.id === partnerId)) {
+    return "Pick your partner";
+  }
   return {
     sideA: [ctx.meId, partnerId],
     sideB: ctx.others.filter((p) => p.id !== partnerId).map((p) => p.id),
@@ -105,7 +109,9 @@ const sides = (
 const setError = (draft: ScoreDraft, index: number): string | undefined => {
   const { mine, theirs } = draft.sets[index]!;
   const label = setLabel(draft, index);
-  if (mine === "" || theirs === "") return `Enter both scores for ${label.toLowerCase()}`;
+  if (mine === "" || theirs === "") {
+    return `Enter both scores for ${label.toLowerCase()}`;
+  }
   const set: SetScore = [Number(mine), Number(theirs)];
   if (index === 2 && draft.thirdIsTiebreak) {
     return isMatchTiebreak(set) ? undefined : "A match tiebreak goes to 10, won by 2, like 10–7";
@@ -126,7 +132,9 @@ export const checkScore = (draft: ScoreDraft, ctx: ScoreContext): ScoreCheck => 
   const sets = draft.sets.map((s): SetScore => [Number(s.mine), Number(s.theirs)]);
   if (setErrors.every((e) => e === undefined)) {
     const verdict = checkMatchScore(sets);
-    if (verdict !== true) match = matchMessage(sets);
+    if (verdict !== true) {
+      match = matchMessage(sets);
+    }
   }
   if (setErrors.some((e) => e !== undefined) || partner || match || typeof who === "string") {
     return { ok: false, errors: { sets: setErrors, partner, match } };
@@ -139,9 +147,14 @@ const matchMessage = (sets: ReadonlyArray<SetScore>): string => {
   let a = 0;
   let b = 0;
   for (const [i, [x, y]] of sets.entries()) {
-    if (a === 2 || b === 2) return `The match was over after set ${i}. Remove the extra set.`;
-    if (x > y) a++;
-    else b++;
+    if (a === 2 || b === 2) {
+      return `The match was over after set ${i}. Remove the extra set.`;
+    }
+    if (x > y) {
+      a++;
+    } else {
+      b++;
+    }
   }
   return a === b ? "Add the deciding set: the match is one set all" : "Check the scores";
 };
@@ -249,9 +262,13 @@ export const isPastSession = (session: { readonly startsAt: Date }, now: Date): 
  * waits on me, otherwise null.
  */
 export const pastScoreLine = (result: SessionResult | null, meId: string | null): string | null => {
-  if (!result || !meId) return null;
+  if (!result || !meId) {
+    return null;
+  }
   const mine = sideOf(result, meId);
-  if (!mine) return null;
+  if (!mine) {
+    return null;
+  }
   if (result.status === "confirmed") {
     return `${result.winner === mine ? "Won" : "Lost"} ${formatSets(result.sets, mine)}`;
   }

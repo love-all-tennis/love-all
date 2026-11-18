@@ -1,8 +1,8 @@
 import { PgClient } from "@effect/sql-pg";
 import { Config, Context, Effect, Layer } from "effect";
-import * as PgDrizzle from "drizzle-orm/effect-postgres";
+import { makeWithDefaults } from "drizzle-orm/effect-postgres";
 
-const makeDb = PgDrizzle.makeWithDefaults();
+const makeDb = makeWithDefaults();
 
 /**
  * Drizzle on top of Effect's Postgres client. Queries are Effects.

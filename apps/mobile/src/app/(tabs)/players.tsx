@@ -57,10 +57,14 @@ function NearbyPlayers() {
     let live = true;
     fetchMe()
       .then((loaded) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         setMe(loaded);
         // Start from my own radius and level, unless I've already changed the filters.
-        if (!filters) setPlayerFilters(defaultFilters(loaded.profile));
+        if (!filters) {
+          setPlayerFilters(defaultFilters(loaded.profile));
+        }
       })
       // Without my profile the list still works, from the widest defaults.
       .catch(() => live && !filters && setPlayerFilters(defaultFilters(null)));
@@ -71,7 +75,9 @@ function NearbyPlayers() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!filters) return <Loading label="Loading players" />;
+  if (!filters) {
+    return <Loading label="Loading players" />;
+  }
 
   const header = (
     <View style={styles.filterBar}>

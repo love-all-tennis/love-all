@@ -29,7 +29,9 @@ export function SocialSignIn({
   const [error, setError] = useState<string | null>(null);
 
   const signIn = async (provider: SocialProvider) => {
-    if (onBeforeSignIn?.() === false) return;
+    if (onBeforeSignIn?.() === false) {
+      return;
+    }
     setBusy(provider);
     setError(null);
     try {

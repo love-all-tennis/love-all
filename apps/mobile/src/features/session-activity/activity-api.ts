@@ -29,7 +29,9 @@ export const onResultChanged = (listener: ResultListener): (() => void) => {
 };
 
 const announce = (sessionId: string) => (result: SessionResult) => {
-  for (const listener of resultListeners) listener(sessionId, result);
+  for (const listener of resultListeners) {
+    listener(sessionId, result);
+  }
   return { ok: result };
 };
 

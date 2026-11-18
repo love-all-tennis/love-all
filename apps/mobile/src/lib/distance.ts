@@ -19,7 +19,9 @@ export const milesToKm = (miles: number): number => Math.round(miles * KM_PER_MI
  * "About 1 mi away" rather than a false fraction.
  */
 export const distanceLabel = (km: number | null): string | null => {
-  if (km === null) return null;
+  if (km === null) {
+    return null;
+  }
   const miles = Math.round(kmToMiles(km));
   return miles <= 1 ? "About 1 mi away" : `${miles} mi away`;
 };

@@ -51,6 +51,13 @@ const noRatings = (): Ratings => ({
   counts: [0, 0, 0, 0, 0],
 });
 
+/** Metres from `home` to the club, or null when I have no home point. */
+const distanceFrom = (home: LngLat | null) =>
+  (home
+    ? sql`ST_Distance(${club.point}::geography, ${pointSql(home)}::geography)`
+    : sql`null::float8`
+  ).mapWith((value): number | null => (value === null ? null : Number(value)));
+
 /**
  * Clubs and club reviews.
  *
@@ -100,13 +107,6 @@ export class Clubs extends Context.Service<
             Effect.map(([row]) => row?.homePoint ?? null),
             Effect.orDie,
           );
-
-      /** Metres from `home` to the club, or null when I have no home point. */
-      const distanceFrom = (home: LngLat | null) =>
-        (home
-          ? sql`ST_Distance(${club.point}::geography, ${pointSql(home)}::geography)`
-          : sql`null::float8`
-        ).mapWith((value): number | null => (value === null ? null : Number(value)));
 
       const selectClubs = (home: LngLat | null) =>
         db
@@ -226,7 +226,9 @@ export class Clubs extends Context.Service<
         Effect.gen(function* () {
           const home = yield* homePointOf(viewer);
           const [row] = yield* selectClubs(home).where(eq(club.id, id)).pipe(Effect.orDie);
-          if (!row) return yield* new ClubNotFound({ id });
+          if (!row) {
+            return yield* new ClubNotFound({ id });
+          }
           const ratings = (yield* ratingsFor(viewer, [id])).get(id) ?? noRatings();
           return new Club({
             ...clubFields(row, ratings),
@@ -297,7 +299,9 @@ export class Clubs extends Context.Service<
               )
               .limit(1)
               .pipe(Effect.orDie);
-            if (existing) return yield* new ClubAlreadyExists(existing);
+            if (existing) {
+              return yield* new ClubAlreadyExists(existing);
+            }
             const [area] = yield* db
               .select({ id: metro.id })
               .from(metro)
@@ -397,7 +401,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 export const reportableClubReview = (db: Db["Service"], viewerId: string, reviewId: string) =>
   Effect.gen(function* () {
-    if (!UUID.test(reviewId)) return Option.none<{ authorId: string; content: string }>();
+    if (!UUID.test(reviewId)) {
+      return Option.none<{ authorId: string; content: string }>();
+    }
     const [row] = yield* db
       .select({
         authorId: clubReview.authorId,
@@ -415,7 +421,9 @@ export const reportableClubReview = (db: Db["Service"], viewerId: string, review
         ),
       )
       .pipe(Effect.orDie);
-    if (!row) return Option.none<{ authorId: string; content: string }>();
+    if (!row) {
+      return Option.none<{ authorId: string; content: string }>();
+    }
     const stars = `${row.rating} ${row.rating === 1 ? "star" : "stars"} for ${row.clubName}`;
     return Option.some({
       authorId: row.authorId,

@@ -24,7 +24,9 @@ export const encodeCatalogCursor = (cursor: CatalogCursor): string =>
   encode([cursor.nameKey, cursor.id]);
 
 export const decodeCatalogCursor = (token: string): Option.Option<CatalogCursor> => {
-  if (!TOKEN.test(token)) return Option.none();
+  if (!TOKEN.test(token)) {
+    return Option.none();
+  }
   return decodeCatalogJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([, id]) => UUID.test(id)),
     Option.map(([nameKey, id]) => ({ nameKey, id })),
@@ -48,7 +50,9 @@ export const encodeReviewsCursor = (cursor: ReviewsCursor): string =>
   encode([cursor.createdAt, cursor.id]);
 
 export const decodeReviewsCursor = (token: string): Option.Option<ReviewsCursor> => {
-  if (!TOKEN.test(token)) return Option.none();
+  if (!TOKEN.test(token)) {
+    return Option.none();
+  }
   return decodeReviewsJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([ms, id]) => Number.isInteger(ms) && UUID.test(id)),
     Option.map(([createdAt, id]) => ({ createdAt, id })),

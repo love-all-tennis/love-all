@@ -32,19 +32,28 @@ export const isMatchTiebreak = ([a, b]: SetScore): boolean => {
  * set. No sets after a side has won two.
  */
 export const checkMatchScore = (sets: ReadonlyArray<SetScore>): string | true => {
-  if (sets.length < 1 || sets.length > 3) return "A match has one to three sets";
+  if (sets.length < 1 || sets.length > 3) {
+    return "A match has one to three sets";
+  }
   let a = 0;
   let b = 0;
   for (const [i, set] of sets.entries()) {
-    if (a === 2 || b === 2) return "No sets after a side has won two";
+    if (a === 2 || b === 2) {
+      return "No sets after a side has won two";
+    }
     const deciding = i === 2 && a === 1 && b === 1;
     if (!isRegularSet(set) && !(deciding && isMatchTiebreak(set))) {
       return `Set ${i + 1} (${set[0]}-${set[1]}) isn't a finished set`;
     }
-    if (set[0] > set[1]) a++;
-    else b++;
+    if (set[0] > set[1]) {
+      a++;
+    } else {
+      b++;
+    }
   }
-  if (a === b) return "The match has no winner";
+  if (a === b) {
+    return "The match has no winner";
+  }
   return true;
 };
 
@@ -64,7 +73,9 @@ const Side = Schema.Array(PlayerId).check(Schema.isBetweenLength(1, 2));
 const distinctPlayers = Schema.makeFilter(
   (r: { readonly sideA: ReadonlyArray<string>; readonly sideB: ReadonlyArray<string> }) => {
     const all = [...r.sideA, ...r.sideB];
-    if (r.sideA.length !== r.sideB.length) return "Both sides need the same number of players";
+    if (r.sideA.length !== r.sideB.length) {
+      return "Both sides need the same number of players";
+    }
     return new Set(all).size === all.length || "A player can only be on one side, once";
   },
 );

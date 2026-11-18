@@ -13,6 +13,8 @@ import { loadAvailability as loadAvailabilityFor } from "./db/availability";
 import { type LngLat, roundHomePoint } from "./db/geo";
 import { availability, metro, profile } from "./db/schema";
 
+const pointSql = (point: LngLat) => sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)`;
+
 /**
  * The signed-in player's own profile and weekly availability.
  *
@@ -34,9 +36,6 @@ export class Profiles extends Context.Service<
     Profiles,
     Effect.gen(function* () {
       const db = yield* Db;
-
-      const pointSql = (point: LngLat) =>
-        sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)`;
 
       /** The closest metro whose radius covers the point, if any. */
       const metroFor = (point: LngLat) =>

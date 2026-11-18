@@ -5,14 +5,14 @@ import {
   ThemeProvider,
   type NativeStackNavigationOptions,
 } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
+import { hideAsync, preventAutoHideAsync } from "expo-splash-screen";
 import { useEffect } from "react";
 
 import { typography, useAppFonts, useColors } from "@/design";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { authClient } from "@/lib/auth-client";
 
-void SplashScreen.preventAutoHideAsync();
+void preventAutoHideAsync();
 
 /**
  * Which screens exist depends on the session:
@@ -34,10 +34,14 @@ export default function RootLayout() {
 
   // Keep the native splash screen up until the stored session and the fonts are ready.
   useEffect(() => {
-    if (ready) void SplashScreen.hideAsync();
+    if (ready) {
+      void hideAsync();
+    }
   }, [ready]);
 
-  if (!ready) return null;
+  if (!ready) {
+    return null;
+  }
 
   const signedIn = session != null;
   const confirmedAdult = session?.user.adultConfirmedAt != null;

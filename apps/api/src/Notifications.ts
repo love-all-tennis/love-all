@@ -67,7 +67,9 @@ export class Notifications extends Context.Service<
       const send = (notice: Notice) =>
         Effect.gen(function* () {
           const to = [...new Set(notice.to)];
-          if (to.length === 0) return;
+          if (to.length === 0) {
+            return;
+          }
           const { from } = notice;
           const tokens = yield* db
             .select({ token: pushToken.token })
@@ -79,7 +81,9 @@ export class Notifications extends Context.Service<
                 from === undefined ? undefined : notBlocked(from, pushToken.userId),
               ),
             );
-          if (tokens.length === 0) return;
+          if (tokens.length === 0) {
+            return;
+          }
 
           const messages: Array<PushMessage> = tokens.map(({ token }) => ({
             to: token,
@@ -98,8 +102,9 @@ export class Notifications extends Context.Service<
           }
           const failed =
             tickets.length - gone.length - tickets.filter((t) => t.status === "ok").length;
-          if (failed > 0)
+          if (failed > 0) {
             yield* Effect.logWarning(`Expo rejected ${failed} push messages`, tickets);
+          }
         }).pipe(
           Effect.catchCause((cause) => Effect.logError("Sending a notification failed", cause)),
           Effect.withSpan("Notifications.send"),

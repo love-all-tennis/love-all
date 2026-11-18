@@ -1,5 +1,5 @@
-import type { ReportReason, ReportTargetType } from "@love-all/domain";
-import { Effect } from "effect";
+import type { NewReport, ReportReason, ReportTargetType } from "@love-all/domain";
+import { Effect, type Types } from "effect";
 
 import { callApi } from "@/lib/api";
 
@@ -17,6 +17,21 @@ export const blockPlayer = (id: string): Promise<Outcome> =>
     api.safety.block({ params: { id } }).pipe(Effect.as<Outcome>(null), Effect.catchTags(refusals)),
   );
 
+/** The report body, leaving out details when there are none. */
+const reportPayload = (
+  targetType: ReportTargetType,
+  targetId: string,
+  reason: ReportReason,
+  details: string,
+): NewReport => {
+  const payload: Types.Mutable<NewReport> = { targetType, targetId, reason };
+  const trimmed = details.trim();
+  if (trimmed) {
+    payload.details = trimmed;
+  }
+  return payload;
+};
+
 /**
  * Sends a report to the moderators about a player (by account id) or
  * something they wrote (a forum thread or reply id, or a direct message id).
@@ -31,12 +46,7 @@ export const sendReport = (
   callApi((api) =>
     api.safety
       .report({
-        payload: {
-          targetType,
-          targetId,
-          reason,
-          ...(details.trim() ? { details: details.trim() } : {}),
-        },
+        payload: reportPayload(targetType, targetId, reason, details),
       })
       .pipe(
         Effect.as<Outcome>(null),

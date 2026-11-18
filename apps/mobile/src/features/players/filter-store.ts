@@ -11,7 +11,9 @@ const listeners = new Set<() => void>();
 
 export const setPlayerFilters = (next: PlayerFilters | null): void => {
   current = next;
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 };
 
 const subscribe = (listener: () => void) => {

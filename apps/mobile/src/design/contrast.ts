@@ -6,8 +6,10 @@ export function contrastRatio(a: string, b: string): number {
 
 function luminance(hex: string): number {
   const match = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!match) throw new Error(`Expected a #RRGGBB colour, got ${hex}`);
-  const value = parseInt(match[1]!, 16);
+  if (!match) {
+    throw new Error(`Expected a #RRGGBB colour, got ${hex}`);
+  }
+  const value = Number.parseInt(match[1]!, 16);
   const [r, g, b] = [(value >> 16) & 255, (value >> 8) & 255, value & 255].map((channel) => {
     const c = channel / 255;
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;

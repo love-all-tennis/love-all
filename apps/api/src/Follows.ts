@@ -77,21 +77,27 @@ export class Follows extends Context.Service<
             .where(and(eq(profile.userId, playerId), notBlocked(user.id, profile.userId)))
             .pipe(Effect.orDie);
           // A blocked player is hidden, so following them looks the same as a missing one.
-          if (!target) return yield* new PlayerNotFound({ id: playerId });
+          if (!target) {
+            return yield* new PlayerNotFound({ id: playerId });
+          }
 
           const [already] = yield* db
             .select({ id: follow.followedId })
             .from(follow)
             .where(and(eq(follow.followerId, user.id), eq(follow.followedId, playerId)))
             .pipe(Effect.orDie);
-          if (already) return;
+          if (already) {
+            return;
+          }
 
           const [{ total } = { total: 0 }] = yield* db
             .select({ total: count() })
             .from(follow)
             .where(eq(follow.followerId, user.id))
             .pipe(Effect.orDie);
-          if (total >= MAX_FOLLOWS) return yield* new FollowLimitReached({ limit: MAX_FOLLOWS });
+          if (total >= MAX_FOLLOWS) {
+            return yield* new FollowLimitReached({ limit: MAX_FOLLOWS });
+          }
 
           yield* db
             .insert(follow)

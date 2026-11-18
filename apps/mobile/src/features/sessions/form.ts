@@ -17,6 +17,7 @@ import {
   type SessionPatch,
   type SessionVisibility,
 } from "@love-all/domain";
+import type { Types } from "effect";
 
 import { NTRP_LEVELS } from "../profile/draft";
 
@@ -145,15 +146,20 @@ export const setLevelBound = (
 /** What's wrong with the form, by field. Empty when it can be sent. */
 export const draftErrors = (draft: SessionDraft, now: Date): DraftErrors => {
   const errors: { -readonly [K in DraftField]?: string } = {};
-  if (!draft.day || !draft.time) errors.when = "Pick a day and a start time";
-  else if (startsAtOf(draft.day, draft.time).getTime() <= now.getTime())
+  if (!draft.day || !draft.time) {
+    errors.when = "Pick a day and a start time";
+  } else if (startsAtOf(draft.day, draft.time).getTime() <= now.getTime()) {
     errors.when = "Pick a start time later than now";
+  }
   const court = draft.courtName.trim();
-  if (!court) errors.courtName = "Enter the court's name, like Palmer Park, Detroit";
-  else if (court.length > COURT_NAME_MAX)
+  if (!court) {
+    errors.courtName = "Enter the court's name, like Palmer Park, Detroit";
+  } else if (court.length > COURT_NAME_MAX) {
     errors.courtName = `Keep the court name to ${COURT_NAME_MAX} characters`;
-  if (draft.notes.trim().length > SESSION_NOTES_MAX)
+  }
+  if (draft.notes.trim().length > SESSION_NOTES_MAX) {
     errors.notes = `Keep notes to ${SESSION_NOTES_MAX} characters`;
+  }
   return errors;
 };
 
@@ -162,18 +168,24 @@ export const hasErrors = (errors: DraftErrors): boolean => Object.keys(errors).l
 const notesOf = (draft: SessionDraft): string | null => draft.notes.trim() || null;
 
 /** The `POST /sessions` body. Call only once `draftErrors` is empty. */
-export const toNewSession = (draft: SessionDraft): NewSession => ({
-  kind: draft.kind,
-  startsAt: startsAtOf(draft.day!, draft.time!),
-  durationMinutes: draft.durationMinutes,
-  courtName: draft.courtName.trim(),
-  courtPoint: draft.courtPoint,
-  levelMin: draft.levelMin,
-  levelMax: draft.levelMax,
-  ...(draft.kind === "hitting" ? { spots: draft.spots } : {}),
-  visibility: draft.visibility,
-  notes: notesOf(draft),
-});
+export const toNewSession = (draft: SessionDraft): NewSession => {
+  const session: Types.Mutable<NewSession> = {
+    kind: draft.kind,
+    startsAt: startsAtOf(draft.day!, draft.time!),
+    durationMinutes: draft.durationMinutes,
+    courtName: draft.courtName.trim(),
+    courtPoint: draft.courtPoint,
+    levelMin: draft.levelMin,
+    levelMax: draft.levelMax,
+    visibility: draft.visibility,
+    notes: notesOf(draft),
+  };
+  // Only hitting sessions pick their spots; singles and doubles take the default.
+  if (draft.kind === "hitting") {
+    session.spots = draft.spots;
+  }
+  return session;
+};
 
 const samePoint = (a: LatLng | null, b: LatLng | null): boolean =>
   a === b || (a !== null && b !== null && a.lat === b.lat && a.lng === b.lng);
@@ -185,16 +197,33 @@ const samePoint = (a: LatLng | null, b: LatLng | null): boolean =>
 export const toSessionPatch = (draft: SessionDraft, saved: Session): SessionPatch => {
   const next = toNewSession(draft);
   const patch: { -readonly [K in keyof SessionPatch]: SessionPatch[K] } = {};
-  if (next.startsAt.getTime() !== saved.startsAt.getTime()) patch.startsAt = next.startsAt;
-  if (next.durationMinutes !== saved.durationMinutes) patch.durationMinutes = next.durationMinutes;
-  if (next.courtName !== saved.courtName) patch.courtName = next.courtName;
-  if (!samePoint(next.courtPoint ?? null, saved.courtPoint))
+  if (next.startsAt.getTime() !== saved.startsAt.getTime()) {
+    patch.startsAt = next.startsAt;
+  }
+  if (next.durationMinutes !== saved.durationMinutes) {
+    patch.durationMinutes = next.durationMinutes;
+  }
+  if (next.courtName !== saved.courtName) {
+    patch.courtName = next.courtName;
+  }
+  if (!samePoint(next.courtPoint ?? null, saved.courtPoint)) {
     patch.courtPoint = next.courtPoint ?? null;
-  if ((next.levelMin ?? null) !== saved.levelMin) patch.levelMin = next.levelMin ?? null;
-  if ((next.levelMax ?? null) !== saved.levelMax) patch.levelMax = next.levelMax ?? null;
-  if (next.spots !== undefined && next.spots !== saved.spots) patch.spots = next.spots;
-  if (next.visibility !== saved.visibility) patch.visibility = next.visibility;
-  if ((next.notes ?? null) !== saved.notes) patch.notes = next.notes ?? null;
+  }
+  if ((next.levelMin ?? null) !== saved.levelMin) {
+    patch.levelMin = next.levelMin ?? null;
+  }
+  if ((next.levelMax ?? null) !== saved.levelMax) {
+    patch.levelMax = next.levelMax ?? null;
+  }
+  if (next.spots !== undefined && next.spots !== saved.spots) {
+    patch.spots = next.spots;
+  }
+  if (next.visibility !== saved.visibility) {
+    patch.visibility = next.visibility;
+  }
+  if ((next.notes ?? null) !== saved.notes) {
+    patch.notes = next.notes ?? null;
+  }
   return patch;
 };
 

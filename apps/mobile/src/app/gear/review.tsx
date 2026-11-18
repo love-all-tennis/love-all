@@ -31,7 +31,9 @@ export default function GearReviewScreen() {
     let live = true;
     fetchItem(id)
       .then((found) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         setItem(found ?? "missing");
         const mine = found?.myReview;
         if (mine) {
@@ -50,7 +52,9 @@ export default function GearReviewScreen() {
 
   const save = async () => {
     setTried(true);
-    if (rating === null || errors.title || errors.body) return;
+    if (rating === null || errors.title || errors.body) {
+      return;
+    }
     setBusy("save");
     setProblem(null);
     try {

@@ -58,11 +58,16 @@ const withPlayers = <A, E>(
     );
     return yield* Effect.gen(function* () {
       for (const [i, patch] of patches.entries()) {
-        if (patch) yield* profiles.update(people[i]!, patch);
+        if (patch) {
+          yield* profiles.update(people[i]!, patch);
+        }
       }
       return yield* f(people, service, profiles);
     }).pipe(Effect.ensuring(cleanup));
   }).pipe(Effect.provide(TestLayer), Effect.runPromise);
+
+const names = (page: { items: ReadonlyArray<{ displayName: string }> }) =>
+  page.items.map((p) => p.displayName);
 
 describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
   it("lists players within my radius, nearest first, without me", async () => {
@@ -117,8 +122,6 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
           both: players.search(me!, { levelMax: "3.5", plays: "doubles" }),
         }),
     );
-    const names = (page: { items: ReadonlyArray<{ displayName: string }> }) =>
-      page.items.map((p) => p.displayName);
     expect(names(result.range)).toEqual(["3.5", "4.0"]);
     expect(names(result.atLeast)).toEqual(["4.0", "4.5"]);
     expect(names(result.doubles)).toEqual(["3.0", "3.5", "4.5", "unrated"]);

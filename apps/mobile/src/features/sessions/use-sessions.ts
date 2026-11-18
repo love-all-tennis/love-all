@@ -35,7 +35,9 @@ export function useSessionList(scope: SessionScope): SessionList {
     const mine = ++generation.current;
     listSessions(scope)
       .then((result) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState(
           result.kind === "needsHomePoint"
             ? { status: "needsHomePoint", sessions: [], cursor: null }
@@ -43,7 +45,9 @@ export function useSessionList(scope: SessionScope): SessionList {
         );
       })
       .catch(() => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         // Keep a list that's already up; only show the error when there's nothing to show.
         setState((s) =>
           s?.status === "ready" ? s : { status: "error", sessions: [], cursor: null },
@@ -54,14 +58,20 @@ export function useSessionList(scope: SessionScope): SessionList {
   useFocusEffect(refresh);
 
   const loadMore = useCallback(() => {
-    if (!state || state.status !== "ready" || !state.cursor || loadingMore) return;
+    if (!state || state.status !== "ready" || !state.cursor || loadingMore) {
+      return;
+    }
     const mine = generation.current;
     setLoadingMore(true);
     listSessions(scope, state.cursor)
       .then((result) => {
-        if (mine !== generation.current || result.kind !== "page") return;
+        if (mine !== generation.current || result.kind !== "page") {
+          return;
+        }
         setState((s) => {
-          if (!s) return s;
+          if (!s) {
+            return s;
+          }
           const seen = new Set(s.sessions.map((x) => x.id));
           return {
             ...s,
@@ -91,23 +101,27 @@ export type SessionDetail =
   | { readonly kind: "error" }
   | { readonly kind: "ready"; readonly session: Session };
 
+export type SessionDetailHandle = {
+  readonly state: SessionDetail;
+  readonly reload: () => void;
+  readonly replace: (session: Session) => void;
+};
+
 /**
  * One session with its players. Reloads on focus (after editing or inviting)
  * and on `reload()`, keeping the loaded session up while it does. `replace`
  * puts in a session an action already returned, with no extra request.
  */
-export function useSessionDetail(id: string): {
-  readonly state: SessionDetail;
-  readonly reload: () => void;
-  readonly replace: (session: Session) => void;
-} {
+export function useSessionDetail(id: string): SessionDetailHandle {
   const [loaded, setLoaded] = useState<{ id: string; state: SessionDetail } | null>(null);
   const generation = useRef(0);
 
   const reload = useCallback(() => {
     const mine = ++generation.current;
     const settle = (state: SessionDetail) => {
-      if (mine === generation.current) setLoaded({ id, state });
+      if (mine === generation.current) {
+        setLoaded({ id, state });
+      }
     };
     fetchSession(id)
       .then((session) => settle(session ? { kind: "ready", session } : { kind: "missing" }))

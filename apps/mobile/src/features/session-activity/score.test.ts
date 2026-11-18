@@ -149,7 +149,9 @@ describe("checkScore", () => {
       singles,
     );
     expect(check.ok).toBe(false);
-    if (check.ok) return;
+    if (check.ok) {
+      return;
+    }
     expect(check.errors.sets[0]).toBe("Enter both scores for set 1");
     expect(check.errors.sets[1]).toBe("Set 2 should end 6–0 to 6–4, 7–5 or 7–6");
     expect(check.errors.match).toBeUndefined();

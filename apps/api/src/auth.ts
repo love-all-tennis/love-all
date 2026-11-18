@@ -53,11 +53,15 @@ export interface IpAddress {
 const appleOrigin = "https://appleid.apple.com";
 
 const passwordToDelete = createAuthMiddleware(async (ctx) => {
-  if (ctx.path !== "/delete-user" || ctx.body?.password) return;
+  if (ctx.path !== "/delete-user" || ctx.body?.password) {
+    return;
+  }
 
   const session = await getSessionFromCtx(ctx);
 
-  if (!session) return;
+  if (!session) {
+    return;
+  }
 
   const accounts = await ctx.context.internalAdapter.findAccounts(session.user.id);
 

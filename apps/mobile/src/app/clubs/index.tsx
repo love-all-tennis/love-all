@@ -40,11 +40,15 @@ export default function ClubsScreen() {
     const mine = ++generation.current;
     return fetchClubs(search)
       .then((result) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState("needsHome" in result ? { status: "needsHome" } : { status: "ready", ...result });
       })
       .catch(() => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         // Keep what's up; only show the error when there's nothing to show.
         setState((s) => (s.status === "ready" ? s : { status: "error" }));
       });

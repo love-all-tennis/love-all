@@ -52,7 +52,9 @@ export default function NewThreadScreen() {
 
   const post = async () => {
     setTried(true);
-    if (!categoryId || errors.title || errors.body) return;
+    if (!categoryId || errors.title || errors.body) {
+      return;
+    }
     setPosting(true);
     setProblem(null);
     try {

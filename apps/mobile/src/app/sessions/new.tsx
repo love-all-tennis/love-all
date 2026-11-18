@@ -55,11 +55,15 @@ export default function NewSessionScreen() {
   const submit = async () => {
     setTried(true);
     setNotice(null);
-    if (hasErrors(draftErrors(draft, new Date()))) return;
+    if (hasErrors(draftErrors(draft, new Date()))) {
+      return;
+    }
     setSaving(true);
     try {
       const created = await createSession(toNewSession(draft));
-      if (created.kind === "refused") return setNotice(created.message);
+      if (created.kind === "refused") {
+        return setNotice(created.message);
+      }
       if (inviteId) {
         // The session exists now, so a failed invite is retried from its screen, not here.
         await invitePlayers(created.session.id, [inviteId]).catch(() => undefined);

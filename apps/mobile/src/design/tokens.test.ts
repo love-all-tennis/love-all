@@ -34,7 +34,7 @@ const pairs: ReadonlyArray<readonly [fg: ColorRole, bg: ColorRole, min: number]>
   ["borderStrong", "background", 3],
 ];
 
-describe.each(Object.keys(colors) as ColorScheme[])("%s colours", (scheme) => {
+describe.each(Object.keys(colors) as Array<ColorScheme>)("%s colours", (scheme) => {
   it.each(pairs)("%s on %s meets %d:1", (fg, bg, min) => {
     expect(contrastRatio(colors[scheme][fg], colors[scheme][bg])).toBeGreaterThanOrEqual(min);
   });

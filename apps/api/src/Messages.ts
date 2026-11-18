@@ -32,6 +32,41 @@ const HOUR_MS = 3_600_000;
 const pairOf = (a: string, b: string) =>
   a < b ? { userLowId: a, userHighId: b } : { userLowId: b, userHighId: a };
 
+/** The other player's id in a conversation row, from the viewer's side. */
+const otherId = (viewer: SessionUser) =>
+  sql<string>`case when ${conversation.userLowId} = ${viewer.id} then ${conversation.userHighId} else ${conversation.userLowId} end`;
+
+/** Messages from the other player that the viewer hasn't read. Needs the member join. */
+const unreadCount = (viewer: SessionUser) =>
+  sql<number>`(
+    select count(*)::int from ${directMessage}
+    where ${directMessage.conversationId} = ${conversation.id}
+      and ${directMessage.senderId} <> ${viewer.id}
+      and ${directMessage.createdAt} > coalesce(${conversationMember.lastReadAt}, '-infinity'::timestamptz)
+  )`;
+
+const toMessage = (viewer: SessionUser, row: typeof directMessage.$inferSelect): DirectMessage =>
+  new DirectMessage({
+    id: row.id,
+    conversationId: row.conversationId,
+    senderId: row.senderId,
+    mine: row.senderId === viewer.id,
+    body: row.body,
+    createdAt: row.createdAt,
+  });
+
+const rateLimited = (limit: number, what: string) =>
+  new MessagesRateLimited({
+    message: `You can send ${limit} ${what} an hour. Try again a bit later.`,
+  });
+
+/** Conversations the viewer can see: theirs, with nobody blocked either way. */
+const visibleTo = (viewer: SessionUser): SQL =>
+  and(
+    or(eq(conversation.userLowId, viewer.id), eq(conversation.userHighId, viewer.id)),
+    notBlocked(viewer.id, otherId(viewer)),
+  )!;
+
 /**
  * Direct messages: one conversation per pair of players.
  *
@@ -78,26 +113,6 @@ export class Messages extends Context.Service<
       const db = yield* Db;
       const notifications = yield* Notifications;
 
-      /** The other player's id in a conversation row, from the viewer's side. */
-      const otherId = (viewer: SessionUser) =>
-        sql<string>`case when ${conversation.userLowId} = ${viewer.id} then ${conversation.userHighId} else ${conversation.userLowId} end`;
-
-      /** Conversations the viewer can see: theirs, with nobody blocked either way. */
-      const visibleTo = (viewer: SessionUser): SQL =>
-        and(
-          or(eq(conversation.userLowId, viewer.id), eq(conversation.userHighId, viewer.id)),
-          notBlocked(viewer.id, otherId(viewer)),
-        )!;
-
-      /** Messages from the other player that the viewer hasn't read. Needs the member join. */
-      const unreadCount = (viewer: SessionUser) =>
-        sql<number>`(
-          select count(*)::int from ${directMessage}
-          where ${directMessage.conversationId} = ${conversation.id}
-            and ${directMessage.senderId} <> ${viewer.id}
-            and ${directMessage.createdAt} > coalesce(${conversationMember.lastReadAt}, '-infinity'::timestamptz)
-        )`;
-
       const selectConversations = (viewer: SessionUser) =>
         db
           .select({
@@ -121,19 +136,6 @@ export class Messages extends Context.Service<
           );
 
       type ConversationRow = Effect.Success<ReturnType<typeof selectConversations>>[number];
-
-      const toMessage = (
-        viewer: SessionUser,
-        row: typeof directMessage.$inferSelect,
-      ): DirectMessage =>
-        new DirectMessage({
-          id: row.id,
-          conversationId: row.conversationId,
-          senderId: row.senderId,
-          mine: row.senderId === viewer.id,
-          body: row.body,
-          createdAt: row.createdAt,
-        });
 
       /** The latest message of each conversation in `ids`. */
       const lastMessages = (viewer: SessionUser, ids: ReadonlyArray<string>) =>
@@ -168,11 +170,15 @@ export class Messages extends Context.Service<
       /** A conversation the viewer can see, with its last message, or undefined. */
       const findConversation = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
-          if (!isUuid(id)) return undefined;
+          if (!isUuid(id)) {
+            return undefined;
+          }
           const [row] = yield* selectConversations(viewer)
             .where(and(eq(conversation.id, id), visibleTo(viewer)))
             .pipe(Effect.orDie);
-          if (!row) return undefined;
+          if (!row) {
+            return undefined;
+          }
           const last = yield* lastMessages(viewer, [row.id]);
           return toConversation(row, last.get(row.id));
         });
@@ -191,11 +197,6 @@ export class Messages extends Context.Service<
             found ? Effect.succeed(found) : Effect.fail(new PlayerNotFound({ id: playerId })),
           ),
         );
-
-      const rateLimited = (limit: number, what: string) =>
-        new MessagesRateLimited({
-          message: `You can send ${limit} ${what} an hour. Try again a bit later.`,
-        });
 
       return Messages.of({
         listConversations: (viewer, query) =>
@@ -258,7 +259,9 @@ export class Messages extends Context.Service<
               .from(profile)
               .where(and(eq(profile.userId, playerId), notBlocked(viewer.id, profile.userId)))
               .pipe(Effect.orDie);
-            if (!other) return yield* new PlayerNotFound({ id: playerId });
+            if (!other) {
+              return yield* new PlayerNotFound({ id: playerId });
+            }
             const pair = pairOf(viewer.id, playerId);
             const [existing] = yield* db
               .select({ id: conversation.id })
@@ -270,7 +273,9 @@ export class Messages extends Context.Service<
                 ),
               )
               .pipe(Effect.orDie);
-            if (existing) return yield* requireOpened(viewer, existing.id, playerId);
+            if (existing) {
+              return yield* requireOpened(viewer, existing.id, playerId);
+            }
 
             const [mine] = yield* db
               .select({ id: profile.id })
@@ -450,7 +455,9 @@ export class Messages extends Context.Service<
  */
 export const reportableMessage = (db: Db["Service"], viewerId: string, messageId: string) =>
   Effect.gen(function* () {
-    if (!isUuid(messageId)) return Option.none();
+    if (!isUuid(messageId)) {
+      return Option.none();
+    }
     const [row] = yield* db
       .select({ authorId: directMessage.senderId, content: directMessage.body })
       .from(directMessage)

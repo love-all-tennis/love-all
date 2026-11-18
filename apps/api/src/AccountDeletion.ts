@@ -112,7 +112,9 @@ export class AccountDeletion extends Context.Service<
               .where(eq(user.id, userId))
               .pipe(Effect.orDie);
 
-            if (!row) return;
+            if (!row) {
+              return;
+            }
 
             const player = new SessionUser({
               ...row,

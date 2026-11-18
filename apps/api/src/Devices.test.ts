@@ -35,7 +35,9 @@ const makeNotifications = () => {
         Effect.sync(() => void tokens.set(device.token, { ...device, userId: user.id })),
       unregister: (user, token) =>
         Effect.sync(() => {
-          if (tokens.get(token)?.userId === user.id) tokens.delete(token);
+          if (tokens.get(token)?.userId === user.id) {
+            tokens.delete(token);
+          }
         }),
       notify: () => Effect.void,
       flush: Effect.void,

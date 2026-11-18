@@ -66,13 +66,17 @@ const migrate = (options: BetterAuthOptions) =>
       }
       yield* sql.unsafe(`CREATE TABLE "${name}" (${columns.join(", ")})`);
     }
-    for (const statement of foreignKeys) yield* sql.unsafe(statement);
+    for (const statement of foreignKeys) {
+      yield* sql.unsafe(statement);
+    }
   });
 
 const databaseUrl = process.env.DATABASE_URL;
 
 describe.skipIf(!databaseUrl)("effectSqlAdapter", async () => {
-  if (!databaseUrl) return;
+  if (!databaseUrl) {
+    return;
+  }
   const runtime = ManagedRuntime.make(
     PgClient.layer({
       url: Redacted.make(databaseUrl),

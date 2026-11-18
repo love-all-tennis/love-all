@@ -45,7 +45,9 @@ export default function ClubScreen() {
     let live = true;
     Promise.all([fetchClub(id), fetchReviews(id)])
       .then(([club, page]) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         setState(
           club && page
             ? { status: "ready", club, reviews: page.items, cursor: page.nextCursor }
@@ -68,12 +70,16 @@ export default function ClubScreen() {
   };
 
   const loadMore = useCallback(() => {
-    if (state.status !== "ready" || !state.cursor || loadingMore) return;
+    if (state.status !== "ready" || !state.cursor || loadingMore) {
+      return;
+    }
     setLoadingMore(true);
     setProblem(null);
     fetchReviews(id, state.cursor)
       .then((page) => {
-        if (!page) return;
+        if (!page) {
+          return;
+        }
         setState((s) =>
           s.status === "ready"
             ? { ...s, reviews: mergeById(s.reviews, page.items), cursor: page.nextCursor }

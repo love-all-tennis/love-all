@@ -4,7 +4,6 @@ import { HttpServer } from "effect/http";
 import { HttpApiTest } from "effect/http-api";
 import { describe, expect, it } from "vite-plus/test";
 import { Accounts } from "./Accounts";
-import type { Auth } from "./auth";
 import { AuthenticationLive } from "./Authentication";
 import { BetterAuth } from "./BetterAuth";
 import { MeHandlers } from "./Handlers";
@@ -16,7 +15,7 @@ type GetSession = () => Promise<{
 
 /** A stand-in for Better Auth whose only behavior is the session lookup. */
 const fakeAuth = (getSession: GetSession) =>
-  Layer.succeed(BetterAuth, { api: { getSession } } as unknown as Auth);
+  Layer.succeed(BetterAuth, { api: { getSession } } as never);
 
 /** GET /me never writes to the account. */
 const noAccounts = Layer.succeed(

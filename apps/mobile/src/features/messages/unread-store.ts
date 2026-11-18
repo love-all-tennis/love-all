@@ -10,9 +10,13 @@ let unread = 0;
 const listeners = new Set<() => void>();
 
 export const setUnreadConversations = (next: number): void => {
-  if (next === unread) return;
+  if (next === unread) {
+    return;
+  }
   unread = Math.max(0, next);
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 };
 
 /** One conversation was just read: take it off the badge. */

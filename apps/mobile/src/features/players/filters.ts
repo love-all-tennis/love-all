@@ -5,6 +5,7 @@
  */
 
 import type { Availability, Ntrp, PlayersQuery, PlayKind, Profile } from "@love-all/domain";
+import type { Types } from "effect";
 
 import { milesToKm, nearestMiles, radiusLabel } from "../../lib/distance";
 
@@ -50,7 +51,7 @@ export const defaultFilters = (profile: Profile | null): PlayerFilters => {
   return {
     radiusMi: profile ? nearestMiles(profile.searchRadiusKm, RADIUS_OPTIONS_MI) : DEFAULT_RADIUS_MI,
     levelMin: own ? levelAt(at - 1) : NTRP_LEVELS[0]!,
-    levelMax: own ? levelAt(at + 1) : NTRP_LEVELS[NTRP_LEVELS.length - 1]!,
+    levelMax: own ? levelAt(at + 1) : NTRP_LEVELS.at(-1)!,
     plays: null,
   };
 };
@@ -85,14 +86,19 @@ export const togglePlay = (filters: PlayerFilters, kind: PlayKind): PlayerFilter
  * haven't rated themselves.
  */
 export const toPlayersQuery = (filters: PlayerFilters, cursor?: string): PlayersQuery => {
-  const wholeRange =
-    filters.levelMin === NTRP_LEVELS[0] && filters.levelMax === NTRP_LEVELS[NTRP_LEVELS.length - 1];
-  return {
-    radiusKm: milesToKm(filters.radiusMi),
-    ...(wholeRange ? {} : { levelMin: filters.levelMin, levelMax: filters.levelMax }),
-    ...(filters.plays ? { plays: filters.plays } : {}),
-    ...(cursor ? { cursor } : {}),
-  };
+  const wholeRange = filters.levelMin === NTRP_LEVELS[0] && filters.levelMax === NTRP_LEVELS.at(-1);
+  const query: Types.Mutable<PlayersQuery> = { radiusKm: milesToKm(filters.radiusMi) };
+  if (!wholeRange) {
+    query.levelMin = filters.levelMin;
+    query.levelMax = filters.levelMax;
+  }
+  if (filters.plays) {
+    query.plays = filters.plays;
+  }
+  if (cursor) {
+    query.cursor = cursor;
+  }
+  return query;
 };
 
 /** "3.0 to 4.0", or a single level when both ends match. */

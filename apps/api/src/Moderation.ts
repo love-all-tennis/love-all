@@ -54,6 +54,17 @@ const reportedPost = alias(forumPost, "reported_post");
 const reportedClubReview = alias(clubReview, "reported_club_review");
 const reportedEquipmentReview = alias(equipmentReview, "reported_equipment_review");
 
+const requireModerator = (viewer: SessionUser) =>
+  viewer.role === "admin"
+    ? Effect.void
+    : Effect.fail(new NotModerator({ message: "Only moderators can do that" }));
+
+const onTarget = (targetType: ReportTargetType, targetId: string) =>
+  and(eq(report.targetType, targetType), eq(report.targetId, targetId))!;
+
+const playerName = (displayName: SQLWrapper, name: SQLWrapper) =>
+  sql<string | null>`coalesce(${displayName}, ${name})`;
+
 /**
  * Moderation, for admins: the reports queue, hiding forum posts and club
  * reviews, and suspending players. Every method fails with `NotModerator`
@@ -103,11 +114,6 @@ export class Moderation extends Context.Service<
     Effect.gen(function* () {
       const db = yield* Db;
 
-      const requireModerator = (viewer: SessionUser) =>
-        viewer.role === "admin"
-          ? Effect.void
-          : Effect.fail(new NotModerator({ message: "Only moderators can do that" }));
-
       const requirePlayer = (id: string) =>
         db
           .select({ id: user.id })
@@ -139,12 +145,6 @@ export class Moderation extends Context.Service<
           })
           .where(and(eq(report.status, "open"), where));
 
-      const onTarget = (targetType: ReportTargetType, targetId: string) =>
-        and(eq(report.targetType, targetType), eq(report.targetId, targetId))!;
-
-      const playerName = (displayName: SQLWrapper, name: SQLWrapper) =>
-        sql<string | null>`coalesce(${displayName}, ${name})`;
-
       /** Sets or clears `hidden_at`; a reply's thread counts it in or out of `reply_count`. */
       const setHidden = (
         viewer: SessionUser,
@@ -154,14 +154,18 @@ export class Moderation extends Context.Service<
       ) =>
         Effect.gen(function* () {
           yield* requireModerator(viewer);
-          if (!UUID.test(id)) return yield* new TargetNotFound({ id });
+          if (!UUID.test(id)) {
+            return yield* new TargetNotFound({ id });
+          }
           const table = hideable[type];
           const [exists] = yield* db
             .select({ id: table.id })
             .from(table)
             .where(eq(table.id, id))
             .pipe(Effect.orDie);
-          if (!exists) return yield* new TargetNotFound({ id });
+          if (!exists) {
+            return yield* new TargetNotFound({ id });
+          }
           yield* db
             .transaction((tx) =>
               Effect.gen(function* () {
@@ -178,13 +182,17 @@ export class Moderation extends Context.Service<
                 if (hidden) {
                   yield* resolveReports(tx, viewer, "content_hidden", onTarget(type, id));
                 }
-                if (changed.length === 0 || type !== "forum_post") return;
+                if (changed.length === 0 || type !== "forum_post") {
+                  return;
+                }
                 // Deleted replies already left the count when they were deleted.
                 const [post] = yield* tx
                   .select({ threadId: forumPost.threadId, deletedAt: forumPost.deletedAt })
                   .from(forumPost)
                   .where(eq(forumPost.id, id));
-                if (!post || post.deletedAt) return;
+                if (!post || post.deletedAt) {
+                  return;
+                }
                 yield* tx
                   .update(forumThread)
                   .set({
@@ -346,13 +354,17 @@ export class Moderation extends Context.Service<
         dismissReport: (viewer, id) =>
           Effect.gen(function* () {
             yield* requireModerator(viewer);
-            if (!UUID.test(id)) return yield* new ReportNotFound({ id });
+            if (!UUID.test(id)) {
+              return yield* new ReportNotFound({ id });
+            }
             const [row] = yield* db
               .select({ targetType: report.targetType, targetId: report.targetId })
               .from(report)
               .where(eq(report.id, id))
               .pipe(Effect.orDie);
-            if (!row) return yield* new ReportNotFound({ id });
+            if (!row) {
+              return yield* new ReportNotFound({ id });
+            }
             yield* db
               .transaction((tx) =>
                 resolveReports(tx, viewer, "dismissed", onTarget(row.targetType, row.targetId)),

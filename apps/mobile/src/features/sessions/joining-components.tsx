@@ -22,7 +22,9 @@ export const confirmCancel = (session: JoinFacts, onConfirm: () => void): void =
   const { title, body } = cancelPrompt(session);
   if (Platform.OS === "web") {
     // react-native-web has no Alert.
-    if (globalThis.confirm?.(`${title}\n\n${body}`)) onConfirm();
+    if (globalThis.confirm?.(`${title}\n\n${body}`)) {
+      onConfirm();
+    }
     return;
   }
   Alert.alert(title, body, [
@@ -64,12 +66,16 @@ export const useJoinChanges = ({
   const running = useRef(false);
 
   const run = async (change: JoinChange) => {
-    if (running.current) return;
+    if (running.current) {
+      return;
+    }
     running.current = true;
     const before = session;
     setPending(change);
     setNotice(null);
-    if (myId && isOptimistic(change)) replace(applyChange(session, change, myId));
+    if (myId && isOptimistic(change)) {
+      replace(applyChange(session, change, myId));
+    }
     try {
       const refusal = await sendJoinChange(session.id, change);
       if (refusal) {
@@ -167,7 +173,9 @@ export function SessionJoinActions({
       case "leave":
         return (
           <>
-            <Text color="textMuted">You're playing. Can't make it? Leave so someone else can.</Text>
+            <Text color="textMuted">
+              {"You're playing. Can't make it? Leave so someone else can."}
+            </Text>
             <Button
               label="Leave session"
               variant="secondary"
@@ -185,7 +193,9 @@ export function SessionJoinActions({
     }
   })();
 
-  if (!body && !notice) return null;
+  if (!body && !notice) {
+    return null;
+  }
   return (
     <View style={styles.actions}>
       <ErrorBanner>{notice}</ErrorBanner>
@@ -225,9 +235,13 @@ export function JoinRequests({
   changes: JoinChanges;
   onOpenPlayer: (id: string) => void;
 }) {
-  if (viewerAction(session, now).kind !== "host") return null;
+  if (viewerAction(session, now).kind !== "host") {
+    return null;
+  }
   const requests = pendingRequests(session);
-  if (requests.length === 0) return null;
+  if (requests.length === 0) {
+    return null;
+  }
   const full = session.acceptedCount >= session.spots;
   return (
     <Section

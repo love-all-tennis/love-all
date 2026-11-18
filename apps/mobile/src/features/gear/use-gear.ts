@@ -42,11 +42,15 @@ export function useCatalog(kind: EquipmentKind | null, q: string) {
     const mine = ++generation.current;
     fetchCatalog({ kind, q: query })
       .then((page) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState({ status: "ready", items: page.items, cursor: page.nextCursor });
       })
       .catch(() => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         // Keep what's up; only show the error when there's nothing to show.
         setState((s) => (s.items.length > 0 ? s : { status: "error", items: [], cursor: null }));
       });
@@ -55,12 +59,16 @@ export function useCatalog(kind: EquipmentKind | null, q: string) {
   useFocusEffect(refresh);
 
   const loadMore = useCallback(() => {
-    if (state.status !== "ready" || !state.cursor || loadingMore) return;
+    if (state.status !== "ready" || !state.cursor || loadingMore) {
+      return;
+    }
     const mine = generation.current;
     setLoadingMore(true);
     fetchCatalog({ kind, q: query, cursor: state.cursor })
       .then((page) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState((s) => ({ ...s, items: mergeById(s.items, page.items), cursor: page.nextCursor }));
       })
       // A failed next page leaves the list as it was; scrolling again retries.
@@ -92,7 +100,9 @@ export function useItem(id: string) {
     const mine = ++generation.current;
     Promise.all([fetchItem(id), fetchReviews(id)])
       .then(([item, reviews]) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState(
           item && reviews
             ? { status: "ready", item, reviews: reviews.items, cursor: reviews.nextCursor }
@@ -100,7 +110,9 @@ export function useItem(id: string) {
         );
       })
       .catch(() => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState((s) => (s.status === "ready" ? s : { status: "error" }));
       });
   }, [id]);
@@ -108,12 +120,16 @@ export function useItem(id: string) {
   useFocusEffect(refresh);
 
   const loadMore = useCallback(() => {
-    if (state.status !== "ready" || !state.cursor || loadingMore) return;
+    if (state.status !== "ready" || !state.cursor || loadingMore) {
+      return;
+    }
     const mine = generation.current;
     setLoadingMore(true);
     fetchReviews(id, state.cursor)
       .then((page) => {
-        if (mine !== generation.current || !page) return;
+        if (mine !== generation.current || !page) {
+          return;
+        }
         setState((s) =>
           s.status === "ready"
             ? { ...s, reviews: mergeById(s.reviews, page.items), cursor: page.nextCursor }

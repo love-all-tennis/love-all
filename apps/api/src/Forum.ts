@@ -56,6 +56,34 @@ const noReactions = (): Array<ForumReactionCount> =>
 /** How an author is shown: their profile name, or their account name before they have a profile. */
 const authorName = sql<string | null>`coalesce(${profile.displayName}, ${user.name})`;
 
+/** Categories I can see: global ones, plus the Local one for my metro. */
+const visibleCategory = (metroId: string | null): SQL =>
+  metroId === null
+    ? isNull(forumCategory.metroId)
+    : or(isNull(forumCategory.metroId), eq(forumCategory.metroId, metroId))!;
+
+const authorOf = (row: {
+  readonly authorId: string | null;
+  readonly authorName: string | null;
+  readonly authorPhotoUrl: string | null;
+}) =>
+  row.authorId === null
+    ? null
+    : {
+        id: row.authorId,
+        displayName: row.authorName ?? "",
+        photoUrl: row.authorPhotoUrl,
+      };
+
+/** Threads I can see. Needs the `forumCategory` join. */
+const visibleThread = (viewer: SessionUser, metroId: string | null): SQL =>
+  and(
+    isNull(forumThread.deletedAt),
+    isNull(forumThread.hiddenAt),
+    notBlocked(viewer.id, forumThread.authorId),
+    visibleCategory(metroId),
+  )!;
+
 /**
  * The forum: categories, threads and replies.
  *
@@ -148,21 +176,6 @@ export class Forum extends Context.Service<
             Effect.orDie,
           );
 
-      /** Categories I can see: global ones, plus the Local one for my metro. */
-      const visibleCategory = (metroId: string | null): SQL =>
-        metroId === null
-          ? isNull(forumCategory.metroId)
-          : or(isNull(forumCategory.metroId), eq(forumCategory.metroId, metroId))!;
-
-      /** Threads I can see. Needs the `forumCategory` join. */
-      const visibleThread = (viewer: SessionUser, metroId: string | null): SQL =>
-        and(
-          isNull(forumThread.deletedAt),
-          isNull(forumThread.hiddenAt),
-          notBlocked(viewer.id, forumThread.authorId),
-          visibleCategory(metroId),
-        )!;
-
       const threadColumns = {
         id: forumThread.id,
         categoryId: forumThread.categoryId,
@@ -187,19 +200,6 @@ export class Forum extends Context.Service<
           .leftJoin(profile, eq(profile.userId, forumThread.authorId));
 
       type ThreadRow = Effect.Success<ReturnType<typeof selectThreads>>[number];
-
-      const authorOf = (row: {
-        readonly authorId: string | null;
-        readonly authorName: string | null;
-        readonly authorPhotoUrl: string | null;
-      }) =>
-        row.authorId === null
-          ? null
-          : {
-              id: row.authorId,
-              displayName: row.authorName ?? "",
-              photoUrl: row.authorPhotoUrl,
-            };
 
       /**
        * Reaction counts for each thread (or reply) in `ids`, leaving out
@@ -417,7 +417,9 @@ export class Forum extends Context.Service<
               .from(forumCategory)
               .where(and(eq(forumCategory.id, query.categoryId), visibleCategory(metroId)))
               .pipe(Effect.orDie);
-            if (!category) return yield* new ForumCategoryNotFound({ id: query.categoryId });
+            if (!category) {
+              return yield* new ForumCategoryNotFound({ id: query.categoryId });
+            }
             const after = cursor?.pipe(Option.getOrUndefined);
             const rows = yield* selectThreads()
               .where(
@@ -451,7 +453,9 @@ export class Forum extends Context.Service<
               .from(forumCategory)
               .where(and(eq(forumCategory.id, input.categoryId), visibleCategory(metroId)))
               .pipe(Effect.orDie);
-            if (!category) return yield* new ForumCategoryNotFound({ id: input.categoryId });
+            if (!category) {
+              return yield* new ForumCategoryNotFound({ id: input.categoryId });
+            }
             yield* checkRate(viewer, forumThread, FORUM_THREADS_PER_HOUR, "new threads");
             // One millisecond-precision time for both, so `last_post_at` matches exactly.
             const now = new Date();
@@ -483,7 +487,9 @@ export class Forum extends Context.Service<
               return yield* new InvalidCursor({ message: "Unknown cursor" });
             }
             const thread = yield* findThread(viewer, metroId, id);
-            if (!thread) return yield* new ForumThreadNotFound({ id });
+            if (!thread) {
+              return yield* new ForumThreadNotFound({ id });
+            }
             const after = cursor?.pipe(Option.getOrUndefined);
             const rows = yield* selectPosts()
               .where(
@@ -521,7 +527,9 @@ export class Forum extends Context.Service<
           Effect.gen(function* () {
             const metroId = yield* viewerMetro(viewer);
             const thread = yield* findThread(viewer, metroId, threadId);
-            if (!thread) return yield* new ForumThreadNotFound({ id: threadId });
+            if (!thread) {
+              return yield* new ForumThreadNotFound({ id: threadId });
+            }
             yield* checkRate(viewer, forumPost, FORUM_REPLIES_PER_HOUR, "replies");
             const inserted = yield* db
               .transaction((tx) =>
@@ -567,7 +575,9 @@ export class Forum extends Context.Service<
               .from(forumThread)
               .where(and(eq(forumThread.id, id), isNull(forumThread.deletedAt)))
               .pipe(Effect.orDie);
-            if (!row) return yield* new ForumThreadNotFound({ id });
+            if (!row) {
+              return yield* new ForumThreadNotFound({ id });
+            }
             if (row.authorId !== viewer.id) {
               return yield* new NotForumAuthor({ message: "Only the author can delete it" });
             }
@@ -585,7 +595,9 @@ export class Forum extends Context.Service<
               .from(forumPost)
               .where(and(eq(forumPost.id, id), isNull(forumPost.deletedAt)))
               .pipe(Effect.orDie);
-            if (!row) return yield* new ForumPostNotFound({ id });
+            if (!row) {
+              return yield* new ForumPostNotFound({ id });
+            }
             if (row.authorId !== viewer.id) {
               return yield* new NotForumAuthor({ message: "Only the author can delete it" });
             }
@@ -598,7 +610,9 @@ export class Forum extends Context.Service<
                     .set({ deletedAt: new Date() })
                     .where(and(eq(forumPost.id, id), isNull(forumPost.deletedAt)))
                     .returning({ id: forumPost.id });
-                  if (deleted.length === 0) return;
+                  if (deleted.length === 0) {
+                    return;
+                  }
                   yield* tx
                     .update(forumThread)
                     .set({ replyCount: sql`greatest(${forumThread.replyCount} - 1, 0)` })
@@ -612,7 +626,9 @@ export class Forum extends Context.Service<
           Effect.gen(function* () {
             const metroId = yield* viewerMetro(viewer);
             const thread = yield* findThread(viewer, metroId, threadId);
-            if (!thread) return yield* new ForumThreadNotFound({ id: threadId });
+            if (!thread) {
+              return yield* new ForumThreadNotFound({ id: threadId });
+            }
             yield* db
               .insert(forumReaction)
               .values({ threadId, userId: viewer.id, kind })
@@ -635,7 +651,9 @@ export class Forum extends Context.Service<
         reactToPost: (viewer, postId, kind) =>
           Effect.gen(function* () {
             const post = yield* findLivePost(viewer, postId);
-            if (!post) return yield* new ForumPostNotFound({ id: postId });
+            if (!post) {
+              return yield* new ForumPostNotFound({ id: postId });
+            }
             yield* db
               .insert(forumReaction)
               .values({ postId, userId: viewer.id, kind })
@@ -658,7 +676,9 @@ export class Forum extends Context.Service<
         findReportable: (viewer, kind, id) =>
           Effect.gen(function* () {
             // Ids are uuids; anything else can't name a thread or reply.
-            if (!UUID.test(id)) return Option.none<ForumReportable>();
+            if (!UUID.test(id)) {
+              return Option.none<ForumReportable>();
+            }
             if (kind === "thread") {
               const metroId = yield* viewerMetro(viewer);
               const thread = yield* findThread(viewer, metroId, id);

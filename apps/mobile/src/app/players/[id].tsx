@@ -51,7 +51,9 @@ export default function PlayerScreen() {
     const settle = (next: Loaded) => live && setLoaded({ key, state: next });
     Promise.all([fetchPlayer(id), fetchFollows()])
       .then(([player, follows]) => {
-        if (!player) return settle({ kind: "missing" });
+        if (!player) {
+          return settle({ kind: "missing" });
+        }
         const following = follows.items.some((p) => p.id === player.id);
         settle({ kind: "ready", player, following });
       })
@@ -62,14 +64,19 @@ export default function PlayerScreen() {
   }, [id, key]);
 
   const toggleFollow = async () => {
-    if (state.kind !== "ready") return;
+    if (state.kind !== "ready") {
+      return;
+    }
     const next = !state.following;
     setSaving("follow");
     setNotice(null);
     try {
       const refusal = await setFollowing(state.player.id, next);
-      if (refusal) setNotice(refusal);
-      else setState({ ...state, following: next });
+      if (refusal) {
+        setNotice(refusal);
+      } else {
+        setState({ ...state, following: next });
+      }
     } catch {
       setNotice("Couldn't save that. Check your connection and try again.");
     } finally {
@@ -82,12 +89,14 @@ export default function PlayerScreen() {
     setNotice(null);
     try {
       const outcome = await openConversation(player.id);
-      if ("refusal" in outcome) setNotice(outcome.refusal);
-      else
+      if ("refusal" in outcome) {
+        setNotice(outcome.refusal);
+      } else {
         router.push({
           pathname: "/messages/[id]",
           params: { id: outcome.ok.id, name: player.displayName },
         });
+      }
     } catch {
       setNotice("Couldn't open your messages. Check your connection and try again.");
     } finally {
@@ -100,9 +109,13 @@ export default function PlayerScreen() {
     setNotice(null);
     try {
       const refusal = await blockPlayer(player.id);
-      if (refusal) setNotice(refusal);
+      if (refusal) {
+        setNotice(refusal);
+      }
       // They're hidden from me now, so leave their profile.
-      else router.back();
+      else {
+        router.back();
+      }
     } catch {
       setNotice("Couldn't block them. Check your connection and try again.");
     } finally {
@@ -249,7 +262,9 @@ function ProfileBody({
           ))}
         </View>
         {hand ? <Text color="textMuted">{hand}</Text> : null}
-        {formats.length === 0 ? <Text color="textMuted">Hasn't said how they play yet</Text> : null}
+        {formats.length === 0 ? (
+          <Text color="textMuted">{"Hasn't said how they play yet"}</Text>
+        ) : null}
       </Section>
 
       {player.bio ? (

@@ -19,6 +19,22 @@ import type { LngLat } from "./db/geo";
 import { metro, profile } from "./db/schema";
 import { decodeCursor, displayKm, encodeCursor } from "./players/cursor";
 
+const geographyOf = (point: LngLat) =>
+  sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)::geography`;
+
+/**
+ * Who the viewer may see. Every query about other players goes through
+ * this list, so visibility rules (such as blocks) are added here once.
+ */
+const visibleTo = (viewer: SessionUser): Array<SQL> => [
+  notBlocked(viewer.id, profile.userId),
+  notSuspended(profile.userId),
+];
+
+/** Metres from `point` to the profile's home point, on the spheroid. */
+const distanceFrom = (point: LngLat) =>
+  sql`ST_Distance(${profile.homePoint}::geography, ${geographyOf(point)})`;
+
 /**
  * Other players, as the signed-in player sees them: a nearby search and
  * public profiles. Home points never leave this module, only distances.
@@ -39,22 +55,6 @@ export class Players extends Context.Service<
     Players,
     Effect.gen(function* () {
       const db = yield* Db;
-
-      const geographyOf = (point: LngLat) =>
-        sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)::geography`;
-
-      /** Metres from `point` to the profile's home point, on the spheroid. */
-      const distanceFrom = (point: LngLat) =>
-        sql`ST_Distance(${profile.homePoint}::geography, ${geographyOf(point)})`;
-
-      /**
-       * Who the viewer may see. Every query about other players goes through
-       * this list, so visibility rules (such as blocks) are added here once.
-       */
-      const visibleTo = (viewer: SessionUser): Array<SQL> => [
-        notBlocked(viewer.id, profile.userId),
-        notSuspended(profile.userId),
-      ];
 
       const viewerHome = (viewer: SessionUser) =>
         db
@@ -154,7 +154,9 @@ export class Players extends Context.Service<
             .leftJoin(metro, eq(metro.id, profile.metroId))
             .where(and(eq(profile.userId, id), ...visibleTo(viewer)))
             .pipe(Effect.orDie);
-          if (!row) return yield* new PlayerNotFound({ id });
+          if (!row) {
+            return yield* new PlayerNotFound({ id });
+          }
           const { profileId, distanceM, ...rest } = row;
           return new PlayerProfile({
             ...rest,

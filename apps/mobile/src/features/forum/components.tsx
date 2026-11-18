@@ -22,7 +22,9 @@ export const confirmDestructive = (
 ) => {
   if (Platform.OS === "web") {
     // react-native-web has no Alert.
-    if (globalThis.confirm?.(`${title}\n\n${message}`)) run();
+    if (globalThis.confirm?.(`${title}\n\n${message}`)) {
+      run();
+    }
     return;
   }
   Alert.alert(title, message, [

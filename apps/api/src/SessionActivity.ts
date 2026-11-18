@@ -40,7 +40,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A comments cursor is the last comment's id, base64url-encoded so clients treat it as opaque. */
 export const encodeCommentCursor = (id: string) => Buffer.from(id).toString("base64url");
 export const decodeCommentCursor = (token: string): string | undefined => {
-  if (!/^[A-Za-z0-9_-]+$/.test(token)) return undefined;
+  if (!/^[A-Za-z0-9_-]+$/.test(token)) {
+    return undefined;
+  }
   const id = Buffer.from(token, "base64url").toString("utf8");
   return UUID.test(id) ? id : undefined;
 };
@@ -48,7 +50,9 @@ export const decodeCommentCursor = (token: string): string | undefined => {
 type ResultRow = typeof playSessionResult.$inferSelect;
 
 const respondingSide = (result: ResultRow) => {
-  if (result.recordedBy === null) return [...result.sideA, ...result.sideB];
+  if (result.recordedBy === null) {
+    return [...result.sideA, ...result.sideB];
+  }
 
   return result.sideA.includes(result.recordedBy) ? result.sideB : result.sideA;
 };
@@ -64,6 +68,21 @@ const toResult = (row: ResultRow) =>
     respondedBy: row.respondedBy,
     recordedAt: row.recordedAt,
     respondedAt: row.respondedAt,
+  });
+
+const toComment = (row: {
+  readonly id: string;
+  readonly authorId: string;
+  readonly body: string;
+  readonly createdAt: Date;
+  readonly displayName: string;
+  readonly photoUrl: string | null;
+}) =>
+  new SessionComment({
+    id: row.id,
+    body: row.body,
+    createdAt: row.createdAt,
+    author: { id: row.authorId, displayName: row.displayName, photoUrl: row.photoUrl },
   });
 
 /**
@@ -148,21 +167,6 @@ export class SessionActivity extends Context.Service<
           .innerJoin(user, eq(user.id, playSessionComment.authorId))
           .leftJoin(profile, eq(profile.userId, playSessionComment.authorId));
 
-      const toComment = (row: {
-        readonly id: string;
-        readonly authorId: string;
-        readonly body: string;
-        readonly createdAt: Date;
-        readonly displayName: string;
-        readonly photoUrl: string | null;
-      }) =>
-        new SessionComment({
-          id: row.id,
-          body: row.body,
-          createdAt: row.createdAt,
-          author: { id: row.authorId, displayName: row.displayName, photoUrl: row.photoUrl },
-        });
-
       const readResult = (sessionId: string) =>
         db
           .select()
@@ -181,7 +185,9 @@ export class SessionActivity extends Context.Service<
             let after: string | undefined;
             if (query.cursor !== undefined) {
               after = decodeCommentCursor(query.cursor);
-              if (!after) return yield* new InvalidCursor({ message: "Unknown cursor" });
+              if (!after) {
+                return yield* new InvalidCursor({ message: "Unknown cursor" });
+              }
             }
             const rows = yield* selectComments()
               .where(
@@ -234,7 +240,9 @@ export class SessionActivity extends Context.Service<
                 and(eq(playSessionComment.id, commentId), isNull(playSessionComment.deletedAt)),
               )
               .pipe(Effect.orDie);
-            if (!row) return yield* new CommentNotFound({ id: commentId });
+            if (!row) {
+              return yield* new CommentNotFound({ id: commentId });
+            }
             if (row.authorId !== viewer.id) {
               return yield* new NotCommentAuthor({ message: "Only the author can delete it" });
             }
@@ -328,7 +336,9 @@ export class SessionActivity extends Context.Service<
           Effect.gen(function* () {
             yield* requirePlayer(viewer, sessionId);
             const current = yield* readResult(sessionId);
-            if (!current) return yield* new ResultNotFound({ id: sessionId });
+            if (!current) {
+              return yield* new ResultNotFound({ id: sessionId });
+            }
             const otherSide = respondingSide(current);
             if (!otherSide.includes(viewer.id)) {
               return yield* new NotOnOtherSide({

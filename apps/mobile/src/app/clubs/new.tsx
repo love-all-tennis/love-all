@@ -1,5 +1,10 @@
 import { CLUB_ACCESS, type ClubAccess, type LatLng } from "@love-all/domain";
-import * as Location from "expo-location";
+import {
+  Accuracy,
+  geocodeAsync,
+  getCurrentPositionAsync,
+  requestForegroundPermissionsAsync,
+} from "expo-location";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Linking, Platform, StyleSheet, View } from "react-native";
@@ -49,7 +54,9 @@ export default function NewClubScreen() {
 
   const save = async () => {
     setTried(true);
-    if (nameError(name) || addressError(address) || !point || !access) return;
+    if (nameError(name) || addressError(address) || !point || !access) {
+      return;
+    }
     setSaving(true);
     setProblem(null);
     setExisting(null);
@@ -61,8 +68,12 @@ export default function NewClubScreen() {
         access,
         indoorCourts: indoor,
       });
-      if ("existing" in outcome) return setExisting(outcome.existing);
-      if ("refusal" in outcome) return setProblem(outcome.refusal);
+      if ("existing" in outcome) {
+        return setExisting(outcome.existing);
+      }
+      if ("refusal" in outcome) {
+        return setProblem(outcome.refusal);
+      }
       router.replace({ pathname: "/clubs/[id]", params: { id: outcome.ok.id } });
     } catch {
       setProblem(`Couldn't add the club. ${NETWORK}`);
@@ -127,7 +138,7 @@ export default function NewClubScreen() {
       {existing ? (
         <Card tone="sunken">
           <Text variant="bodyStrong">{existing.name} is already listed</Text>
-          <Text color="textMuted">It's pinned close by. Review it there instead.</Text>
+          <Text color="textMuted">{"It's pinned close by. Review it there instead."}</Text>
           <Button
             variant="secondary"
             size="small"
@@ -161,12 +172,16 @@ function MapPin({
 
   const fromText = async () => {
     const text = address.trim() || name.trim();
-    if (!text) return setProblem("Type the club's name or address first, then find it.");
+    if (!text) {
+      return setProblem("Type the club's name or address first, then find it.");
+    }
     setBusy("search");
     setProblem(null);
     try {
-      const [hit] = await Location.geocodeAsync(text);
-      if (!hit) return setProblem(`Couldn't find "${text}". Try adding the city.`);
+      const [hit] = await geocodeAsync(text);
+      if (!hit) {
+        return setProblem(`Couldn't find "${text}". Try adding the city.`);
+      }
       onChange({ lat: hit.latitude, lng: hit.longitude });
     } catch {
       setProblem("Map search isn't available here. Pin where you are instead.");
@@ -179,11 +194,12 @@ function MapPin({
     setBusy("here");
     setProblem(null);
     try {
-      const { granted } = await Location.requestForegroundPermissionsAsync();
-      if (!granted)
+      const { granted } = await requestForegroundPermissionsAsync();
+      if (!granted) {
         return setProblem("Location is off for Love All. Find the club by name instead.");
-      const { coords } = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+      }
+      const { coords } = await getCurrentPositionAsync({
+        accuracy: Accuracy.Balanced,
       });
       onChange({ lat: coords.latitude, lng: coords.longitude });
     } catch {
@@ -198,7 +214,7 @@ function MapPin({
       <Card tone="sunken">
         <View style={styles.pinned}>
           <Icon ios="mappin.and.ellipse" md="location_on" color="accent" />
-          <Text style={styles.fill}>Map pin set. Check it's on the right courts.</Text>
+          <Text style={styles.fill}>{"Map pin set. Check it's on the right courts."}</Text>
         </View>
         <View style={styles.row}>
           <Button

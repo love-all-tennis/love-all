@@ -124,6 +124,13 @@ const tagOf = <A, E extends { _tag: string }>(effect: Effect.Effect<A, E>) =>
     Effect.map((e) => e._tag),
   );
 
+/** Notices about the session, with players named instead of ids. */
+const heard = (id: string, players: ReadonlyArray<SessionUser>) =>
+  sent.about(`/sessions/${id}`).map((notice) => ({
+    to: notice.to.map((to) => players.find((p) => p.id === to)?.name ?? to).sort(),
+    title: notice.title,
+  }));
+
 describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
   it("confirms a singles session when the invited player accepts", async () => {
     const result = await withPlayers(["3.5", "3.5"], ([host, guest], { db, joins }) =>
@@ -290,7 +297,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
             [c!, d!].map((p) =>
               joins.respond(p, id, "accept").pipe(
                 Effect.as("ok"),
-                Effect.catch((e) => Effect.succeed(e._tag)),
+                Effect.catch((error) => Effect.succeed(error._tag)),
               ),
             ),
             { concurrency: "unbounded" },
@@ -441,13 +448,6 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionJoins", () => {
   });
 
   describe("notifications", () => {
-    /** Notices about the session, with players named instead of ids. */
-    const heard = (id: string, players: ReadonlyArray<SessionUser>) =>
-      sent.about(`/sessions/${id}`).map((notice) => ({
-        to: notice.to.map((to) => players.find((p) => p.id === to)?.name ?? to).sort(),
-        title: notice.title,
-      }));
-
     it("tells the host about answers to invites, and everyone when it fills", async () => {
       await withPlayers(["3.5", "3.5", "3.5", "3.5"], (players, { db, joins }) =>
         Effect.gen(function* () {

@@ -26,12 +26,16 @@ export function useInbox() {
     const mine = ++generation.current;
     fetchInbox()
       .then((page) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setUnreadConversations(page.unreadConversations);
         setState({ status: "ready", items: page.items, cursor: page.nextCursor });
       })
       .catch(() => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         // Keep what's up; only show the error when there's nothing to show.
         setState((s) => (s?.status === "ready" ? s : { status: "error", items: [], cursor: null }));
       });
@@ -40,12 +44,16 @@ export function useInbox() {
   useFocusEffect(refresh);
 
   const loadMore = useCallback(() => {
-    if (!state || state.status !== "ready" || !state.cursor || loadingMore) return;
+    if (!state || state.status !== "ready" || !state.cursor || loadingMore) {
+      return;
+    }
     const mine = generation.current;
     setLoadingMore(true);
     fetchInbox(state.cursor)
       .then((page) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState((s) =>
           s ? { ...s, items: mergeById(s.items, page.items), cursor: page.nextCursor } : s,
         );
@@ -76,7 +84,9 @@ export function useUnreadBadgeSync() {
         .catch(() => undefined);
     void load();
     const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active") void load();
+      if (next === "active") {
+        void load();
+      }
     });
     return () => sub.remove();
   }, []);

@@ -7,7 +7,7 @@ import {
   type DBAdapter,
 } from "better-auth/adapters";
 import { PgTypes } from "@effect/sql-pg";
-import { Context, Effect } from "effect";
+import { Context, Effect, Predicate } from "effect";
 import { SqlClient, type Statement } from "effect/sql";
 
 /**
@@ -16,10 +16,14 @@ import { SqlClient, type Statement } from "effect/sql";
  * Auth CLI and drizzle-kit laid out the auth tables in `auth-schema.ts`.
  */
 export const toSnakeCase = (name: string) =>
-  name.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+  name.replaceAll(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
 
 /** `LIKE` treats `%`, `_` and `\` as special, so a search for them must escape them. */
-const escapeLike = (value: string) => value.replace(/[\\%_]/g, "\\$&");
+const escapeLike = (value: string) => value.replaceAll(/[\\%_]/g, String.raw`\$&`);
+
+const param = (value: unknown) => (Predicate.isDate(value) ? PgTypes.timestamp(value) : value);
+
+const first = <A>(rows: ReadonlyArray<A>) => rows[0] ?? null;
 
 /**
  * Better Auth's database adapter on the app's Effect SQL client.
@@ -37,12 +41,11 @@ export const effectSqlAdapter = (
   options: { readonly debugLogs?: AdapterFactoryConfig["debugLogs"] } = {},
 ) => {
   const sql = Context.get(services, SqlClient.SqlClient);
+  const table = (model: string) => sql(toSnakeCase(model));
   let betterAuthOptions: BetterAuthOptions | undefined;
 
   /** A query runner. Inside a transaction it carries the transaction's connection. */
   type Run = <A>(effect: Effect.Effect<A, unknown, SqlClient.SqlClient>) => Promise<A>;
-
-  const param = (value: unknown) => (value instanceof Date ? PgTypes.timestamp(value) : value);
 
   const createCustomAdapter =
     (run: Run): Parameters<typeof createAdapterFactory>[0]["adapter"] =>
@@ -51,7 +54,6 @@ export const effectSqlAdapter = (
         modelKey ?? getDefaultModelName(model);
       const column = (modelKey: string, field: string) =>
         sql(toSnakeCase(getFieldName({ model: modelKey, field })));
-      const table = (model: string) => sql(toSnakeCase(model));
 
       /** `column AS "fieldName"` for each field asked for, or all of them. */
       const selection = (modelKey: string, select?: ReadonlyArray<string>) => {
@@ -82,7 +84,9 @@ export const effectSqlAdapter = (
           case "in":
           case "not_in": {
             const values = (Array.isArray(value) ? value : [value]) as ReadonlyArray<unknown>;
-            if (values.length === 0) return sql.literal(where.operator === "in" ? "FALSE" : "TRUE");
+            if (values.length === 0) {
+              return sql.literal(where.operator === "in" ? "FALSE" : "TRUE");
+            }
             const items = insensitive ? values.map((item) => String(item).toLowerCase()) : values;
             const list = sql.in(items.map(param));
             return where.operator === "in" ? sql`${lhs} IN ${list}` : sql`${lhs} NOT IN ${list}`;
@@ -116,7 +120,9 @@ export const effectSqlAdapter = (
 
       /** ANDed conditions, then ORed ones, as Better Auth's own adapters read them. */
       const whereClause = (modelKey: string, where: ReadonlyArray<CleanedWhere> | undefined) => {
-        if (!where || where.length === 0) return sql.literal("TRUE");
+        if (!where || where.length === 0) {
+          return sql.literal("TRUE");
+        }
         const ands = where.filter((w) => w.connector !== "OR").map((w) => condition(modelKey, w));
         const ors = where.filter((w) => w.connector === "OR").map((w) => condition(modelKey, w));
         return sql.and([
@@ -125,7 +131,10 @@ export const effectSqlAdapter = (
         ]);
       };
 
-      const assignments = (modelKey: string, values: Record<string, unknown>) =>
+      const assignments = (
+        modelKey: string,
+        values: Parameters<CustomAdapter["updateMany"]>[0]["update"],
+      ) =>
         Object.entries(values)
           .filter(([, value]) => value !== undefined)
           .map(([field, value]) => sql`${column(modelKey, field)} = ${param(value)}`);
@@ -133,8 +142,6 @@ export const effectSqlAdapter = (
       /** The id of the first row matching `where`, so single-row writes touch one row. */
       const firstId = (model: string, modelKey: string, where: ReadonlyArray<CleanedWhere>) =>
         sql`${column(modelKey, "id")} IN (SELECT ${column(modelKey, "id")} FROM ${table(model)} WHERE ${whereClause(modelKey, where)} LIMIT 1)`;
-
-      const first = <A>(rows: ReadonlyArray<A>) => rows[0] ?? null;
 
       const adapter: CustomAdapter = {
         create: ({ model, modelKey, data }) => {
@@ -179,8 +186,10 @@ export const effectSqlAdapter = (
         },
         update: ({ model, modelKey, where, update }) => {
           const key = keyOf(model, modelKey);
-          const set = assignments(key, update as Record<string, unknown>);
-          if (set.length === 0) return adapter.findOne({ model, modelKey, where });
+          const set = assignments(key, update as Parameters<typeof assignments>[1]);
+          if (set.length === 0) {
+            return adapter.findOne({ model, modelKey, where });
+          }
           return run(
             sql`UPDATE ${table(model)} SET ${sql.csv(set)} WHERE ${firstId(model, key, where)} RETURNING ${selection(key)}`.pipe(
               Effect.map(first),
@@ -190,7 +199,9 @@ export const effectSqlAdapter = (
         updateMany: ({ model, modelKey, where, update }) => {
           const key = keyOf(model, modelKey);
           const set = assignments(key, update);
-          if (set.length === 0) return adapter.count({ model, modelKey, where });
+          if (set.length === 0) {
+            return adapter.count({ model, modelKey, where });
+          }
           return run(
             sql<{
               count: number;

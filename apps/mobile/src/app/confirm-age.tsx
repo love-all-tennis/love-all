@@ -10,6 +10,8 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { signOut } from "@/lib/sign-out";
 
+const onSignOut = () => void signOut();
+
 /**
  * Shown to a signed-in player who hasn't confirmed they're 18 or older yet:
  * right after email sign-up (where the answer from the form is sent
@@ -36,14 +38,14 @@ export default function ConfirmAgeScreen() {
   };
 
   useEffect(() => {
-    if (!autoConfirming) return;
+    if (!autoConfirming) {
+      return;
+    }
     rememberAdultConfirmation(false);
     void confirm();
     // Runs once, with the answer given on the sign-up screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const onSignOut = () => void signOut();
 
   if (autoConfirming && submitting && !error) {
     return (

@@ -43,6 +43,8 @@ export function ProfileDraftProvider({ children }: { children: ReactNode }) {
 
 export function useProfileDraft(): DraftState {
   const state = useContext(DraftContext);
-  if (!state) throw new Error("useProfileDraft must be used inside ProfileDraftProvider");
+  if (!state) {
+    throw new Error("useProfileDraft must be used inside ProfileDraftProvider");
+  }
   return state;
 }

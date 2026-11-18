@@ -15,7 +15,7 @@ export type ScreenProps = {
   /** Scrolls by default. Pass false for screens that hold their own list. */
   scroll?: boolean;
   /** Safe-area edges to pad. Tabs screens usually skip "bottom". */
-  edges?: Edge[];
+  edges?: Array<Edge>;
 };
 
 /**

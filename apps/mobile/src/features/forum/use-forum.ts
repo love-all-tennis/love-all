@@ -10,11 +10,13 @@ export type Loadable<A> =
   | { readonly status: "error" }
   | { readonly status: "ready"; readonly value: A };
 
-/** The categories I can see. Reloads on focus, so new activity shows up. */
-export function useCategories(): {
+export type Categories = {
   readonly state: Loadable<ReadonlyArray<ForumCategory>>;
   readonly refresh: () => void;
-} {
+};
+
+/** The categories I can see. Reloads on focus, so new activity shows up. */
+export function useCategories(): Categories {
   const [state, setState] = useState<Loadable<ReadonlyArray<ForumCategory>>>({
     status: "loading",
   });
@@ -53,7 +55,9 @@ export function useThreadList(categoryId: string) {
     const mine = ++generation.current;
     fetchThreads(categoryId)
       .then((page) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState(
           page
             ? { status: "ready", threads: page.items, cursor: page.nextCursor }
@@ -61,7 +65,9 @@ export function useThreadList(categoryId: string) {
         );
       })
       .catch(() => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState((s) =>
           s?.status === "ready" ? s : { status: "error", threads: [], cursor: null },
         );
@@ -71,12 +77,16 @@ export function useThreadList(categoryId: string) {
   useFocusEffect(refresh);
 
   const loadMore = useCallback(() => {
-    if (!state || state.status !== "ready" || !state.cursor || loadingMore) return;
+    if (!state || state.status !== "ready" || !state.cursor || loadingMore) {
+      return;
+    }
     const mine = generation.current;
     setLoadingMore(true);
     fetchThreads(categoryId, state.cursor)
       .then((page) => {
-        if (mine !== generation.current || !page) return;
+        if (mine !== generation.current || !page) {
+          return;
+        }
         setState((s) =>
           s ? { ...s, threads: mergeById(s.threads, page.items), cursor: page.nextCursor } : s,
         );

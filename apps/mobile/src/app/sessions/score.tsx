@@ -81,7 +81,9 @@ export default function RecordScoreSheet() {
     </ScrollView>
   );
 
-  if (loaded.status === "loading") return frame(<Loading />);
+  if (loaded.status === "loading") {
+    return frame(<Loading />);
+  }
   if (loaded.status === "error") {
     return frame(
       <EmptyState
@@ -128,13 +130,18 @@ export default function RecordScoreSheet() {
 
   const save = async () => {
     setTried(true);
-    if (!check.ok) return;
+    if (!check.ok) {
+      return;
+    }
     setSaving(true);
     setProblem(null);
     try {
       const outcome = await recordResult(session.id, check.result);
-      if ("refusal" in outcome) setProblem(outcome.refusal);
-      else router.back();
+      if ("refusal" in outcome) {
+        setProblem(outcome.refusal);
+      } else {
+        router.back();
+      }
     } catch {
       setProblem(`Couldn't save the score. ${NETWORK}`);
     } finally {

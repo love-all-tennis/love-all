@@ -21,7 +21,10 @@ const revokeWith = (env: Record<string, string>, token: AppleToken, status = 200
     return new Response(null, { status });
   }) as typeof fetch;
 
-  return AppleTokens.use((apple) => apple.revoke(token)).pipe(
+  return Effect.gen(function* () {
+    const apple = yield* AppleTokens;
+    return yield* apple.revoke(token);
+  }).pipe(
     Effect.provide(
       AppleTokens.layer.pipe(
         Layer.provide(ConfigProvider.layer(ConfigProvider.fromEnvRecord(env))),

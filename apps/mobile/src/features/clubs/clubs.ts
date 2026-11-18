@@ -77,8 +77,12 @@ export const wasEdited = (review: {
 
 const lengthError = (text: string, what: string, min: number, max: number): string | null => {
   const length = text.trim().length;
-  if (length < min) return `Enter a ${what}.`;
-  if (length > max) return `Keep the ${what} to ${max} characters or fewer.`;
+  if (length < min) {
+    return `Enter a ${what}.`;
+  }
+  if (length > max) {
+    return `Keep the ${what} to ${max} characters or fewer.`;
+  }
   return null;
 };
 

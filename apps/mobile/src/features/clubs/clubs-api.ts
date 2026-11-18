@@ -73,7 +73,9 @@ export const onReviewChanged = (listener: ReviewListener): (() => void) => {
 
 /** Tells an open club page to reload, after a change made somewhere else (blocking a reviewer, say). */
 export const announce = (clubId: string) => {
-  for (const listener of reviewListeners) listener(clubId);
+  for (const listener of reviewListeners) {
+    listener(clubId);
+  }
 };
 
 export const saveReview = (

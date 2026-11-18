@@ -54,8 +54,12 @@ export const reviewerLevel = (ntrp: string | null): string | null =>
 
 const lengthError = (text: string, what: string, max: number): string | null => {
   const value = text.trim();
-  if (value.length === 0) return `Enter the ${what}`;
-  if (value.length > max) return `Keep the ${what} to ${max} characters (${value.length} now)`;
+  if (value.length === 0) {
+    return `Enter the ${what}`;
+  }
+  if (value.length > max) {
+    return `Keep the ${what} to ${max} characters (${value.length} now)`;
+  }
   return null;
 };
 

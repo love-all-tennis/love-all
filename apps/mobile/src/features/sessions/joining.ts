@@ -38,11 +38,17 @@ export type ViewerAction =
   | { readonly kind: "none"; readonly note: string | null };
 
 export const viewerAction = (s: JoinFacts, now: Date): ViewerAction => {
-  if (s.status === "cancelled") return { kind: "none", note: "This session was cancelled." };
-  if (hasStarted(s, now)) return { kind: "none", note: "This session has already started." };
+  if (s.status === "cancelled") {
+    return { kind: "none", note: "This session was cancelled." };
+  }
+  if (hasStarted(s, now)) {
+    return { kind: "none", note: "This session has already started." };
+  }
   const full = spotsLeft(s) === 0;
   const me = s.me;
-  if (me?.role === "host") return { kind: "host" };
+  if (me?.role === "host") {
+    return { kind: "host" };
+  }
   switch (me?.state) {
     case "invited":
       return { kind: "answerInvite", full };
@@ -60,7 +66,9 @@ export const viewerAction = (s: JoinFacts, now: Date): ViewerAction => {
           note: me ? "You left this session. It's invite only." : "This session is invite only.",
         };
       }
-      if (full) return { kind: "none", note: "Every spot is taken." };
+      if (full) {
+        return { kind: "none", note: "Every spot is taken." };
+      }
       return { kind: "askToJoin" };
   }
 };
@@ -71,6 +79,11 @@ export const needsMyAnswer = (s: JoinFacts, now: Date): boolean =>
   !hasStarted(s, now) &&
   (s.me?.state === "invited" || (s.me?.role === "host" && s.requestCount > 0));
 
+export type MySessionGroups<S> = {
+  readonly needsAnswer: ReadonlyArray<S>;
+  readonly rest: ReadonlyArray<S>;
+};
+
 /**
  * Splits My sessions into the "Needs your answer" group, soonest first, and
  * the rest in the order the API sent them.
@@ -78,10 +91,12 @@ export const needsMyAnswer = (s: JoinFacts, now: Date): boolean =>
 export const groupMySessions = <S extends JoinFacts>(
   sessions: ReadonlyArray<S>,
   now: Date,
-): { readonly needsAnswer: ReadonlyArray<S>; readonly rest: ReadonlyArray<S> } => {
+): MySessionGroups<S> => {
   const needsAnswer: Array<S> = [];
   const rest: Array<S> = [];
-  for (const s of sessions) (needsMyAnswer(s, now) ? needsAnswer : rest).push(s);
+  for (const s of sessions) {
+    (needsMyAnswer(s, now) ? needsAnswer : rest).push(s);
+  }
   needsAnswer.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
   return { needsAnswer, rest };
 };
@@ -173,8 +188,10 @@ export const pendingRequests = <P extends Participant>(s: {
   readonly participants: ReadonlyArray<P>;
 }): ReadonlyArray<P> => s.participants.filter((p) => p.state === "requested");
 
+export type Prompt = { readonly title: string; readonly body: string };
+
 /** What the confirm step for cancelling says. */
-export const cancelPrompt = (s: JoinFacts): { readonly title: string; readonly body: string } => {
+export const cancelPrompt = (s: JoinFacts): Prompt => {
   const others = s.acceptedCount - 1;
   return {
     title: "Cancel this session?",

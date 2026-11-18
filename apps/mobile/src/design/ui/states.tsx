@@ -46,7 +46,9 @@ export function EmptyState({
 /** An error banner in place, such as a failed save. Read out as soon as it shows. */
 export function ErrorBanner({ children }: { children: string | null | undefined }) {
   const palette = useColors();
-  if (!children) return null;
+  if (!children) {
+    return null;
+  }
   return (
     <View
       accessibilityRole="alert"

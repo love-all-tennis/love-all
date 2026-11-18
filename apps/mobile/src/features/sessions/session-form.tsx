@@ -1,4 +1,9 @@
-import * as Location from "expo-location";
+import {
+  Accuracy,
+  geocodeAsync,
+  getCurrentPositionAsync,
+  requestForegroundPermissionsAsync,
+} from "expo-location";
 import { useState } from "react";
 import { Linking, Platform, ScrollView, StyleSheet, View } from "react-native";
 
@@ -203,12 +208,16 @@ function CourtPin({
 
   const fromName = async () => {
     const name = draft.courtName.trim();
-    if (!name) return setProblem("Type the court's name first, then find it on the map.");
+    if (!name) {
+      return setProblem("Type the court's name first, then find it on the map.");
+    }
     setBusy("name");
     setProblem(null);
     try {
-      const [hit] = await Location.geocodeAsync(name);
-      if (!hit) return setProblem(`Couldn't find "${name}". Try adding the city.`);
+      const [hit] = await geocodeAsync(name);
+      if (!hit) {
+        return setProblem(`Couldn't find "${name}". Try adding the city.`);
+      }
       onChange({ courtPoint: { lat: hit.latitude, lng: hit.longitude } });
     } catch {
       setProblem("Map search isn't available here. Pin where you are instead.");
@@ -221,11 +230,12 @@ function CourtPin({
     setBusy("here");
     setProblem(null);
     try {
-      const { granted } = await Location.requestForegroundPermissionsAsync();
-      if (!granted)
+      const { granted } = await requestForegroundPermissionsAsync();
+      if (!granted) {
         return setProblem("Location is off for Love All. Find the court by name instead.");
-      const { coords } = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+      }
+      const { coords } = await getCurrentPositionAsync({
+        accuracy: Accuracy.Balanced,
       });
       onChange({ courtPoint: { lat: coords.latitude, lng: coords.longitude } });
     } catch {

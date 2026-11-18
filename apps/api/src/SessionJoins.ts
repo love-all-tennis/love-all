@@ -129,7 +129,9 @@ const takeSpot = (tx: Tx, session: LockedSession, userId: string) =>
       return yield* new SessionFull({ message: "Every spot is taken" });
     }
     yield* setState(tx, session.id, userId, "accepted");
-    if (taken + 1 < session.spots) return false;
+    if (taken + 1 < session.spots) {
+      return false;
+    }
     yield* tx
       .update(playSession)
       .set({ status: "confirmed" })
@@ -240,6 +242,25 @@ const inLevelRange = (session: LockedSession, ntrp: string | null) =>
   (session.levelMin === null || (ntrp !== null && ntrp >= session.levelMin)) &&
   (session.levelMax === null || (ntrp !== null && ntrp <= session.levelMax));
 
+/** The player's pending request, if they're still not blocked with the host. */
+const pendingRequest = (tx: Tx, session: LockedSession, userId: string) =>
+  Effect.gen(function* () {
+    const [row] = yield* tx
+      .select({ userId: playSessionParticipant.userId })
+      .from(playSessionParticipant)
+      .where(
+        and(
+          eq(playSessionParticipant.sessionId, session.id),
+          eq(playSessionParticipant.userId, userId),
+          eq(playSessionParticipant.state, "requested"),
+          notBlocked(session.hostId, playSessionParticipant.userId),
+        ),
+      );
+    if (!row) {
+      return yield* new JoinRequestNotFound({ userId });
+    }
+  });
+
 /**
  * Joining, leaving and cancelling sessions. Each change locks the session
  * row first and counts spots inside the same transaction.
@@ -304,7 +325,9 @@ export class SessionJoins extends Context.Service<
           .transaction((tx) =>
             Effect.gen(function* () {
               const locked = yield* lockSession(tx, sessionId);
-              if (Option.isNone(locked)) return yield* new SessionNotFound({ id: sessionId });
+              if (Option.isNone(locked)) {
+                return yield* new SessionNotFound({ id: sessionId });
+              }
               const session = locked.value;
               if (session.hostId !== viewer.id) {
                 const [visible] = yield* tx
@@ -313,7 +336,9 @@ export class SessionJoins extends Context.Service<
                   .where(
                     and(eq(playSession.id, sessionId), notBlocked(viewer.id, playSession.hostId)),
                   );
-                if (!visible) return yield* new SessionNotFound({ id: sessionId });
+                if (!visible) {
+                  return yield* new SessionNotFound({ id: sessionId });
+                }
               }
               return yield* f(tx, session);
             }),
@@ -355,7 +380,9 @@ export class SessionJoins extends Context.Service<
               return yield* new SessionNotFound({ id: sessionId });
             }
             yield* requireOpenForChanges(session);
-            if (me?.state === "accepted") return;
+            if (me?.state === "accepted") {
+              return;
+            }
 
             if (answer === "decline") {
               if (me?.state !== "invited") {
@@ -371,7 +398,9 @@ export class SessionJoins extends Context.Service<
             // The host chose who to invite, so invites skip the level check.
             if (me?.state === "invited") {
               const confirmed = yield* takeSpot(tx, session, user.id);
-              if (confirmed) return yield* confirmedNotices(tx, session, user.id, true);
+              if (confirmed) {
+                return yield* confirmedNotices(tx, session, user.id, true);
+              }
               const name = yield* playerName(tx, user.id);
               return [
                 { to: [session.hostId], from: user.id, ...messages.acceptedInvite(session, name) },
@@ -381,7 +410,9 @@ export class SessionJoins extends Context.Service<
               return yield* new NotInvited({ message: "You have no invite to accept" });
             }
 
-            if (me?.state === "requested") return;
+            if (me?.state === "requested") {
+              return;
+            }
             if (session.visibility === "invite_only") {
               return yield* new NotInvited({ message: "This session is invite only" });
             }
@@ -414,23 +445,6 @@ export class SessionJoins extends Context.Service<
             ];
           }),
         ).pipe(Effect.asVoid, Effect.withSpan("SessionJoins.respond"));
-
-      /** The player's pending request, if they're still not blocked with the host. */
-      const pendingRequest = (tx: Tx, session: LockedSession, userId: string) =>
-        Effect.gen(function* () {
-          const [row] = yield* tx
-            .select({ userId: playSessionParticipant.userId })
-            .from(playSessionParticipant)
-            .where(
-              and(
-                eq(playSessionParticipant.sessionId, session.id),
-                eq(playSessionParticipant.userId, userId),
-                eq(playSessionParticipant.state, "requested"),
-                notBlocked(session.hostId, playSessionParticipant.userId),
-              ),
-            );
-          if (!row) return yield* new JoinRequestNotFound({ userId });
-        });
 
       const approve = (host: SessionUser, sessionId: string, userId: string) =>
         asHost(host, sessionId, "approve players", (tx, session) =>
@@ -478,7 +492,9 @@ export class SessionJoins extends Context.Service<
             }
             yield* setState(tx, sessionId, user.id, "left");
             // Withdrawing a request to join is quiet; giving up a spot tells the host.
-            if (me.state !== "accepted") return;
+            if (me.state !== "accepted") {
+              return;
+            }
             yield* reopenIfSpotFree(tx, sessionId);
             const name = yield* playerName(tx, user.id);
             return [{ to: [session.hostId], from: user.id, ...messages.left(session, name) }];
@@ -488,7 +504,9 @@ export class SessionJoins extends Context.Service<
       const cancel = (host: SessionUser, sessionId: string) =>
         asHost(host, sessionId, "cancel the session", (tx, session) =>
           Effect.gen(function* () {
-            if (session.status === "cancelled") return;
+            if (session.status === "cancelled") {
+              return;
+            }
             yield* requireOpenForChanges(session);
             yield* tx
               .update(playSession)

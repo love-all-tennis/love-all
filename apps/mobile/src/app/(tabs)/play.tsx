@@ -76,7 +76,9 @@ function SessionList({ segment }: { segment: Segment }) {
   const needsMore =
     segment === "past" && status === "ready" && sections.length === 0 && hasMore && !loadingMore;
   useEffect(() => {
-    if (needsMore) loadMore();
+    if (needsMore) {
+      loadMore();
+    }
   }, [needsMore, loadMore]);
 
   if (list.status === "needsHomePoint") {
@@ -157,6 +159,9 @@ function SessionList({ segment }: { segment: Segment }) {
 
 type ListSection = { readonly title: string | null; readonly data: ReadonlyArray<SessionSummary> };
 
+const plain = (data: ReadonlyArray<SessionSummary>) =>
+  data.length > 0 ? [{ title: null, data }] : [];
+
 /**
  * My sessions shows upcoming ones, with invites and requests waiting on me in
  * a short group at the top. Past and Nearby are plain lists. Empty groups are
@@ -167,14 +172,18 @@ const listSections = (
   sessions: ReadonlyArray<SessionSummary>,
   now: Date,
 ): ReadonlyArray<ListSection> => {
-  const plain = (data: ReadonlyArray<SessionSummary>) =>
-    data.length > 0 ? [{ title: null, data }] : [];
-  if (segment === "nearby") return plain(sessions);
-  if (segment === "past") return plain(sessions.filter((s) => isPastSession(s, now)));
+  if (segment === "nearby") {
+    return plain(sessions);
+  }
+  if (segment === "past") {
+    return plain(sessions.filter((s) => isPastSession(s, now)));
+  }
   const upcoming = sessions.filter((s) => !isPastSession(s, now));
   const { needsAnswer, rest } = groupMySessions(upcoming, now);
   const sections: Array<ListSection> = [];
-  if (needsAnswer.length > 0) sections.push({ title: "Needs your answer", data: needsAnswer });
+  if (needsAnswer.length > 0) {
+    sections.push({ title: "Needs your answer", data: needsAnswer });
+  }
   if (rest.length > 0) {
     sections.push({ title: needsAnswer.length > 0 ? "All sessions" : null, data: rest });
   }

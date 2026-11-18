@@ -13,6 +13,11 @@ export type InviteCandidate = {
   readonly distanceKm: number | null;
 };
 
+export type InviteCandidates = {
+  readonly followed: ReadonlyArray<InviteCandidate>;
+  readonly nearby: ReadonlyArray<InviteCandidate>;
+};
+
 /**
  * People I follow, then nearby players I don't follow, leaving out me and
  * anyone already in the session (invited, asked to join, or playing). Players
@@ -28,10 +33,7 @@ export const inviteCandidates = ({
   myId: string;
   followed: ReadonlyArray<InviteCandidate>;
   nearby: ReadonlyArray<InviteCandidate>;
-}): {
-  readonly followed: ReadonlyArray<InviteCandidate>;
-  readonly nearby: ReadonlyArray<InviteCandidate>;
-} => {
+}): InviteCandidates => {
   const taken = new Set([
     myId,
     ...session.participants
@@ -51,7 +53,11 @@ export const inviteCandidates = ({
  * back unchanged, so the screen can say why.
  */
 export const toggleInvite = (picked: ReadonlyArray<string>, id: string): ReadonlyArray<string> => {
-  if (picked.includes(id)) return picked.filter((p) => p !== id);
-  if (picked.length >= MAX_INVITES_PER_REQUEST) return picked;
+  if (picked.includes(id)) {
+    return picked.filter((p) => p !== id);
+  }
+  if (picked.length >= MAX_INVITES_PER_REQUEST) {
+    return picked;
+  }
   return [...picked, id];
 };

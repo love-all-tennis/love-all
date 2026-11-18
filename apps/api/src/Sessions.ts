@@ -35,6 +35,21 @@ import { messages } from "./notifications/messages";
 import { displayKm } from "./players/cursor";
 import { decodeCursor, encodeCursor } from "./sessions/cursor";
 
+const geographyOf = (point: LngLat) =>
+  sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)::geography`;
+
+/** True when the session's level range includes `ntrp`. No rating fits only "any level". */
+const levelIncludes = (ntrp: Ntrp | null | undefined): SQL =>
+  ntrp
+    ? and(
+        or(isNull(playSession.levelMin), lte(playSession.levelMin, ntrp)),
+        or(isNull(playSession.levelMax), gte(playSession.levelMax, ntrp)),
+      )!
+    : and(isNull(playSession.levelMin), isNull(playSession.levelMax))!;
+
+const toPoint = (point: { lat: number; lng: number } | null | undefined) =>
+  point ? { x: point.lng, y: point.lat } : null;
+
 /**
  * Matches and hitting sessions: creating, editing, listing and inviting.
  * Join, approve and leave (#14) and comments and scores (#15) build on the
@@ -105,9 +120,6 @@ export class Sessions extends Context.Service<
             Effect.orDie,
           );
 
-      const geographyOf = (point: LngLat) =>
-        sql`ST_SetSRID(ST_MakePoint(${point.x}, ${point.y}), 4326)::geography`;
-
       /** The court pin, or the host's home point when there is no pin. */
       const sessionPoint = sql`coalesce(${playSession.courtPoint}, ${hostProfile.homePoint})`;
 
@@ -130,15 +142,6 @@ export class Sessions extends Context.Service<
         where ${playSessionParticipant.sessionId} = ${playSession.id}
           and ${playSessionParticipant.state} = 'requested'
       ) else 0 end`.mapWith(Number);
-
-      /** True when the session's level range includes `ntrp`. No rating fits only "any level". */
-      const levelIncludes = (ntrp: Ntrp | null | undefined): SQL =>
-        ntrp
-          ? and(
-              or(isNull(playSession.levelMin), lte(playSession.levelMin, ntrp)),
-              or(isNull(playSession.levelMax), gte(playSession.levelMax, ntrp)),
-            )!
-          : and(isNull(playSession.levelMin), isNull(playSession.levelMax))!;
 
       /** Who may see a session at all. Needs the `mine` join. */
       const canSee = (viewer: SessionUser, ntrp: Ntrp | null | undefined): Array<SQL> => [
@@ -258,7 +261,9 @@ export class Sessions extends Context.Service<
       const get = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           const row = yield* visibleSession(viewer, id);
-          if (Option.isNone(row)) return yield* new SessionNotFound({ id });
+          if (Option.isNone(row)) {
+            return yield* new SessionNotFound({ id });
+          }
           return yield* detail(viewer, row.value);
         }).pipe(Effect.withSpan("Sessions.get"));
 
@@ -266,7 +271,9 @@ export class Sessions extends Context.Service<
       const hostedSession = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           const found = yield* visibleSession(viewer, id);
-          if (Option.isNone(found)) return yield* new SessionNotFound({ id });
+          if (Option.isNone(found)) {
+            return yield* new SessionNotFound({ id });
+          }
           const row = found.value;
           const host = row.host;
           if (host?.id !== viewer.id) {
@@ -280,9 +287,6 @@ export class Sessions extends Context.Service<
           }
           return { ...row, host };
         });
-
-      const toPoint = (point: { lat: number; lng: number } | null | undefined) =>
-        point ? { x: point.lng, y: point.lat } : null;
 
       const create = (viewer: SessionUser, input: NewSession) =>
         Effect.gen(function* () {
@@ -349,18 +353,22 @@ export class Sessions extends Context.Service<
           }
 
           const { courtPoint, startsAt, ...rest } = patch;
+          const changes: Partial<typeof playSession.$inferInsert> = { ...rest };
+          // A new start time gets a new "starting soon" reminder.
+          if (startsAt !== undefined) {
+            changes.startsAt = startsAt;
+            changes.reminderSentAt = null;
+          }
+          if (courtPoint !== undefined) {
+            changes.courtPoint = toPoint(courtPoint);
+          }
+          // More or fewer spots can fill a session or open one up again.
+          if (patch.spots !== undefined) {
+            changes.status = row.acceptedCount >= spots ? "confirmed" : "open";
+          }
           yield* db
             .update(playSession)
-            .set({
-              ...rest,
-              // A new start time gets a new "starting soon" reminder.
-              ...(startsAt === undefined ? {} : { startsAt, reminderSentAt: null }),
-              ...(courtPoint === undefined ? {} : { courtPoint: toPoint(courtPoint) }),
-              // More or fewer spots can fill a session or open one up again.
-              ...(patch.spots === undefined
-                ? {}
-                : { status: row.acceptedCount >= spots ? "confirmed" : "open" }),
-            })
+            .set(changes)
             .where(eq(playSession.id, id))
             .pipe(Effect.orDie);
           return yield* get(viewer, id).pipe(Effect.orDie);
@@ -384,7 +392,9 @@ export class Sessions extends Context.Service<
             .pipe(Effect.orDie);
           const foundIds = new Set(found.map((p) => p.id));
           const missing = ids.find((playerId) => !foundIds.has(playerId));
-          if (missing !== undefined) return yield* new PlayerNotFound({ id: missing });
+          if (missing !== undefined) {
+            return yield* new PlayerNotFound({ id: missing });
+          }
 
           const invited = yield* db
             .insert(playSessionParticipant)

@@ -6,7 +6,9 @@ export const confirmDelete = (onConfirm: () => void) => {
   const message = "Your profile, posts, sessions and messages are deleted for good.";
 
   if (Platform.OS === "web") {
-    if (globalThis.confirm?.(`${title}\n\n${message}`)) onConfirm();
+    if (globalThis.confirm?.(`${title}\n\n${message}`)) {
+      onConfirm();
+    }
 
     return;
   }

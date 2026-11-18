@@ -55,7 +55,9 @@ export default function ConversationScreen() {
     const mine = ++generation.current;
     fetchMessages(id)
       .then((page) => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         if (!page) {
           setState({ status: "missing" });
           return;
@@ -81,7 +83,9 @@ export default function ConversationScreen() {
         }
       })
       .catch(() => {
-        if (mine !== generation.current) return;
+        if (mine !== generation.current) {
+          return;
+        }
         setState((s) => (s.status === "ready" ? s : { status: "error" }));
       });
   }, [id]);
@@ -90,7 +94,9 @@ export default function ConversationScreen() {
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active") refresh();
+      if (next === "active") {
+        refresh();
+      }
     });
     return () => sub.remove();
   }, [refresh]);
@@ -101,11 +107,15 @@ export default function ConversationScreen() {
   };
 
   const loadOlder = () => {
-    if (state.status !== "ready" || !state.cursor || loadingMore) return;
+    if (state.status !== "ready" || !state.cursor || loadingMore) {
+      return;
+    }
     setLoadingMore(true);
     fetchMessages(id, state.cursor)
       .then((page) => {
-        if (!page) return;
+        if (!page) {
+          return;
+        }
         setState((s) =>
           s.status === "ready"
             ? { ...s, messages: mergeMessages(s.messages, page.items), cursor: page.nextCursor }
@@ -120,7 +130,9 @@ export default function ConversationScreen() {
 
   const send = async () => {
     setTried(true);
-    if (messageError(draft)) return;
+    if (messageError(draft)) {
+      return;
+    }
     setSending(true);
     setProblem(null);
     try {
@@ -151,7 +163,9 @@ export default function ConversationScreen() {
 
   /** Their messages can be reported: it goes to the moderators with the message attached. */
   const offerReport = (message: DirectMessage) => {
-    if (!other) return;
+    if (!other) {
+      return;
+    }
     const report = () =>
       router.push({
         pathname: "/messages/report",

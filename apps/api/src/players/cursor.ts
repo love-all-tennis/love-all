@@ -20,7 +20,9 @@ export const encodeCursor = (cursor: PlayersCursor): string =>
 
 /** None when the token wasn't made by `encodeCursor`. */
 export const decodeCursor = (token: string): Option.Option<PlayersCursor> => {
-  if (!/^[A-Za-z0-9_-]+$/.test(token)) return Option.none();
+  if (!/^[A-Za-z0-9_-]+$/.test(token)) {
+    return Option.none();
+  }
   return decodeJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([distanceM, id]) => distanceM >= 0 && id.length > 0),
     Option.map(([distanceM, id]) => ({ distanceM, id })),

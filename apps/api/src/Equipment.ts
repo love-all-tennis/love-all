@@ -46,7 +46,7 @@ const searchPatterns = (q: string) =>
     .toLowerCase()
     .split(/\s+/)
     .filter((word) => word.length > 0)
-    .map((word) => `%${word.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+    .map((word) => `%${word.replaceAll(/[\\%_]/g, (c) => `\\${c}`)}%`);
 
 /**
  * Equipment reviews: the gear catalog and players' reviews of it.
@@ -289,7 +289,9 @@ export class Equipment extends Context.Service<
               .onConflictDoNothing()
               .returning()
               .pipe(Effect.orDie);
-            if (inserted) return yield* detail(viewer, inserted);
+            if (inserted) {
+              return yield* detail(viewer, inserted);
+            }
             // Already in the catalog: point at the existing item (even if hidden, it's the same thing).
             const [existing] = yield* db
               .select({ id: equipment.id })
@@ -310,7 +312,9 @@ export class Equipment extends Context.Service<
         get: (viewer, id) =>
           Effect.gen(function* () {
             const item = yield* findItem(id);
-            if (!item) return yield* new EquipmentNotFound({ id });
+            if (!item) {
+              return yield* new EquipmentNotFound({ id });
+            }
             return yield* detail(viewer, item);
           }).pipe(Effect.withSpan("Equipment.get")),
 
@@ -323,7 +327,9 @@ export class Equipment extends Context.Service<
               return yield* new InvalidCursor({ message: "Unknown cursor" });
             }
             const item = yield* findItem(id);
-            if (!item) return yield* new EquipmentNotFound({ id });
+            if (!item) {
+              return yield* new EquipmentNotFound({ id });
+            }
             const after = cursor?.pipe(Option.getOrUndefined);
             const rows = yield* selectReviews()
               .where(
@@ -354,7 +360,9 @@ export class Equipment extends Context.Service<
         saveReview: (viewer, id, input) =>
           Effect.gen(function* () {
             const item = yield* findItem(id);
-            if (!item) return yield* new EquipmentNotFound({ id });
+            if (!item) {
+              return yield* new EquipmentNotFound({ id });
+            }
             const [me] = yield* db
               .select({ ntrp: profile.ntrp })
               .from(profile)

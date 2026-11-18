@@ -31,7 +31,9 @@ const NETWORK = "Check your connection and try again.";
 const confirmDestructive = (title: string, message: string, action: string, run: () => void) => {
   if (Platform.OS === "web") {
     // react-native-web has no Alert.
-    if (globalThis.confirm?.(`${title}\n\n${message}`)) run();
+    if (globalThis.confirm?.(`${title}\n\n${message}`)) {
+      run();
+    }
     return;
   }
   Alert.alert(title, message, [
@@ -87,7 +89,9 @@ export function SessionComments({
   }, [sessionId, generation]);
 
   const loadMore = async () => {
-    if (state.status !== "ready" || !state.cursor) return;
+    if (state.status !== "ready" || !state.cursor) {
+      return;
+    }
     setLoadingMore(true);
     try {
       const page = await fetchComments(sessionId, state.cursor);
@@ -107,7 +111,9 @@ export function SessionComments({
 
   const send = async () => {
     setTried(true);
-    if (commentError(draft)) return;
+    if (commentError(draft)) {
+      return;
+    }
     setPosting(true);
     setProblem(null);
     try {
@@ -138,13 +144,15 @@ export function SessionComments({
         setProblem(null);
         deleteComment(comment.id)
           .then((outcome) => {
-            if ("refusal" in outcome) setProblem(outcome.refusal);
-            else
+            if ("refusal" in outcome) {
+              setProblem(outcome.refusal);
+            } else {
               setState((s) =>
                 s.status === "ready"
                   ? { ...s, items: s.items.filter((c) => c.id !== comment.id) }
                   : s,
               );
+            }
           })
           .catch(() => setProblem(`Couldn't delete your comment. ${NETWORK}`))
           .finally(() => setDeleting(null));
@@ -160,7 +168,9 @@ export function SessionComments({
         <Text color="textMuted">Loading comments…</Text>
       ) : state.status === "error" ? (
         <View style={styles.group}>
-          <Text color="textMuted">Couldn't load comments. {NETWORK}</Text>
+          <Text color="textMuted">
+            {"Couldn't load comments."} {NETWORK}
+          </Text>
           <Button
             label="Try again"
             variant="secondary"
@@ -175,7 +185,7 @@ export function SessionComments({
         <View style={styles.group}>
           {state.items.length === 0 && (
             <Text color="textMuted">
-              No comments yet. Share the court number or who's bringing balls.
+              {"No comments yet. Share the court number or who's bringing balls."}
             </Text>
           )}
           {state.items.map((comment) => (
@@ -275,7 +285,9 @@ type ResultState =
 export function useSessionResult(sessionId: string, enabled: boolean) {
   const [state, setState] = useState<ResultState>({ status: "loading" });
   const reload = useCallback(() => {
-    if (!enabled) return () => {};
+    if (!enabled) {
+      return () => {};
+    }
     let live = true;
     fetchResult(sessionId)
       .then((result) => live && setState({ status: "ready", result }))
@@ -288,7 +300,9 @@ export function useSessionResult(sessionId: string, enabled: boolean) {
   useEffect(
     () =>
       onResultChanged((id, result) => {
-        if (id === sessionId) setState({ status: "ready", result });
+        if (id === sessionId) {
+          setState({ status: "ready", result });
+        }
       }),
     [sessionId],
   );
@@ -317,16 +331,22 @@ export function SessionScore({
   const [busy, setBusy] = useState<"confirm" | "dispute" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
-  if (!enabled) return null;
+  if (!enabled) {
+    return null;
+  }
   const recordable = canRecordScore(session, now);
-  if (state.status === "loading") return null;
+  if (state.status === "loading") {
+    return null;
+  }
   if (state.status === "error") {
     return (
       <View style={styles.section}>
         <Text variant="heading" accessibilityRole="header">
           Score
         </Text>
-        <Text color="textMuted">Couldn't load the score. {NETWORK}</Text>
+        <Text color="textMuted">
+          {"Couldn't load the score."} {NETWORK}
+        </Text>
         <Button label="Try again" variant="secondary" size="small" onPress={() => void reload()} />
       </View>
     );
@@ -334,7 +354,9 @@ export function SessionScore({
 
   const result = state.result;
   if (!result) {
-    if (!recordable) return null;
+    if (!recordable) {
+      return null;
+    }
     return (
       <View style={styles.section}>
         <Text variant="heading" accessibilityRole="header">
@@ -449,9 +471,13 @@ export function PastScore({ session, meId }: { session: SessionSummary; meId: st
     session.status !== "cancelled" &&
     session.me?.state === "accepted";
   const { state } = useSessionResult(session.id, enabled);
-  if (!enabled || state.status !== "ready") return null;
+  if (!enabled || state.status !== "ready") {
+    return null;
+  }
   const line = pastScoreLine(state.result, meId);
-  if (!line) return null;
+  if (!line) {
+    return null;
+  }
   const toConfirm = state.result?.status === "pending";
   return toConfirm ? (
     <View style={styles.pastTag}>
