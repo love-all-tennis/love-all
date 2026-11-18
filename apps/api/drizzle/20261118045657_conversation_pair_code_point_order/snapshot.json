@@ -1,0 +1,40 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "89e48f20-4766-4c96-a7b3-ce9ee3deb48c",
+  "prevIds": [
+    "2fbb8a16-b353-49c8-b0a9-bfb9b0c0a701"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "conversation"
+      ],
+      "writes": [
+        "s|ck|public.conversation.conversation_pair_ordered"
+      ],
+      "reads": [
+        "n|tbl|public.conversation",
+        "n|sch|public",
+        "n|col|public.conversation.user_low_id",
+        "n|col|public.conversation.user_high_id",
+        "e|col|public.conversation.user_low_id",
+        "e|col|public.conversation.user_high_id"
+      ],
+      "sqlHash": "3ec0fc9f64a6124a"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"conversation\",\"conversation_pair_ordered\"]",
+      "set": {
+        "value": "\"user_low_id\" collate \"C\" < \"user_high_id\""
+      }
+    }
+  ]
+}
