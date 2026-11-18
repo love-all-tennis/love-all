@@ -551,6 +551,9 @@ export const pushToken = pgTable(
 /**
  * A one-to-one conversation. The two players are stored in id order
  * (`user_low_id` < `user_high_id`), so a pair has at most one conversation.
+ * The order is by code point (`collate "C"`), the same as JavaScript's `<`,
+ * since Better Auth ids mix upper and lower case and the database's default
+ * collation would sort them differently.
  * `last_message_at` is null until the first message and orders the inbox.
  */
 export const conversation = pgTable(
@@ -572,7 +575,7 @@ export const conversation = pgTable(
     unique("conversation_pair_unique").on(t.userLowId, t.userHighId),
     index("conversation_user_high_idx").on(t.userHighId),
     index("conversation_started_by_created_idx").on(t.startedById, t.createdAt),
-    check("conversation_pair_ordered", sql`${t.userLowId} < ${t.userHighId}`),
+    check("conversation_pair_ordered", sql`${t.userLowId} collate "C" < ${t.userHighId}`),
   ],
 );
 

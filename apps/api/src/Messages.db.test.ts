@@ -24,7 +24,11 @@ interface World {
 }
 
 const withPlayers = <A, E>(
-  setup: { readonly count: number; readonly withoutProfile?: ReadonlyArray<number> },
+  setup: {
+    readonly count: number;
+    readonly withoutProfile?: ReadonlyArray<number>;
+    readonly idPrefixes?: ReadonlyArray<string>;
+  },
   f: (world: World) => Effect.Effect<A, E>,
 ) =>
   Effect.gen(function* () {
@@ -33,7 +37,7 @@ const withPlayers = <A, E>(
     const safety = yield* Safety;
 
     const players = Array.from({ length: setup.count }, (_, i) => {
-      const id = `test_${crypto.randomUUID()}`;
+      const id = `${setup.idPrefixes?.[i] ?? "test_"}${crypto.randomUUID()}`;
 
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
@@ -83,6 +87,21 @@ describe.skipIf(!process.env.DATABASE_URL)("Opening conversations", () => {
     expect(result.fromB.otherPlayer.id).toBe(result.a.id);
     expect(result.first.lastMessage).toBeNull();
     expect(result.first.unreadCount).toBe(0);
+  });
+
+  it("orders the pair the same way as the database, whatever the case of the ids", async () => {
+    const result = await withPlayers(
+      { count: 2, idPrefixes: ["Sv", "bG"] },
+      ({ players: [upper, lower], messages }) =>
+        Effect.gen(function* () {
+          const first = yield* messages.openConversation(upper!, lower!.id);
+          const fromLower = yield* messages.openConversation(lower!, upper!.id);
+
+          return { first, fromLower };
+        }),
+    );
+
+    expect(result.fromLower.id).toBe(result.first.id);
   });
 
   it("refuses myself, players without a profile, blocked players, and me without a profile", async () => {
