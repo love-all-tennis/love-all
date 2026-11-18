@@ -4,6 +4,8 @@ import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { BetterAuth } from "./BetterAuth";
 import { Db } from "./Db";
+import { makeAppleTokensMemory } from "./testing/AppleTokensMemory";
+import { betterAuthTestLayer } from "./testing/BetterAuthTest";
 import {
   accountSuspension,
   club,
@@ -422,7 +424,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Moderation", () => {
         }).pipe(
           Effect.ensuring(Effect.orDie(db.delete(user).where(eq(user.id, signedUp.user.id)))),
         );
-      }).pipe(Effect.provide(BetterAuth.layer.pipe(Layer.provideMerge(Db.layer)))),
+      }).pipe(
+        Effect.provide(
+          betterAuthTestLayer(makeNotificationsMemory().layer, makeAppleTokensMemory().layer),
+        ),
+      ),
     );
 
     expect(signIn).toMatchObject({ status: "FORBIDDEN" });

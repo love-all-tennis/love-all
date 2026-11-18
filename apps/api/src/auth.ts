@@ -1,6 +1,6 @@
 import { expo } from "@better-auth/expo";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 
 /** Who a user is to the app. Admins can use the moderation endpoints. */
 export const roles = ["player", "admin"] as const;
@@ -35,6 +35,12 @@ export interface AuthOptions {
   readonly socialProviders?: SocialProviders;
   /** How rate limiting finds the client IP behind the VPS's reverse proxy. */
   readonly ipAddress?: IpAddress;
+  /**
+   * Runs before Better Auth deletes a player, with their id, for cleanup the
+   * database's cascades don't cover (`AccountDeletion.prepare`). Throwing
+   * stops the delete.
+   */
+  readonly beforeDeleteUser?: (userId: string) => Promise<void>;
 }
 
 export interface IpAddress {
@@ -46,9 +52,32 @@ export interface IpAddress {
 
 const appleOrigin = "https://appleid.apple.com";
 
+const passwordToDelete = createAuthMiddleware(async (ctx) => {
+  if (ctx.path !== "/delete-user" || ctx.body?.password) return;
+
+  const session = await getSessionFromCtx(ctx);
+
+  if (!session) return;
+
+  const accounts = await ctx.context.internalAdapter.findAccounts(session.user.id);
+
+  if (accounts.some((a) => a.providerId === "credential")) {
+    throw APIError.from("BAD_REQUEST", {
+      message: "Enter your password to delete your account.",
+      code: "PASSWORD_REQUIRED",
+    });
+  }
+});
+
 /**
  * Better Auth runs inside the API process. `BetterAuth.ts` builds it on the
  * app's Effect SQL client, so auth shares the API's pool and transactions.
+ *
+ * Players can delete their account (`POST /api/auth/delete-user`). Players
+ * with a password confirm with it, however fresh their session is. Players
+ * who only use Google or Apple have no password, so Better Auth asks for a
+ * fresh session instead (`session.freshAge`, a day by default): an older one
+ * gets `SESSION_EXPIRED` and signs in again first.
  *
  * Reads BETTER_AUTH_SECRET and BETTER_AUTH_URL from the environment.
  */
@@ -80,6 +109,7 @@ export const makeAuth = (options: AuthOptions) => {
         },
       },
     },
+    hooks: { before: passwordToDelete },
     emailAndPassword: { enabled: true },
     socialProviders: {
       ...(google && {
@@ -94,6 +124,12 @@ export const makeAuth = (options: AuthOptions) => {
       }),
     },
     user: {
+      deleteUser: {
+        enabled: true,
+        beforeDelete: async (user) => {
+          await options.beforeDeleteUser?.(user.id);
+        },
+      },
       additionalFields: {
         role: {
           type: [...roles],

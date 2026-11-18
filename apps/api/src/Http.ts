@@ -4,7 +4,9 @@ import { Config, Effect, Layer } from "effect";
 import { HttpEffect, HttpMiddleware, HttpRouter } from "effect/http";
 import { HttpApiBuilder, HttpApiScalar } from "effect/http-api";
 import { createServer } from "node:http";
+import { AccountDeletion } from "./AccountDeletion";
 import { Accounts } from "./Accounts";
+import { AppleTokens } from "./AppleTokens";
 import { AuthenticationLive } from "./Authentication";
 import { BetterAuth, TrustedOrigins } from "./BetterAuth";
 import { Clubs } from "./Clubs";
@@ -55,9 +57,15 @@ const Reminders = SessionReminders.schedule.pipe(Layer.provide(SessionReminders.
 
 const DocsRoute = HttpApiScalar.layer(Api, { path: "/docs" });
 
+const Auth = BetterAuth.layer.pipe(
+  Layer.provide(AccountDeletion.layer),
+  Layer.provide([SessionJoins.layer, AppleTokens.layer]),
+);
+
 export const AllRoutes = Layer.mergeAll(ApiRoutes, AuthRoutes, DocsRoute, Reminders).pipe(
+  Layer.provide(Auth),
   Layer.provide(Notifications.layer.pipe(Layer.provide(PushSender.expo))),
-  Layer.provide(BetterAuth.layer.pipe(Layer.provideMerge(Db.layer))),
+  Layer.provide(Db.layer),
 );
 
 export const HttpLive = Layer.unwrap(

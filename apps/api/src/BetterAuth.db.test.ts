@@ -1,8 +1,11 @@
 import { eq } from "drizzle-orm";
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { BetterAuth } from "./BetterAuth";
 import { Db } from "./Db";
+import { makeAppleTokensMemory } from "./testing/AppleTokensMemory";
+import { betterAuthTestLayer } from "./testing/BetterAuthTest";
+import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 import { account, session, user } from "./db/schema";
 
 describe.skipIf(!process.env.DATABASE_URL)("BetterAuth on Effect SQL", () => {
@@ -51,7 +54,11 @@ describe.skipIf(!process.env.DATABASE_URL)("BetterAuth on Effect SQL", () => {
         }).pipe(
           Effect.ensuring(Effect.orDie(db.delete(user).where(eq(user.id, signedUp.user.id)))),
         );
-      }).pipe(Effect.provide(BetterAuth.layer.pipe(Layer.provideMerge(Db.layer)))),
+      }).pipe(
+        Effect.provide(
+          betterAuthTestLayer(makeNotificationsMemory().layer, makeAppleTokensMemory().layer),
+        ),
+      ),
     );
 
     expect(result.signedUp.user).toMatchObject({ email: result.signedUp.user.email, name: "Sam" });
