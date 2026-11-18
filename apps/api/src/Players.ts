@@ -73,11 +73,13 @@ export class Players extends Context.Service<
       const search = (viewer: SessionUser, query: PlayersQuery) =>
         Effect.gen(function* () {
           const me = yield* viewerHome(viewer).pipe(Effect.orDie);
+
           if (!me?.homePoint) {
             return yield* new HomePointRequired({
               message: "Set your home location to find players near you",
             });
           }
+
           const cursor =
             query.cursor === undefined
               ? undefined
@@ -94,6 +96,7 @@ export class Players extends Context.Service<
           const radiusKm = query.radiusKm ?? me.searchRadiusKm;
           const limit = query.limit ?? PLAYERS_PAGE_DEFAULT;
           const distance = distanceFrom(me.homePoint).mapWith(Number);
+
           const conditions: Array<SQL | undefined> = [
             ...visibleTo(viewer),
             ne(profile.userId, viewer.id),
@@ -119,6 +122,7 @@ export class Players extends Context.Service<
 
           const page = rows.slice(0, limit);
           const last = page.at(-1);
+
           return new PlayersPage({
             items: page.map(
               ({ distanceM, ...row }) =>
@@ -134,6 +138,7 @@ export class Players extends Context.Service<
       const get = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           const me = yield* viewerHome(viewer).pipe(Effect.orDie);
+
           const [row] = yield* db
             .select({
               ...summaryColumns,
@@ -147,8 +152,10 @@ export class Players extends Context.Service<
             .leftJoin(metro, eq(metro.id, profile.metroId))
             .where(and(eq(profile.userId, id), ...visibleTo(viewer)))
             .pipe(Effect.orDie);
+
           if (!row) return yield* new PlayerNotFound({ id });
           const { profileId, distanceM, ...rest } = row;
+
           return new PlayerProfile({
             ...rest,
             availability: yield* loadAvailability(db, profileId).pipe(Effect.orDie),

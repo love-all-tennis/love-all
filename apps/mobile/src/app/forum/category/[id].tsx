@@ -1,3 +1,4 @@
+import { Match } from "effect";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { FlatList, RefreshControl, StyleSheet } from "react-native";
 
@@ -39,23 +40,23 @@ export default function CategoryScreen() {
               <Button label="New thread" variant="primary" onPress={startThread} />
             ) : undefined
           }
-          ListEmptyComponent={
-            list.status === "loading" ? (
-              <Loading label="Loading threads" />
-            ) : list.status === "error" ? (
+          ListEmptyComponent={Match.value(list.status).pipe(
+            Match.when("loading", () => <Loading label="Loading threads" />),
+            Match.when("error", () => (
               <EmptyState
                 title="Couldn't load threads"
                 body="Check your connection and try again."
                 action={{ label: "Try again", onPress: list.refresh }}
               />
-            ) : (
+            )),
+            Match.orElse(() => (
               <EmptyState
                 title="No threads yet"
                 body="Ask a question or share something with other players."
                 action={{ label: "New thread", onPress: startThread }}
               />
-            )
-          }
+            )),
+          )}
           ListFooterComponent={
             list.loadingMore ? <Loading label="Loading more threads" /> : undefined
           }

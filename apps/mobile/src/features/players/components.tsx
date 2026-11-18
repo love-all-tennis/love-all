@@ -25,6 +25,7 @@ export function PlayerRow({ player, onPress }: { player: RowPlayer; onPress: () 
   const distance = distanceLabel(player.distanceKm);
   const meta = distance ? `${level} · ${distance}` : level;
   const plays = playsLabel(player);
+
   return (
     <Card
       onPress={onPress}

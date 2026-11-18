@@ -28,25 +28,32 @@ if (supported) {
  */
 export async function registerForPush() {
   if (!supported) return;
+
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
       name: "Matches, sessions and replies",
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
+
   let { granted, canAskAgain } = await Notifications.getPermissionsAsync();
+
   if (!granted && canAskAgain) {
     ({ granted } = await Notifications.requestPermissionsAsync());
   }
+
   if (!granted) return;
 
   let token: string;
+
   try {
     ({ data: token } = await Notifications.getExpoPushTokenAsync());
   } catch (error) {
     console.warn("No push token: is the EAS project set up?", error);
+
     return;
   }
+
   await callApi((api) =>
     api.devices.register({
       payload: { token, platform: Platform.OS === "ios" ? "ios" : "android" },
@@ -62,8 +69,10 @@ export async function registerForPush() {
  */
 export async function unregisterForPush() {
   if (!supported) return;
+
   try {
     const token = await SecureStore.getItemAsync(TOKEN_KEY);
+
     if (!token) return;
     await callApi((api) => api.devices.unregister({ params: { token } }));
     await SecureStore.deleteItemAsync(TOKEN_KEY);

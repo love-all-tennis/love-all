@@ -20,6 +20,7 @@ export function useNeedsProfileSetup() {
     fetchMe()
       .then((me) => live && setChecked({ userId, needs: needsSetup(me) }))
       .catch(() => live && setChecked({ userId, needs: false }));
+
     return () => {
       live = false;
     };

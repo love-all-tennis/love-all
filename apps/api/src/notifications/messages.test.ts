@@ -32,6 +32,7 @@ describe("notification messages", () => {
       "Jo",
       `Try a  multifilament.\n${"x".repeat(200)}`,
     );
+
     expect(notice.title).toBe('Jo replied to "Best strings for a 3.5?"');
     expect(notice.body.startsWith("Try a multifilament. x")).toBe(true);
     expect(notice.body).toHaveLength(140);

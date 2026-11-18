@@ -17,6 +17,7 @@ export interface SessionsCursor {
 const CursorJson = Schema.fromJsonString(
   Schema.Tuple([Schema.Literals([0, 1]), Schema.Finite, Schema.String]),
 );
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const decodeJson = Schema.decodeUnknownOption(CursorJson);
 
@@ -27,6 +28,7 @@ export const encodeCursor = (cursor: SessionsCursor) =>
 /** None when the token wasn't made by `encodeCursor`. */
 export const decodeCursor = (token: string) => {
   if (!/^[A-Za-z0-9_-]+$/.test(token)) return Option.none();
+
   return decodeJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([, , id]) => UUID.test(id)),
     Option.map(([bucket, key, id]) => ({ bucket, key, id })),

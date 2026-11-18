@@ -3,7 +3,8 @@ import { Option, Schema } from "effect";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TOKEN = /^[A-Za-z0-9_-]+$/;
 
-const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+const encode = (value: readonly [string | number, string]) =>
+  Buffer.from(JSON.stringify(value)).toString("base64url");
 
 /** Where a catalog page ended: the last item's `name_key` and id, in ascending order. */
 export interface CatalogCursor {
@@ -18,6 +19,7 @@ export const encodeCatalogCursor = (cursor: CatalogCursor) => encode([cursor.nam
 
 export const decodeCatalogCursor = (token: string) => {
   if (!TOKEN.test(token)) return Option.none();
+
   return decodeCatalogJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([, id]) => UUID.test(id)),
     Option.map(([nameKey, id]) => ({ nameKey, id })),
@@ -41,6 +43,7 @@ export const encodeReviewsCursor = (cursor: ReviewsCursor) => encode([cursor.cre
 
 export const decodeReviewsCursor = (token: string) => {
   if (!TOKEN.test(token)) return Option.none();
+
   return decodeReviewsJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([ms, id]) => Number.isInteger(ms) && UUID.test(id)),
     Option.map(([createdAt, id]) => ({ createdAt, id })),

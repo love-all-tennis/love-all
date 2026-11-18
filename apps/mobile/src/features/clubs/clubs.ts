@@ -1,3 +1,4 @@
+import { Match } from "effect";
 import {
   CLUB_ADDRESS_MAX,
   CLUB_NAME_MAX,
@@ -22,7 +23,11 @@ export const clubTags = (club: { readonly access: ClubAccess; readonly indoorCou
 
 /** "No reviews yet", "1 review", "12 reviews". */
 export const reviewCountLabel = (count: number) =>
-  count === 0 ? "No reviews yet" : count === 1 ? "1 review" : `${count} reviews`;
+  Match.value(count).pipe(
+    Match.when(0, () => "No reviews yet"),
+    Match.when(1, () => "1 review"),
+    Match.orElse((n) => `${n} reviews`),
+  );
 
 /** "4.3", always with one decimal so a list lines up. */
 export const averageLabel = (average: number) => average.toFixed(1);
@@ -53,8 +58,10 @@ export const starChoiceLabel = (stars: number) =>
  */
 export const ratingBars = (counts: ReadonlyArray<number>) => {
   const total = counts.reduce((a, b) => a + b, 0);
+
   return [5, 4, 3, 2, 1].map((stars) => {
     const count = counts[stars - 1] ?? 0;
+
     return { stars, count, share: total === 0 ? 0 : count / total };
   });
 };
@@ -65,8 +72,11 @@ export const wasEdited = (review: { readonly createdAt: Date; readonly updatedAt
 
 const lengthError = (text: string, what: string, min: number, max: number) => {
   const length = text.trim().length;
+
   if (length < min) return `Enter a ${what}.`;
+
   if (length > max) return `Keep the ${what} to ${max} characters or fewer.`;
+
   return null;
 };
 
@@ -88,6 +98,7 @@ export const noteError = (text: string) =>
 /** Trimmed text, or null when nothing's left: for the optional fields. */
 export const optionalText = (text: string) => {
   const trimmed = text.trim();
+
   return trimmed.length === 0 ? null : trimmed;
 };
 
@@ -100,5 +111,6 @@ export const mergeById = <T extends { readonly id: string }>(
   more: ReadonlyArray<T>,
 ) => {
   const seen = new Set(current.map((x) => x.id));
+
   return [...current, ...more.filter((x) => !seen.has(x.id))];
 };

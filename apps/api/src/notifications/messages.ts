@@ -111,5 +111,6 @@ export const messages = {
 /** Cuts `text` to `max` characters, ending with an ellipsis when it was longer. */
 export const truncate = (text: string, max: number) => {
   const flat = text.replace(/\s+/g, " ").trim();
+
   return flat.length <= max ? flat : `${flat.slice(0, max - 1).trimEnd()}…`;
 };

@@ -18,11 +18,15 @@ const withPlayers = <A, E>(
   Effect.gen(function* () {
     const db = yield* Db;
     const notifications = yield* Notifications;
+
     const players = Array.from({ length: count }, (_, i) => {
       const id = `test_${crypto.randomUUID()}`;
+
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
+
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
+
     return yield* f(players, { db, notifications }).pipe(
       Effect.ensuring(
         Effect.orDie(

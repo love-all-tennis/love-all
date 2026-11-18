@@ -51,6 +51,7 @@ export function usePlayerSearch(filters: PlayerFilters | null) {
         );
       })
       .catch(() => live && setResults({ ...base, status: "error", players: [], cursor: null }));
+
     return () => {
       live = false;
     };
@@ -62,15 +63,19 @@ export function usePlayerSearch(filters: PlayerFilters | null) {
   const loadMore = useCallback(() => {
     if (!current || current.status !== "ready" || !current.cursor || current.loadingCursor) return;
     const cursor = current.cursor;
+
     const isSame = (r: Results | null): r is Results =>
       r !== null && r.filters === current.filters && r.generation === current.generation;
+
     setResults((r) => (isSame(r) ? { ...r, loadingCursor: cursor } : r));
     searchPlayers(current.filters, cursor)
       .then((result) => {
         setResults((r) => {
           if (!isSame(r) || r.loadingCursor !== cursor) return r;
+
           if (result.kind !== "page") return { ...r, loadingCursor: null };
           const seen = new Set(r.players.map((p) => p.id));
+
           return {
             ...r,
             players: [...r.players, ...result.page.items.filter((p) => !seen.has(p.id))],

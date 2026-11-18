@@ -43,6 +43,7 @@ export function ReportCard({
   const subjectName = report.subject?.displayName ?? "Deleted account";
   const count = reportCountLabel(report.openReportsOnTarget);
   const what = TARGET_LABELS[report.targetType];
+
   return (
     <Card>
       <View style={styles.group}>

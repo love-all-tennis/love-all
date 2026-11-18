@@ -30,8 +30,10 @@ export const inviteCandidates = ({
       .filter((p) => p.state !== "declined" && p.state !== "left")
       .map((p) => p.player.id),
   ]);
+
   const keptFollowed = followed.filter((p) => !taken.has(p.id));
   const followedIds = new Set(keptFollowed.map((p) => p.id));
+
   return {
     followed: keptFollowed,
     nearby: nearby.filter((p) => !taken.has(p.id) && !followedIds.has(p.id)),
@@ -44,6 +46,8 @@ export const inviteCandidates = ({
  */
 export const toggleInvite = (picked: ReadonlyArray<string>, id: string) => {
   if (picked.includes(id)) return picked.filter((p) => p !== id);
+
   if (picked.length >= MAX_INVITES_PER_REQUEST) return picked;
+
   return [...picked, id];
 };

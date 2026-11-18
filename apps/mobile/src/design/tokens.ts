@@ -84,7 +84,9 @@ export const colors = {
 } as const;
 
 export type ColorScheme = keyof typeof colors;
+
 export type ColorRole = keyof typeof colors.light;
+
 export type Palette = { readonly [K in ColorRole]: string };
 
 /**

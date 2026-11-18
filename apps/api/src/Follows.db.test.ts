@@ -18,11 +18,15 @@ const withPlayers = <A, E>(
   Effect.gen(function* () {
     const db = yield* Db;
     const services = { db, follows: yield* Follows, profiles: yield* Profiles };
+
     const players = Array.from({ length: count }, (_, i) => {
       const id = `test_${crypto.randomUUID()}`;
+
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
+
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
+
     return yield* f(players, services).pipe(
       Effect.ensuring(
         Effect.orDie(
@@ -50,9 +54,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Follows", () => {
         yield* follows.follow(me!, near!.id);
         yield* Effect.sleep("5 millis");
         yield* follows.follow(me!, far!.id);
+
         return yield* follows.list(me!);
       }),
     );
+
     expect(list.items.map((p) => p.displayName)).toEqual(["P2", "P1"]);
     expect(list.items[1]).toMatchObject({ ntrp: "3.5", playsSingles: true, distanceKm: 1 });
     expect(list.items[0]!.distanceKm).toBeGreaterThan(15);
@@ -64,9 +70,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Follows", () => {
       Effect.gen(function* () {
         yield* profiles.update(other!, { homePoint: downtown });
         yield* follows.follow(me!, other!.id);
+
         return yield* follows.list(me!);
       }),
     );
+
     expect(list.items[0]!.distanceKm).toBeNull();
   });
 
@@ -79,9 +87,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Follows", () => {
         const twice = yield* follows.list(me!);
         yield* follows.unfollow(me!, other!.id);
         yield* follows.unfollow(me!, other!.id);
+
         return { twice, after: yield* follows.list(me!) };
       }),
     );
+
     expect(result.twice.items).toHaveLength(1);
     expect(result.after.items).toEqual([]);
   });
@@ -90,6 +100,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Follows", () => {
     const errors = await withPlayers(2, ([me, noProfile], { follows, profiles }) =>
       Effect.gen(function* () {
         yield* profiles.update(me!, {});
+
         return [
           yield* Effect.flip(follows.follow(me!, me!.id)),
           yield* Effect.flip(follows.follow(me!, noProfile!.id)),
@@ -97,6 +108,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Follows", () => {
         ];
       }),
     );
+
     expect(errors.map((e) => e._tag)).toEqual([
       "CannotFollowSelf",
       "PlayerNotFound",
@@ -115,11 +127,13 @@ describe.skipIf(!process.env.DATABASE_URL)("Follows", () => {
         yield* db
           .insert(follow)
           .values(fillers.map((followedId) => ({ followerId: me!.id, followedId })));
+
         return yield* Effect.flip(follows.follow(me!, other!.id)).pipe(
           Effect.ensuring(Effect.orDie(db.delete(user).where(inArray(user.id, fillers)))),
         );
       }),
     );
+
     expect(error._tag).toBe("FollowLimitReached");
   });
 });

@@ -64,6 +64,7 @@ export const HttpLive = Layer.unwrap(
   Effect.gen(function* () {
     const port = yield* Config.Port("PORT").pipe(Config.withDefault(3000));
     const allowedOrigins = yield* TrustedOrigins;
+
     return HttpRouter.serve(AllRoutes, {
       middleware: HttpMiddleware.cors({ allowedOrigins, credentials: true }),
     }).pipe(Layer.provide(NodeHttpServer.layer(createServer, { port })));

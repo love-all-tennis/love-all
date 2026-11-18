@@ -29,12 +29,14 @@ export function useCatalog(kind: EquipmentKind | null, q: string) {
     items: [],
     cursor: null,
   });
+
   const [loadingMore, setLoadingMore] = useState(false);
   const [query, setQuery] = useState(q);
   const generation = useRef(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setQuery(q), SEARCH_DELAY_MS);
+
     return () => clearTimeout(timer);
   }, [q]);
 

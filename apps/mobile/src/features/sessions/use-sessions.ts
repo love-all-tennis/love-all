@@ -61,6 +61,7 @@ export function useSessionList(scope: SessionScope) {
         setState((s) => {
           if (!s) return s;
           const seen = new Set(s.sessions.map((x) => x.id));
+
           return {
             ...s,
             sessions: [...s.sessions, ...result.page.items.filter((x) => !seen.has(x.id))],
@@ -99,9 +100,11 @@ export function useSessionDetail(id: string) {
 
   const reload = useCallback(() => {
     const mine = ++generation.current;
+
     const settle = (state: SessionDetail) => {
       if (mine === generation.current) setLoaded({ id, state });
     };
+
     fetchSession(id)
       .then((session) => settle(session ? { kind: "ready", session } : { kind: "missing" }))
       .catch(() =>
@@ -124,6 +127,7 @@ export function useSessionDetail(id: string) {
   );
 
   const state: SessionDetail = loaded?.id === id ? loaded.state : { kind: "loading" };
+
   return { state, reload, replace };
 }
 
@@ -134,5 +138,6 @@ export function useSessionDetail(id: string) {
 export function useNow() {
   const [now, setNow] = useState(() => new Date());
   useFocusEffect(useCallback(() => setNow(new Date()), []));
+
   return now;
 }

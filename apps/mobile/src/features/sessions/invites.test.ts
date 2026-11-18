@@ -8,6 +8,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { inviteCandidates, toggleInvite, type InviteCandidate } from "./invites";
 
 const id = () => crypto.randomUUID();
+
 const person = (name: string) =>
   ({
     id: id(),
@@ -69,6 +70,7 @@ describe("inviteCandidates", () => {
       followed: [ana, ben],
       nearby: [me, ben, cy, dee],
     });
+
     expect(lists.followed.map((p) => p.displayName)).toEqual(["Ben"]);
     expect(lists.nearby.map((p) => p.displayName)).toEqual(["Cy", "Dee"]);
   });

@@ -30,12 +30,16 @@ const withPlayers = <A, E>(
   Effect.gen(function* () {
     const db = yield* Db;
     const safety = yield* Safety;
+
     const players = Array.from({ length: count }, (_, i) => {
       const id = `test_${crypto.randomUUID()}`;
+
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
+
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
     const ids = players.map((p) => p.id);
+
     return yield* f(players, safety, db).pipe(
       Effect.ensuring(
         Effect.orDie(
@@ -62,9 +66,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
         yield* safety.unblock(sam!, alex!.id);
         yield* safety.unblock(sam!, alex!.id);
         const after = yield* safety.listBlocks(sam!);
+
         return { listed, theirs, after };
       }),
     );
+
     expect(result.listed).toHaveLength(1);
     expect(result.listed[0]).toMatchObject({ displayName: "Alex", photoUrl: null });
     expect(result.listed[0]!.blockedAt).toBeInstanceOf(Date);
@@ -76,6 +82,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
     const listed = await withPlayers(2, ([sam, alex], safety) =>
       safety.block(sam!, alex!.id).pipe(Effect.andThen(safety.listBlocks(sam!))),
     );
+
     expect(listed[0]).toMatchObject({ id: expect.any(String), displayName: null });
   });
 
@@ -86,6 +93,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
         Effect.flip(safety.block(sam!, "nobody")),
       ]),
     );
+
     expect(errors.map((e) => e._tag)).toEqual(["CannotTargetSelf", "TargetNotFound"]);
   });
 
@@ -93,13 +101,16 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
     const visible = await withPlayers(3, ([sam, alex, jo], safety, db) =>
       Effect.gen(function* () {
         const ids = [sam!.id, alex!.id, jo!.id];
+
         const seenBy = (viewer: SessionUser) =>
           db
             .select({ id: user.id })
             .from(user)
             .where(and(inArray(user.id, ids), notBlocked(viewer.id, user.id)))
             .pipe(Effect.map((rows) => rows.map((r) => r.id).sort()));
+
         yield* safety.block(alex!, sam!.id);
+
         return {
           sam: yield* seenBy(sam!),
           alex: yield* seenBy(alex!),
@@ -108,6 +119,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
         };
       }),
     );
+
     expect(visible.sam).toEqual([visible.ids.sam, visible.ids.jo].sort());
     expect(visible.alex).toEqual([visible.ids.alex, visible.ids.jo].sort());
     expect(visible.jo).toHaveLength(3);
@@ -122,11 +134,14 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
           reason: "harassment",
           details: "Rude messages after our match",
         });
+
         yield* db.delete(user).where(eq(user.id, sam!.id));
         const [row] = yield* db.select().from(report).where(eq(report.id, created.id));
+
         return row;
       }),
     );
+
     expect(saved).toMatchObject({
       reporterId: null,
       targetType: "player",
@@ -145,6 +160,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
           .select({ id: forumCategory.id })
           .from(forumCategory)
           .where(eq(forumCategory.slug, "general"));
+
         const [thread] = yield* db
           .insert(forumThread)
           .values({
@@ -154,27 +170,34 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
             body: "DM me",
           })
           .returning({ id: forumThread.id });
+
         const [post] = yield* db
           .insert(forumPost)
           .values({ threadId: thread!.id, authorId: alex!.id, body: "Still selling" })
           .returning({ id: forumPost.id });
+
         const onThread = yield* safety.report(sam!, {
           targetType: "forum_thread",
           targetId: thread!.id,
           reason: "spam",
         });
+
         const onPost = yield* safety.report(sam!, {
           targetType: "forum_post",
           targetId: post!.id,
           reason: "spam",
         });
+
         const ownPost = yield* Effect.flip(
           safety.report(alex!, { targetType: "forum_post", targetId: post!.id, reason: "spam" }),
         );
+
         yield* db.update(forumPost).set({ hiddenAt: new Date() }).where(eq(forumPost.id, post!.id));
+
         const hidden = yield* Effect.flip(
           safety.report(sam!, { targetType: "forum_post", targetId: post!.id, reason: "spam" }),
         );
+
         const unknown = yield* Effect.flip(
           safety.report(sam!, {
             targetType: "forum_thread",
@@ -182,13 +205,16 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
             reason: "spam",
           }),
         );
+
         const rows = yield* db
           .select()
           .from(report)
           .where(inArray(report.id, [onThread.id, onPost.id]));
+
         return { rows, errors: [ownPost._tag, hidden._tag, unknown._tag], alex: alex!.id };
       }),
     );
+
     expect(saved.errors).toEqual(["CannotTargetSelf", "TargetNotFound", "TargetNotFound"]);
     expect(saved.rows).toHaveLength(2);
     const byType = Object.fromEntries(saved.rows.map((row) => [row.targetType, row]));
@@ -210,6 +236,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
         ),
       ]),
     );
+
     expect(errors.map((e) => e._tag)).toEqual(["CannotTargetSelf", "TargetNotFound"]);
   });
 
@@ -219,13 +246,16 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
         const players = yield* Players;
         const profiles = yield* Profiles;
         const follows = yield* Follows;
+
         for (const [i, p] of [sam!, alex!, jo!].entries()) {
           yield* profiles.update(p, { homePoint: { lat: 64.14 + i / 100, lng: -21.94 } });
         }
+
         yield* follows.follow(sam!, alex!.id);
         yield* follows.follow(alex!, sam!.id);
         yield* follows.follow(sam!, jo!.id);
         yield* safety.block(alex!, sam!.id);
+
         return {
           samSees: (yield* players.search(sam!, { radiusKm: 5 })).items.map((p) => p.id),
           alexSees: (yield* players.search(alex!, { radiusKm: 5 })).items.map((p) => p.id),
@@ -237,6 +267,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Safety", () => {
         };
       }),
     );
+
     expect(result.samSees).toEqual([result.ids.jo]);
     expect(result.alexSees).toEqual([result.ids.jo]);
     expect(result.samGetsAlex._tag).toBe("PlayerNotFound");

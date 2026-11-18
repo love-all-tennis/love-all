@@ -8,6 +8,7 @@ import { SessionReminders } from "./SessionReminders";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 const sent = makeNotificationsMemory();
+
 const TestLayer = SessionReminders.layer.pipe(
   Layer.provide(sent.layer),
   Layer.provideMerge(Db.layer),
@@ -23,11 +24,15 @@ const withPlayers = <A, E>(
   Effect.gen(function* () {
     const db = yield* Db;
     const reminders = yield* SessionReminders;
+
     const players = Array.from({ length: count }, (_, i) => {
       const id = `test_${crypto.randomUUID()}`;
+
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
+
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
+
     return yield* f(players, { db, reminders }).pipe(
       Effect.ensuring(
         Effect.orDie(
@@ -64,12 +69,14 @@ const makeSession = (
         status: options.status ?? "open",
       })
       .returning({ id: playSession.id });
+
     yield* db
       .insert(playSessionParticipant)
       .values([
         { sessionId: row!.id, userId: host.id, role: "host", state: "accepted" },
         ...others.map((p) => ({ sessionId: row!.id, userId: p.id, state: "accepted" as const })),
       ]);
+
     return row!.id;
   });
 
@@ -81,11 +88,14 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionReminders", () => {
           startsAt: minutesFromNow(30),
           status: "confirmed",
         });
+
         const alone = yield* makeSession(db, host!, [], { startsAt: minutesFromNow(30) });
+
         const cancelled = yield* makeSession(db, host!, [guest!], {
           startsAt: minutesFromNow(30),
           status: "cancelled",
         });
+
         const later = yield* makeSession(db, host!, [guest!], { startsAt: minutesFromNow(180) });
         const started = yield* makeSession(db, host!, [guest!], { startsAt: minutesFromNow(-5) });
 
@@ -97,6 +107,7 @@ describe.skipIf(!process.env.DATABASE_URL)("SessionReminders", () => {
         expect([...notices[0]!.to].sort()).toEqual([host!.id, guest!.id].sort());
         expect(notices[0]!.title).toMatch(/^Singles at \d{1,2}:\d{2} [AP]M$/);
         expect(notices[0]!.body).toBe("Starting soon at Palmer Park");
+
         for (const id of [alone, cancelled, later, started]) {
           expect(sent.about(`/sessions/${id}`)).toEqual([]);
         }

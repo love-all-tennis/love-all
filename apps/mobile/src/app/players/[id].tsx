@@ -1,3 +1,4 @@
+import { Match } from "effect";
 import type { PlayerProfile } from "@love-all/domain";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
@@ -55,6 +56,7 @@ export default function PlayerScreen() {
         settle({ kind: "ready", player, following });
       })
       .catch(() => settle({ kind: "error" }));
+
     return () => {
       live = false;
     };
@@ -65,8 +67,10 @@ export default function PlayerScreen() {
     const next = !state.following;
     setSaving("follow");
     setNotice(null);
+
     try {
       const refusal = await setFollowing(state.player.id, next);
+
       if (refusal) setNotice(refusal);
       else setState({ ...state, following: next });
     } catch {
@@ -79,8 +83,10 @@ export default function PlayerScreen() {
   const message = async (player: PlayerProfile) => {
     setSaving("message");
     setNotice(null);
+
     try {
       const outcome = await openConversation(player.id);
+
       if ("refusal" in outcome) setNotice(outcome.refusal);
       else
         router.push({
@@ -97,8 +103,10 @@ export default function PlayerScreen() {
   const block = async (player: PlayerProfile) => {
     setSaving("block");
     setNotice(null);
+
     try {
       const refusal = await blockPlayer(player.id);
+
       if (refusal) setNotice(refusal);
       else router.back();
     } catch {
@@ -172,17 +180,21 @@ function ProfileBody({
   onBlock: () => void;
 }) {
   const where = [player.metro?.name, distanceLabel(player.distanceKm)].filter(Boolean).join(" · ");
-  const hand =
-    player.handedness === "left"
-      ? "Left-handed"
-      : player.handedness === "right"
-        ? "Right-handed"
-        : null;
-  const formats = [
-    player.playsSingles && "Singles",
-    player.playsDoubles && "Doubles",
-    player.playsHitting && "Hitting",
-  ].filter((f): f is string => typeof f === "string");
+
+  const hand = Match.value(player.handedness).pipe(
+    Match.when("left", () => "Left-handed"),
+    Match.when("right", () => "Right-handed"),
+    Match.orElse(() => null),
+  );
+
+  const formats = (
+    [
+      [player.playsSingles, "Singles"],
+      [player.playsDoubles, "Doubles"],
+      [player.playsHitting, "Hitting"],
+    ] as const
+  ).flatMap(([plays, label]) => (plays ? [label] : []));
+
   const schedule = availabilityLines(player.availability);
 
   return (

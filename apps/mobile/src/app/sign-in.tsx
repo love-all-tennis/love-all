@@ -9,11 +9,15 @@ import { authClient } from "@/lib/auth-client";
 
 type FieldErrors = { email?: string; password?: string };
 
-const check = (email: string, password: string) =>
-  ({
-    ...(email.trim() ? {} : { email: "Enter the email you signed up with" }),
-    ...(password ? {} : { password: "Enter your password" }),
-  }) satisfies FieldErrors;
+const check = (email: string, password: string) => {
+  const errors: FieldErrors = {};
+
+  if (!email.trim()) errors.email = "Enter the email you signed up with";
+
+  if (!password) errors.password = "Enter your password";
+
+  return errors;
+};
 
 export default function SignInScreen() {
   const [email, setEmail] = useState("");
@@ -25,12 +29,15 @@ export default function SignInScreen() {
 
   const submit = async () => {
     setTried(true);
+
     if (Object.keys(check(email, password)).length > 0) return;
     setSubmitting(true);
     setError(null);
     rememberAdultConfirmation(false);
+
     try {
       const result = await authClient.signIn.email({ email: email.trim(), password });
+
       if (result.error) {
         setError(
           result.error.status === 401

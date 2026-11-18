@@ -15,7 +15,9 @@ export function useCategories() {
   const [state, setState] = useState<Loadable<ReadonlyArray<ForumCategory>>>({
     status: "loading",
   });
+
   const generation = useRef(0);
+
   const refresh = useCallback(() => {
     const mine = ++generation.current;
     fetchCategories()
@@ -26,7 +28,9 @@ export function useCategories() {
           setState((s) => (s.status === "ready" ? s : { status: "error" })),
       );
   }, []);
+
   useFocusEffect(refresh);
+
   return { state, refresh };
 }
 

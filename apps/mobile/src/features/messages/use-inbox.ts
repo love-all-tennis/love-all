@@ -72,10 +72,13 @@ export function useUnreadBadgeSync() {
       fetchInbox()
         .then((page) => setUnreadConversations(page.unreadConversations))
         .catch(() => undefined);
+
     void load();
+
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") void load();
     });
+
     return () => sub.remove();
   }, []);
 }

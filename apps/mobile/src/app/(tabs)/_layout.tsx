@@ -7,6 +7,7 @@ import { useNeedsProfileSetup } from "@/features/profile/use-needs-profile-setup
 
 export default function TabLayout() {
   if (useNeedsProfileSetup()) return <Redirect href="/profile-setup" />;
+
   return (
     <>
       {Platform.OS !== "web" && <PushNotifications />}
@@ -17,5 +18,6 @@ export default function TabLayout() {
 
 function PushNotifications() {
   usePushNotifications();
+
   return null;
 }

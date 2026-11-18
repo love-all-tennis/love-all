@@ -10,9 +10,11 @@ import { LatLng } from "./Profile";
  */
 
 export const ClubId = Schema.String.check(Schema.isUUID());
+
 export type ClubId = typeof ClubId.Type;
 
 export const ClubReviewId = Schema.String.check(Schema.isUUID());
+
 export type ClubReviewId = typeof ClubReviewId.Type;
 
 export const CLUB_NAME_MAX = 100;
@@ -23,10 +25,12 @@ export const ClubName = Schema.String.check(
   Schema.isTrimmed(),
   Schema.isBetweenLength(1, CLUB_NAME_MAX),
 );
+
 export const ClubAddress = Schema.String.check(
   Schema.isTrimmed(),
   Schema.isBetweenLength(1, CLUB_ADDRESS_MAX),
 );
+
 export const ClubReviewBody = Schema.String.check(
   Schema.isTrimmed(),
   Schema.isBetweenLength(1, CLUB_REVIEW_BODY_MAX),
@@ -43,10 +47,12 @@ export const ClubReviewBody = Schema.String.check(
  */
 export const CLUB_ACCESS = ["free", "pay_to_play", "members_only"] as const;
 export const ClubAccess = Schema.Literals(CLUB_ACCESS);
+
 export type ClubAccess = typeof ClubAccess.Type;
 
 /** Whole stars, 1 to 5. */
 export const ClubRating = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 5 }));
+
 export type ClubRating = typeof ClubRating.Type;
 
 /**
@@ -77,6 +83,7 @@ export const ClubRatingSummary = Schema.Struct({
   average: Schema.NullOr(Schema.Number),
   count: Schema.Int,
 });
+
 export type ClubRatingSummary = typeof ClubRatingSummary.Type;
 
 /** A club as it shows in a list. */
@@ -98,6 +105,7 @@ export const ClubReviewAuthor = Schema.Struct({
   displayName: Schema.String,
   photoUrl: Schema.NullOr(Schema.String),
 });
+
 export type ClubReviewAuthor = typeof ClubReviewAuthor.Type;
 
 /** One player's review of a club. */
@@ -140,6 +148,7 @@ export const ClubsQuery = {
   q: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(CLUB_NAME_MAX))),
   radiusKm: Schema.optionalKey(ClubsRadiusKm),
 };
+
 export type ClubsQuery = Schema.Struct<typeof ClubsQuery>["Type"];
 
 /** `POST /clubs` body. */
@@ -150,6 +159,7 @@ export const NewClub = Schema.Struct({
   access: ClubAccess,
   indoorCourts: Schema.optionalKey(Schema.Boolean),
 });
+
 export type NewClub = typeof NewClub.Type;
 
 /** `PUT /clubs/:id/review` body: my review, written or replaced. */
@@ -157,6 +167,7 @@ export const ClubReviewInput = Schema.Struct({
   rating: ClubRating,
   body: Schema.optionalKey(Schema.NullOr(ClubReviewBody)),
 });
+
 export type ClubReviewInput = typeof ClubReviewInput.Type;
 
 export const CLUB_REVIEWS_PAGE_DEFAULT = 20;
@@ -169,6 +180,7 @@ export const ClubReviewsQuery = {
     Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: CLUB_REVIEWS_PAGE_MAX })),
   ),
 };
+
 export type ClubReviewsQuery = Schema.Struct<typeof ClubReviewsQuery>["Type"];
 
 /** One page of a club's reviews, newest first. */

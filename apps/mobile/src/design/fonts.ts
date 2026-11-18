@@ -14,5 +14,6 @@ export function useAppFonts() {
     [fontFamily.sansSemiBold]: require("@/assets/fonts/Geist-SemiBold.ttf"),
     [fontFamily.serif]: require("@/assets/fonts/GeistSerif-Regular.ttf"),
   });
+
   return loaded || error != null;
 }

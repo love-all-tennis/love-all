@@ -32,11 +32,13 @@ export default function ClubsScreen() {
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(query.trim()), SEARCH_DELAY_MS);
+
     return () => clearTimeout(timer);
   }, [query]);
 
   const load = useCallback(() => {
     const mine = ++generation.current;
+
     return fetchClubs(search)
       .then((result) => {
         if (mine !== generation.current) return;

@@ -25,6 +25,7 @@ export default function ConfirmAgeScreen() {
   const confirm = async () => {
     setSubmitting(true);
     setError(null);
+
     try {
       await confirmAdult();
       await refetch({ query: { disableCookieCache: true } });

@@ -15,8 +15,10 @@ export type TextProps = RNTextProps & {
 /** All text in the app. Picks its style from the type scale and its colour from the theme. */
 export function Text({ variant = "body", color = "text", tabular, style, ...rest }: TextProps) {
   const palette = useColors();
+
   const accessibilityRole =
     rest.accessibilityRole ?? (variant === "display" || variant === "title" ? "header" : undefined);
+
   return (
     <RNText
       {...rest}

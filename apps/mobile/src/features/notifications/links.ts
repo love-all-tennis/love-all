@@ -1,3 +1,6 @@
+import { Option, Schema } from "effect";
+import type * as Notifications from "expo-notifications";
+
 const ROUTES = [/^\/sessions\/[\w-]+$/, /^\/forum\/thread\/[\w-]+$/, /^\/messages\/[\w-]+$/];
 
 export type NotificationRoute =
@@ -5,9 +8,17 @@ export type NotificationRoute =
   | `/forum/thread/${string}`
   | `/messages/${string}`;
 
-export function notificationRoute(data: unknown) {
-  if (typeof data !== "object" || data === null || !("url" in data)) return null;
-  const { url } = data;
-  if (typeof url !== "string") return null;
-  return ROUTES.some((route) => route.test(url)) ? (url as NotificationRoute) : null;
+const NotificationData = Schema.Struct({ url: Schema.String });
+
+const decodeNotificationData = Schema.decodeUnknownOption(NotificationData);
+
+const isNotificationRoute = (url: string): url is NotificationRoute =>
+  ROUTES.some((route) => route.test(url));
+
+export function notificationRoute(data: Notifications.NotificationContent["data"] | null) {
+  return decodeNotificationData(data).pipe(
+    Option.map(({ url }) => url),
+    Option.filter(isNotificationRoute),
+    Option.getOrNull,
+  );
 }

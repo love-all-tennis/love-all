@@ -23,6 +23,7 @@ export const encodeThreadsCursor = (cursor: ThreadsCursor) =>
 /** None when the token wasn't made by `encodeThreadsCursor`. */
 export const decodeThreadsCursor = (token: string) => {
   if (!/^[A-Za-z0-9_-]+$/.test(token)) return Option.none();
+
   return decodeJson(Buffer.from(token, "base64url").toString("utf8")).pipe(
     Option.filter(([ms, id]) => Number.isInteger(ms) && UUID.test(id)),
     Option.map(([lastPostAt, id]) => ({ lastPostAt, id })),
@@ -36,5 +37,6 @@ export const encodeRepliesCursor = (id: string) => Buffer.from(id).toString("bas
 export const decodeRepliesCursor = (token: string) => {
   if (!/^[A-Za-z0-9_-]+$/.test(token)) return Option.none();
   const id = Buffer.from(token, "base64url").toString("utf8");
+
   return UUID.test(id) ? Option.some(id) : Option.none();
 };

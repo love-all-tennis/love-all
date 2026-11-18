@@ -18,6 +18,7 @@ import {
 
 function Star({ on, size: starSize }: { on: boolean; size: keyof typeof size.icon }) {
   const px = size.icon[starSize];
+
   return (
     <Text
       color={on ? "accent" : "borderStrong"}
@@ -53,6 +54,7 @@ export function RatingLine({ rating }: { rating: ClubRatingSummary }) {
       </Text>
     );
   }
+
   return (
     <View
       style={styles.ratingLine}
@@ -75,6 +77,7 @@ export function ClubCard({ club, onPress }: { club: ClubSummary; onPress: () => 
   const distance = distanceLabel(club.distanceKm);
   const meta = [club.address, distance].filter(Boolean).join(" · ");
   const tags = clubTags(club);
+
   return (
     <Card
       onPress={onPress}
@@ -105,6 +108,7 @@ export function ClubCard({ club, onPress }: { club: ClubSummary; onPress: () => 
 /** The 5-to-1 star breakdown on a club's page. */
 export function RatingBreakdown({ counts }: { counts: ReadonlyArray<number> }) {
   const palette = useColors();
+
   return (
     <View style={styles.bars}>
       {ratingBars(counts).map((bar) => (
@@ -154,6 +158,7 @@ export function StarPicker({
       <View style={styles.pickerRow} accessibilityRole="radiogroup">
         {[1, 2, 3, 4, 5].map((n) => {
           const on = value !== null && n <= value;
+
           return (
             <Pressable
               key={n}
@@ -196,6 +201,7 @@ export function ReviewCard({
   onReport?: () => void;
 }) {
   const when = `${timeAgo(review.createdAt, now)}${wasEdited(review) ? " · Edited" : ""}`;
+
   return (
     <Card>
       <View style={styles.reviewHead}>

@@ -46,6 +46,7 @@ export function SessionForm({
   const set = (fields: Partial<SessionDraft>) => onChange({ ...draft, ...fields });
   const days = dayOptions(now, draft.day);
   const times = timeOptions(draft.time);
+
   const parts = (["Morning", "Afternoon", "Evening"] as const).map((part) => ({
     part,
     times: times.filter((t) => dayPartOf(t) === part),
@@ -199,11 +200,14 @@ function CourtPin({
 
   const fromName = async () => {
     const name = draft.courtName.trim();
+
     if (!name) return setProblem("Type the court's name first, then find it on the map.");
     setBusy("name");
     setProblem(null);
+
     try {
       const [hit] = await Location.geocodeAsync(name);
+
       if (!hit) return setProblem(`Couldn't find "${name}". Try adding the city.`);
       onChange({ courtPoint: { lat: hit.latitude, lng: hit.longitude } });
     } catch {
@@ -216,13 +220,17 @@ function CourtPin({
   const fromHere = async () => {
     setBusy("here");
     setProblem(null);
+
     try {
       const { granted } = await Location.requestForegroundPermissionsAsync();
+
       if (!granted)
         return setProblem("Location is off for Love All. Find the court by name instead.");
+
       const { coords } = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+
       onChange({ courtPoint: { lat: coords.latitude, lng: coords.longitude } });
     } catch {
       setProblem("Couldn't get your location. Find the court by name instead.");

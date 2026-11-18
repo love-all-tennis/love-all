@@ -32,6 +32,7 @@ export const HOME_POINT_DECIMALS = 2;
 
 export const roundPoint = ({ lat, lng }: LatLng) => {
   const factor = 10 ** HOME_POINT_DECIMALS;
+
   return { lat: Math.round(lat * factor) / factor, lng: Math.round(lng * factor) / factor };
 };
 
@@ -50,6 +51,7 @@ export const WEEKDAYS = [
   { weekday: 6, short: "Sat" },
   { weekday: 7, short: "Sun" },
 ] as const;
+
 export type Weekday = (typeof WEEKDAYS)[number]["weekday"];
 
 /** The simple time blocks a player picks from. Times are local, "HH:MM". */
@@ -58,10 +60,12 @@ export const DAY_PARTS = [
   { part: "afternoon", label: "Afternoon", start: "12:00", end: "17:00" },
   { part: "evening", label: "Evening", start: "17:00", end: "22:00" },
 ] as const;
+
 export type DayPart = (typeof DAY_PARTS)[number]["part"];
 
 /** A picked cell in the week grid, such as "2-evening" for Tuesday evening. */
 export type SlotKey = `${Weekday}-${DayPart}`;
+
 export const slotKey = (weekday: Weekday, part: DayPart) => `${weekday}-${part}` satisfies SlotKey;
 
 type AvailabilityBlock = Availability[number];
@@ -101,18 +105,25 @@ export const stepError = (draft: ProfileDraft, step: Step) => {
   switch (step) {
     case "basics": {
       const name = draft.displayName.trim();
+
       if (name.length === 0) return "Add the name other players will see.";
+
       if (name.length > DISPLAY_NAME_MAX)
         return `Keep your name to ${DISPLAY_NAME_MAX} characters.`;
+
       return null;
     }
+
     case "home":
       return draft.homeArea ? null : "Pick a city or drop a pin so we can find players near you.";
     case "game":
       if (!draft.ntrp) return "Pick your NTRP level.";
+
       if (!draft.handedness) return "Pick which hand you play with.";
+
       if (!draft.playsSingles && !draft.playsDoubles && !draft.playsHitting)
         return "Pick at least one way you like to play.";
+
       return null;
     case "availability":
       return null;
@@ -132,8 +143,10 @@ export const toggleSlot = (draft: ProfileDraft, key: SlotKey) => ({
 export const toAvailabilityBlocks = (slots: ReadonlyArray<SlotKey>) => {
   const picked = new Set(slots);
   const blocks: Array<AvailabilityBlock> = [];
+
   for (const { weekday } of WEEKDAYS) {
     let open: { startTime: string; endTime: string } | null = null;
+
     for (const { part, start, end } of DAY_PARTS) {
       if (picked.has(slotKey(weekday, part))) {
         if (open && open.endTime === start) open.endTime = end;
@@ -146,13 +159,16 @@ export const toAvailabilityBlocks = (slots: ReadonlyArray<SlotKey>) => {
         open = null;
       }
     }
+
     if (open) blocks.push({ weekday, ...open });
   }
+
   return blocks;
 };
 
 const minutes = (time: string) => {
   const [h = "0", m = "0"] = time.split(":");
+
   return Number(h) * 60 + Number(m);
 };
 
@@ -164,15 +180,19 @@ export const fromAvailabilityBlocks = (
   blocks: ReadonlyArray<{ weekday: number; startTime: string; endTime: string }>,
 ) => {
   const keys = new Set<SlotKey>();
+
   for (const block of blocks) {
     const day = WEEKDAYS.find((d) => d.weekday === block.weekday);
+
     if (!day) continue;
     const from = minutes(block.startTime);
     const to = minutes(block.endTime);
+
     for (const { part, start, end } of DAY_PARTS) {
       if (from < minutes(end) && to > minutes(start)) keys.add(slotKey(day.weekday, part));
     }
   }
+
   return [...keys];
 };
 
@@ -193,7 +213,9 @@ export const toProfileUpdate = (draft: ProfileDraft) => ({
  */
 export const draftFromMe = (me: Me) => {
   const { profile } = me;
+
   if (!profile) return emptyDraft(me.user.name.slice(0, DISPLAY_NAME_MAX));
+
   return {
     displayName: profile.displayName,
     photoUri: profile.photoUrl,
@@ -210,6 +232,7 @@ export const draftFromMe = (me: Me) => {
 /** Whether a player still has setup to do: true until the required steps are saved. */
 export const needsSetup = (me: Me) => {
   const draft = draftFromMe(me);
+
   return (
     me.profile === null || (["basics", "home", "game"] as const).some((s) => stepError(draft, s))
   );

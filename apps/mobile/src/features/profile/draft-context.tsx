@@ -24,6 +24,7 @@ export function ProfileDraftProvider({ children }: { children: ReactNode }) {
       .then((me) => live && setDraft(draftFromMe(me)))
       .catch(() => undefined)
       .finally(() => live && setLoading(false));
+
     return () => {
       live = false;
     };
@@ -36,11 +37,14 @@ export function ProfileDraftProvider({ children }: { children: ReactNode }) {
     loading,
     save: () => saveProfile(draft),
   };
+
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;
 }
 
 export function useProfileDraft() {
   const state = useContext(DraftContext);
+
   if (!state) throw new Error("useProfileDraft must be used inside ProfileDraftProvider");
+
   return state;
 }

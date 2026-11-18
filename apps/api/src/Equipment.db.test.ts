@@ -1,4 +1,4 @@
-import { EQUIPMENT_ADDED_PER_HOUR, SessionUser } from "@love-all/domain";
+import { EQUIPMENT_ADDED_PER_HOUR, EquipmentExists, SessionUser } from "@love-all/domain";
 import { eq, inArray, like } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
@@ -20,12 +20,16 @@ const withGear = <A, E>(count: number, f: (world: World) => Effect.Effect<A, E>)
     const db = yield* Db;
     const gear = yield* Equipment;
     const brand = `Test${crypto.randomUUID().slice(0, 8)}`;
+
     const players = Array.from({ length: count }, (_, i) => {
       const id = `test_${crypto.randomUUID()}`;
+
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
+
     const ids = players.map((p) => p.id);
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
+
     return yield* Effect.gen(function* () {
       yield* db.insert(profile).values(
         players.map((p, i) => ({
@@ -34,6 +38,7 @@ const withGear = <A, E>(count: number, f: (world: World) => Effect.Effect<A, E>)
           ntrp: "4.0" as const,
         })),
       );
+
       return yield* f({ players, gear, db, brand });
     }).pipe(
       Effect.ensuring(
@@ -58,9 +63,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment catalog", () => {
         const second = yield* gear.list(me!, { q: brand, limit: 2, cursor: first.nextCursor! });
         const rackets = yield* gear.list(me!, { q: brand, kind: "racket" });
         const search = yield* gear.list(me!, { q: `staff ${brand.toLowerCase()}` });
+
         return { first, second, rackets, search };
       }),
     );
+
     expect(result.first.items.map((i) => i.model)).toEqual(["Alu Power", "Blade 98"]);
     expect(result.second.items.map((i) => i.model)).toEqual(["Pro Staff 97"]);
     expect(result.second.nextCursor).toBeNull();
@@ -77,18 +84,23 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment catalog", () => {
     const result = await withGear(2, ({ players: [a, b], gear, brand }) =>
       Effect.gen(function* () {
         const first = yield* gear.create(a!, { kind: "shoes", brand, model: "Gel Resolution 9" });
+
         const again = yield* gear
           .create(b!, { kind: "shoes", brand: brand.toUpperCase(), model: "gel  resolution 9" })
           .pipe(Effect.flip);
+
         const otherKind = yield* gear.create(b!, {
           kind: "other",
           brand,
           model: "Gel Resolution 9",
         });
+
         return { first, again, otherKind };
       }),
     );
-    expect(result.again).toMatchObject({ _tag: "EquipmentExists", id: result.first.id });
+
+    expect(result.again).toBeInstanceOf(EquipmentExists);
+    expect(result.again).toMatchObject({ id: result.first.id });
     expect(result.otherKind.id).not.toBe(result.first.id);
   });
 
@@ -98,11 +110,13 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment catalog", () => {
         for (let i = 0; i < EQUIPMENT_ADDED_PER_HOUR; i++) {
           yield* gear.create(me!, { kind: "balls", brand, model: `Ball ${i}` });
         }
+
         return yield* gear
           .create(me!, { kind: "balls", brand, model: "One more" })
           .pipe(Effect.flip);
       }),
     );
+
     expect(error._tag).toBe("EquipmentRateLimited");
   });
 
@@ -111,12 +125,14 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment catalog", () => {
       Effect.gen(function* () {
         const item = yield* gear.create(me!, { kind: "bag", brand, model: "Tour 12" });
         yield* db.update(equipment).set({ hiddenAt: new Date() }).where(eq(equipment.id, item.id));
+
         return {
           list: yield* gear.list(me!, { q: brand }),
           get: yield* gear.get(me!, item.id).pipe(Effect.flip),
         };
       }),
     );
+
     expect(result.list.items).toHaveLength(0);
     expect(result.get._tag).toBe("EquipmentNotFound");
   });
@@ -125,6 +141,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment catalog", () => {
     const error = await withGear(1, ({ players: [me], gear }) =>
       gear.list(me!, { cursor: "nope" }).pipe(Effect.flip),
     );
+
     expect(error._tag).toBe("InvalidCursor");
   });
 });
@@ -136,9 +153,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment reviews", () => {
         const item = yield* gear.create(me!, { kind: "racket", brand, model: "Ezone 100" });
         const first = yield* gear.saveReview(me!, item.id, { rating: 3, body: "Stiff" });
         const second = yield* gear.saveReview(me!, item.id, { rating: 5, title: "Grew on me" });
+
         return { first, second, detail: yield* gear.get(me!, item.id) };
       }),
     );
+
     expect(result.second.id).toBe(result.first.id);
     expect(result.second).toMatchObject({
       rating: 5,
@@ -161,14 +180,18 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment reviews", () => {
         yield* Effect.sleep("5 millis");
         yield* gear.saveReview(c!, item.id, { rating: 4, body: "Solid" });
         const first = yield* gear.listReviews(me!, item.id, { limit: 2 });
+
         const second = yield* gear.listReviews(me!, item.id, {
           limit: 2,
           cursor: first.nextCursor!,
         });
+
         const list = yield* gear.list(me!, { q: brand });
+
         return { first, second, summary: list.items[0]! };
       }),
     );
+
     expect(result.first.items.map((r) => r.body)).toEqual(["Solid", "Dies fast"]);
     expect(result.second.items.map((r) => r.body)).toEqual(["Spin!"]);
     expect(result.second.nextCursor).toBeNull();
@@ -187,12 +210,14 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment reviews", () => {
           .update(equipmentReview)
           .set({ hiddenAt: new Date() })
           .where(eq(equipmentReview.id, h.id));
+
         return {
           reviews: yield* gear.listReviews(me!, item.id, {}),
           detail: yield* gear.get(me!, item.id),
         };
       }),
     );
+
     expect(result.reviews.items).toHaveLength(0);
     expect(result.detail.rating.count).toBe(0);
   });
@@ -204,9 +229,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment reviews", () => {
         yield* gear.saveReview(me!, item.id, { rating: 2 });
         yield* gear.deleteReview(me!, item.id);
         yield* gear.deleteReview(me!, item.id);
+
         return yield* gear.get(me!, item.id);
       }),
     );
+
     expect(detail.myReview).toBeNull();
     expect(detail.rating.count).toBe(0);
   });
@@ -215,6 +242,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Equipment reviews", () => {
     const error = await withGear(1, ({ players: [me], gear }) =>
       gear.saveReview(me!, crypto.randomUUID(), { rating: 3 }).pipe(Effect.flip),
     );
+
     expect(error._tag).toBe("EquipmentNotFound");
   });
 });

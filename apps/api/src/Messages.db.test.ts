@@ -10,6 +10,7 @@ import { Safety } from "./Safety";
 import { makeNotificationsMemory } from "./testing/NotificationsMemory";
 
 const sent = makeNotificationsMemory();
+
 const TestLayer = Layer.mergeAll(
   Messages.layer,
   Safety.layer.pipe(Layer.provide(Forum.layer)),
@@ -30,19 +31,25 @@ const withPlayers = <A, E>(
     const db = yield* Db;
     const messages = yield* Messages;
     const safety = yield* Safety;
+
     const players = Array.from({ length: setup.count }, (_, i) => {
       const id = `test_${crypto.randomUUID()}`;
+
       return new SessionUser({ id, name: `P${i}`, email: `${id}@example.com`, role: "player" });
     });
+
     const ids = players.map((p) => p.id);
     yield* db.insert(user).values(players.map(({ id, name, email }) => ({ id, name, email })));
+
     return yield* Effect.gen(function* () {
       const withProfile = players.filter((_, i) => !setup.withoutProfile?.includes(i));
+
       if (withProfile.length > 0) {
         yield* db
           .insert(profile)
           .values(withProfile.map((p) => ({ userId: p.id, displayName: `Player ${p.name}` })));
       }
+
       return yield* f({ players, messages, safety, db });
     }).pipe(
       Effect.ensuring(
@@ -65,9 +72,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Opening conversations", () => {
         const first = yield* messages.openConversation(a!, b!.id);
         const again = yield* messages.openConversation(a!, b!.id);
         const fromB = yield* messages.openConversation(b!, a!.id);
+
         return { first, again, fromB, a: a!, b: b! };
       }),
     );
+
     expect(result.again.id).toBe(result.first.id);
     expect(result.fromB.id).toBe(result.first.id);
     expect(result.first.otherPlayer).toMatchObject({ id: result.b.id, displayName: "Player P1" });
@@ -86,9 +95,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Opening conversations", () => {
           const needsProfile = yield* Effect.flip(messages.openConversation(newcomer!, a!.id));
           yield* safety.block(b!, a!.id);
           const blocked = yield* Effect.flip(messages.openConversation(a!, b!.id));
+
           return { self, missing, needsProfile, blocked };
         }),
     );
+
     expect(result.self._tag).toBe("CannotMessageSelf");
     expect(result.missing._tag).toBe("PlayerNotFound");
     expect(result.needsProfile._tag).toBe("ProfileRequired");
@@ -103,10 +114,13 @@ describe.skipIf(!process.env.DATABASE_URL)("Opening conversations", () => {
           for (const other of others.slice(0, CONVERSATIONS_PER_HOUR)) {
             yield* messages.openConversation(me!, other.id);
           }
+
           yield* messages.openConversation(me!, others[0]!.id);
+
           return yield* Effect.flip(messages.openConversation(me!, others.at(-1)!.id));
         }),
     );
+
     expect(error._tag).toBe("MessagesRateLimited");
   });
 });
@@ -121,9 +135,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Sending and reading", () => {
         yield* messages.send(me!, withB.id, say("Hit Saturday?"));
         yield* messages.send(c!, withC.id, say("Doubles at 6?"));
         yield* messages.send(b!, withB.id, say("Sure, 9am"));
+
         return { inbox: yield* messages.listConversations(me!, {}), withB, withC };
       }),
     );
+
     expect(result.inbox.items.map((c) => c.id)).toEqual([result.withB.id, result.withC.id]);
     expect(result.inbox.items[0]!.lastMessage).toMatchObject({ body: "Sure, 9am", mine: false });
     expect(result.inbox.items[0]!.unreadCount).toBe(1);
@@ -144,9 +160,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Sending and reading", () => {
         yield* messages.send(me!, withC.id, say("Hey"));
         const after = yield* messages.listConversations(me!, {});
         const theirs = yield* messages.listConversations(b!, {});
+
         return { before, after, theirs };
       }),
     );
+
     expect(result.before.items.map((c) => c.unreadCount)).toEqual([1, 2]);
     expect(result.before.unreadConversations).toBe(2);
     expect(result.after.items.map((c) => c.unreadCount)).toEqual([0, 0]);
@@ -158,30 +176,39 @@ describe.skipIf(!process.env.DATABASE_URL)("Sending and reading", () => {
     const result = await withPlayers({ count: 4 }, ({ players: [me, b, c, d], messages }) =>
       Effect.gen(function* () {
         const convo = yield* messages.openConversation(me!, b!.id);
+
         for (const n of [1, 2, 3, 4, 5]) {
           yield* messages.send(n % 2 ? me! : b!, convo.id, say(`m${n}`));
         }
+
         const first = yield* messages.listMessages(me!, convo.id, { limit: 2 });
+
         const second = yield* messages.listMessages(me!, convo.id, {
           limit: 2,
           cursor: first.nextCursor!,
         });
+
         const third = yield* messages.listMessages(me!, convo.id, {
           limit: 2,
           cursor: second.nextCursor!,
         });
+
         for (const other of [c!, d!]) {
           const next = yield* messages.openConversation(me!, other.id);
           yield* messages.send(me!, next.id, say("hello"));
         }
+
         const inbox1 = yield* messages.listConversations(me!, { limit: 2 });
+
         const inbox2 = yield* messages.listConversations(me!, {
           limit: 2,
           cursor: inbox1.nextCursor!,
         });
+
         return { first, second, third, inbox1, inbox2, convo };
       }),
     );
+
     const bodies = (page: typeof result.first) => page.items.map((m) => m.body);
     expect(bodies(result.first)).toEqual(["m5", "m4"]);
     expect(bodies(result.second)).toEqual(["m3", "m2"]);
@@ -198,6 +225,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Sending and reading", () => {
     const result = await withPlayers({ count: 3 }, ({ players: [a, b, outsider], messages }) =>
       Effect.gen(function* () {
         const convo = yield* messages.openConversation(a!, b!.id);
+
         return yield* Effect.all({
           read: Effect.flip(messages.listMessages(outsider!, convo.id, {})),
           send: Effect.flip(messages.send(outsider!, convo.id, say("hi"))),
@@ -207,6 +235,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Sending and reading", () => {
         });
       }),
     );
+
     expect(result.read._tag).toBe("ConversationNotFound");
     expect(result.send._tag).toBe("ConversationNotFound");
     expect(result.mark._tag).toBe("ConversationNotFound");
@@ -222,6 +251,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Blocking and reporting", () => {
         const convo = yield* messages.openConversation(a!, b!.id);
         yield* messages.send(a!, convo.id, say("See you at 6"));
         yield* safety.block(b!, a!.id);
+
         const blocked = yield* Effect.all({
           inboxA: messages.listConversations(a!, {}),
           inboxB: messages.listConversations(b!, {}),
@@ -229,15 +259,19 @@ describe.skipIf(!process.env.DATABASE_URL)("Blocking and reporting", () => {
           sendA: Effect.flip(messages.send(a!, convo.id, say("hello?"))),
           sendB: Effect.flip(messages.send(b!, convo.id, say("bye"))),
         });
+
         const [kept] = yield* db
           .select({ id: conversation.id })
           .from(conversation)
           .where(eq(conversation.id, convo.id));
+
         yield* safety.unblock(b!, a!.id);
         const unblocked = yield* messages.listConversations(a!, {});
+
         return { blocked, kept, unblocked };
       }),
     );
+
     expect(result.blocked.inboxA.items).toHaveLength(0);
     expect(result.blocked.inboxB.items).toHaveLength(0);
     expect(result.blocked.inboxB.unreadConversations).toBe(0);
@@ -257,15 +291,19 @@ describe.skipIf(!process.env.DATABASE_URL)("Blocking and reporting", () => {
           const theirs = yield* messages.send(them!, convo.id, say("rude message"));
           const mine = yield* messages.send(me!, convo.id, say("please stop"));
           yield* safety.block(me!, them!.id);
+
           const created = yield* safety.report(me!, {
             targetType: "direct_message",
             targetId: theirs.id,
             reason: "harassment",
           });
+
           const [row] = yield* db.select().from(report).where(eq(report.id, created.id));
+
           const own = yield* Effect.flip(
             safety.report(me!, { targetType: "direct_message", targetId: mine.id, reason: "spam" }),
           );
+
           const notMine = yield* Effect.flip(
             safety.report(outsider!, {
               targetType: "direct_message",
@@ -273,12 +311,15 @@ describe.skipIf(!process.env.DATABASE_URL)("Blocking and reporting", () => {
               reason: "spam",
             }),
           );
+
           const bogus = yield* Effect.flip(
             safety.report(me!, { targetType: "direct_message", targetId: "x", reason: "spam" }),
           );
+
           return { row, own, notMine, bogus, theirs };
         }),
     );
+
     expect(result.row).toMatchObject({
       targetType: "direct_message",
       targetId: result.theirs.id,
@@ -299,9 +340,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Message notifications", () => {
       Effect.gen(function* () {
         const convo = yield* messages.openConversation(a!, b!.id);
         yield* messages.send(a!, convo.id, say("Court 3 at 6?"));
+
         return { convo, a: a!, b: b! };
       }),
     );
+
     const notices = sent.about(`/messages/${result.convo.id}`);
     expect(notices).toEqual([
       {

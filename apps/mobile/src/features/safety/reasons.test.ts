@@ -9,6 +9,7 @@ describe("REPORT_REASONS", () => {
     const offered = REPORT_REASONS.map((r) => r.reason);
     expect(new Set(offered).size).toBe(offered.length);
     expect([...offered].sort()).toEqual([...ReportReason.literals].sort());
+
     for (const reason of offered) expect(Schema.is(ReportReason)(reason)).toBe(true);
   });
 });

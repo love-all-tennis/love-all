@@ -151,13 +151,16 @@ export class Moderation extends Context.Service<
       ) =>
         Effect.gen(function* () {
           yield* requireModerator(viewer);
+
           if (!UUID.test(id)) return yield* new TargetNotFound({ id });
           const table = hideable[type];
+
           const [exists] = yield* db
             .select({ id: table.id })
             .from(table)
             .where(eq(table.id, id))
             .pipe(Effect.orDie);
+
           if (!exists) return yield* new TargetNotFound({ id });
           yield* db
             .transaction((tx) =>
@@ -172,14 +175,18 @@ export class Moderation extends Context.Service<
                     ),
                   )
                   .returning({ id: table.id });
+
                 if (hidden) {
                   yield* resolveReports(tx, viewer, "content_hidden", onTarget(type, id));
                 }
+
                 if (changed.length === 0 || type !== "forum_post") return;
+
                 const [post] = yield* tx
                   .select({ threadId: forumPost.threadId, deletedAt: forumPost.deletedAt })
                   .from(forumPost)
                   .where(eq(forumPost.id, id));
+
                 if (!post || post.deletedAt) return;
                 yield* tx
                   .update(forumThread)
@@ -201,10 +208,13 @@ export class Moderation extends Context.Service<
             const limit = query.limit ?? MODERATION_PAGE_DEFAULT;
             const status = query.status ?? "open";
             const cursor = query.cursor === undefined ? undefined : decodeIdCursor(query.cursor);
+
             if (cursor !== undefined && Option.isNone(cursor)) {
               return yield* new InvalidCursor({ message: "Unknown cursor" });
             }
+
             const after = cursor?.pipe(Option.getOrUndefined);
+
             const rows = yield* db
               .select({
                 id: report.id,
@@ -297,8 +307,10 @@ export class Moderation extends Context.Service<
               .orderBy(desc(report.createdAt), desc(report.id))
               .limit(limit + 1)
               .pipe(Effect.orDie);
+
             const page = rows.slice(0, limit);
             const last = page.at(-1);
+
             return new ModerationReportsPage({
               items: page.map(
                 (row) =>
@@ -342,12 +354,15 @@ export class Moderation extends Context.Service<
         dismissReport: (viewer, id) =>
           Effect.gen(function* () {
             yield* requireModerator(viewer);
+
             if (!UUID.test(id)) return yield* new ReportNotFound({ id });
+
             const [row] = yield* db
               .select({ targetType: report.targetType, targetId: report.targetId })
               .from(report)
               .where(eq(report.id, id))
               .pipe(Effect.orDie);
+
             if (!row) return yield* new ReportNotFound({ id });
             yield* db
               .transaction((tx) =>
@@ -365,9 +380,11 @@ export class Moderation extends Context.Service<
         suspend: (viewer, playerId, input) =>
           Effect.gen(function* () {
             yield* requireModerator(viewer);
+
             if (playerId === viewer.id) {
               return yield* new CannotTargetSelf({ message: "You can't suspend yourself" });
             }
+
             yield* requirePlayer(playerId);
             yield* db
               .transaction((tx) =>

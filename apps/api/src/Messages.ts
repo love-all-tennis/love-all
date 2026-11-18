@@ -160,11 +160,14 @@ export class Messages extends Context.Service<
       const findConversation = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           if (!isUuid(id)) return undefined;
+
           const [row] = yield* selectConversations(viewer)
             .where(and(eq(conversation.id, id), visibleTo(viewer)))
             .pipe(Effect.orDie);
+
           if (!row) return undefined;
           const last = yield* lastMessages(viewer, [row.id]);
+
           return toConversation(row, last.get(row.id));
         });
 
@@ -192,10 +195,13 @@ export class Messages extends Context.Service<
           Effect.gen(function* () {
             const limit = query.limit ?? MESSAGES_PAGE_DEFAULT;
             const cursor = query.cursor === undefined ? undefined : decodeCursor(query.cursor);
+
             if (cursor !== undefined && Option.isNone(cursor)) {
               return yield* new InvalidCursor({ message: "Unknown cursor" });
             }
+
             const after = cursor?.pipe(Option.getOrUndefined);
+
             const rows = yield* selectConversations(viewer)
               .where(
                 and(
@@ -209,12 +215,15 @@ export class Messages extends Context.Service<
               .orderBy(desc(conversation.lastMessageAt), desc(conversation.id))
               .limit(limit + 1)
               .pipe(Effect.orDie);
+
             const page = rows.slice(0, limit);
             const last = page.at(-1);
+
             const latest = yield* lastMessages(
               viewer,
               page.map((row) => row.id),
             );
+
             const [unread] = yield* db
               .select({ total: count() })
               .from(conversation)
@@ -227,6 +236,7 @@ export class Messages extends Context.Service<
               )
               .where(and(visibleTo(viewer), sql`${unreadCount(viewer)} > 0`))
               .pipe(Effect.orDie);
+
             return new ConversationsPage({
               items: page.map((row) => toConversation(row, latest.get(row.id))),
               nextCursor:
@@ -242,13 +252,16 @@ export class Messages extends Context.Service<
             if (playerId === viewer.id) {
               return yield* new CannotMessageSelf({ message: "You can't message yourself" });
             }
+
             const [other] = yield* db
               .select({ id: profile.userId })
               .from(profile)
               .where(and(eq(profile.userId, playerId), notBlocked(viewer.id, profile.userId)))
               .pipe(Effect.orDie);
+
             if (!other) return yield* new PlayerNotFound({ id: playerId });
             const pair = pairOf(viewer.id, playerId);
+
             const [existing] = yield* db
               .select({ id: conversation.id })
               .from(conversation)
@@ -259,6 +272,7 @@ export class Messages extends Context.Service<
                 ),
               )
               .pipe(Effect.orDie);
+
             if (existing) return yield* requireOpened(viewer, existing.id, playerId);
 
             const [mine] = yield* db
@@ -266,11 +280,13 @@ export class Messages extends Context.Service<
               .from(profile)
               .where(eq(profile.userId, viewer.id))
               .pipe(Effect.orDie);
+
             if (!mine) {
               return yield* new ProfileRequired({
                 message: "Set up your profile before messaging players",
               });
             }
+
             const [started] = yield* db
               .select({ total: count() })
               .from(conversation)
@@ -281,9 +297,11 @@ export class Messages extends Context.Service<
                 ),
               )
               .pipe(Effect.orDie);
+
             if ((started?.total ?? 0) >= CONVERSATIONS_PER_HOUR) {
               return yield* rateLimited(CONVERSATIONS_PER_HOUR, "new conversations");
             }
+
             const id = yield* db
               .transaction((tx) =>
                 Effect.gen(function* () {
@@ -292,6 +310,7 @@ export class Messages extends Context.Service<
                     .values({ ...pair, startedById: viewer.id })
                     .onConflictDoNothing()
                     .returning({ id: conversation.id });
+
                   if (!created) {
                     const [row] = yield* tx
                       .select({ id: conversation.id })
@@ -302,16 +321,20 @@ export class Messages extends Context.Service<
                           eq(conversation.userHighId, pair.userHighId),
                         ),
                       );
+
                     return row!.id;
                   }
+
                   yield* tx.insert(conversationMember).values([
                     { conversationId: created.id, userId: viewer.id },
                     { conversationId: created.id, userId: playerId },
                   ]);
+
                   return created.id;
                 }),
               )
               .pipe(Effect.orDie);
+
             return yield* requireOpened(viewer, id, playerId);
           }).pipe(Effect.withSpan("Messages.openConversation")),
 
@@ -319,11 +342,14 @@ export class Messages extends Context.Service<
           Effect.gen(function* () {
             const limit = query.limit ?? MESSAGES_PAGE_DEFAULT;
             const cursor = query.cursor === undefined ? undefined : decodeCursor(query.cursor);
+
             if (cursor !== undefined && Option.isNone(cursor)) {
               return yield* new InvalidCursor({ message: "Unknown cursor" });
             }
+
             const found = yield* requireConversation(viewer, conversationId);
             const after = cursor?.pipe(Option.getOrUndefined);
+
             const rows = yield* db
               .select()
               .from(directMessage)
@@ -338,8 +364,10 @@ export class Messages extends Context.Service<
               .orderBy(desc(directMessage.createdAt), desc(directMessage.id))
               .limit(limit + 1)
               .pipe(Effect.orDie);
+
             const page = rows.slice(0, limit);
             const last = page.at(-1);
+
             return new MessagesPage({
               conversation: found,
               items: page.map((row) => toMessage(viewer, row)),
@@ -353,6 +381,7 @@ export class Messages extends Context.Service<
         send: (viewer, conversationId, input) =>
           Effect.gen(function* () {
             const found = yield* requireConversation(viewer, conversationId);
+
             const [sent] = yield* db
               .select({ total: count() })
               .from(directMessage)
@@ -363,13 +392,16 @@ export class Messages extends Context.Service<
                 ),
               )
               .pipe(Effect.orDie);
+
             if ((sent?.total ?? 0) >= MESSAGES_PER_HOUR) {
               return yield* rateLimited(MESSAGES_PER_HOUR, "messages");
             }
+
             const row = yield* db
               .transaction((tx) =>
                 Effect.gen(function* () {
                   const now = new Date();
+
                   const [message] = yield* tx
                     .insert(directMessage)
                     .values({
@@ -379,6 +411,7 @@ export class Messages extends Context.Service<
                       createdAt: now,
                     })
                     .returning();
+
                   yield* tx
                     .update(conversation)
                     .set({ lastMessageAt: now })
@@ -392,21 +425,25 @@ export class Messages extends Context.Service<
                         eq(conversationMember.userId, viewer.id),
                       ),
                     );
+
                   return message!;
                 }),
               )
               .pipe(Effect.orDie);
+
             const [me] = yield* db
               .select({ name: sql<string>`coalesce(${profile.displayName}, ${user.name})` })
               .from(user)
               .leftJoin(profile, eq(profile.userId, user.id))
               .where(eq(user.id, viewer.id))
               .pipe(Effect.orDie);
+
             yield* notifications.notify({
               to: [found.otherPlayer.id],
               from: viewer.id,
               ...notices.directMessage(conversationId, me?.name ?? viewer.name, input.body),
             });
+
             return toMessage(viewer, row);
           }).pipe(Effect.withSpan("Messages.send")),
 
@@ -437,6 +474,7 @@ export class Messages extends Context.Service<
 export const reportableMessage = (db: Db["Service"], viewerId: string, messageId: string) =>
   Effect.gen(function* () {
     if (!isUuid(messageId)) return Option.none();
+
     const [row] = yield* db
       .select({ authorId: directMessage.senderId, content: directMessage.body })
       .from(directMessage)
@@ -448,5 +486,6 @@ export const reportableMessage = (db: Db["Service"], viewerId: string, messageId
         ),
       )
       .pipe(Effect.orDie);
+
     return Option.fromNullishOr(row);
   });

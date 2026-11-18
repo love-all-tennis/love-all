@@ -31,6 +31,7 @@ export default function EditSessionScreen() {
       </Screen>
     );
   }
+
   if (state.kind !== "ready") {
     return (
       <Screen edges={["left", "right", "bottom"]}>
@@ -50,12 +51,16 @@ export default function EditSessionScreen() {
   const submit = async () => {
     setTried(true);
     setNotice(null);
+
     if (hasErrors(draftErrors(current, new Date()))) return;
     const patch = toSessionPatch(current, saved);
+
     if (Object.keys(patch).length === 0) return router.back();
     setSaving(true);
+
     try {
       const result = await updateSession(saved.id, patch);
+
       if (result.kind === "refused") return setNotice(result.message);
       router.back();
     } catch {

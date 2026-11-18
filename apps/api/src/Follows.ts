@@ -70,11 +70,13 @@ export class Follows extends Context.Service<
           if (playerId === user.id) {
             return yield* new CannotFollowSelf({ message: "You can't follow yourself" });
           }
+
           const [target] = yield* db
             .select({ id: profile.userId })
             .from(profile)
             .where(and(eq(profile.userId, playerId), notBlocked(user.id, profile.userId)))
             .pipe(Effect.orDie);
+
           if (!target) return yield* new PlayerNotFound({ id: playerId });
 
           const [already] = yield* db
@@ -82,6 +84,7 @@ export class Follows extends Context.Service<
             .from(follow)
             .where(and(eq(follow.followerId, user.id), eq(follow.followedId, playerId)))
             .pipe(Effect.orDie);
+
           if (already) return;
 
           const [{ total } = { total: 0 }] = yield* db
@@ -89,6 +92,7 @@ export class Follows extends Context.Service<
             .from(follow)
             .where(eq(follow.followerId, user.id))
             .pipe(Effect.orDie);
+
           if (total >= MAX_FOLLOWS) return yield* new FollowLimitReached({ limit: MAX_FOLLOWS });
 
           yield* db

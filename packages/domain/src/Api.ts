@@ -127,6 +127,7 @@ import {
 export const Health = Schema.Struct({
   status: Schema.Literal("ok"),
 });
+
 export type Health = typeof Health.Type;
 
 export class SystemApi extends HttpApiGroup.make("system").add(

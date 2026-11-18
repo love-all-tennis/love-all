@@ -13,17 +13,24 @@ const MIN_PASSWORD_LENGTH = 8;
 const ADULT_ERROR = "Confirm you're 18 or older to create an account";
 
 type Fields = { name: string; email: string; password: string; isAdult: boolean };
+
 type FieldErrors = Partial<Record<keyof Fields, string>>;
 
-const check = ({ name, email, password, isAdult }: Fields) =>
-  ({
-    ...(name.trim() ? {} : { name: "Enter the name other players will see" }),
-    ...(email.trim() ? {} : { email: "Enter your email" }),
-    ...(password.length >= MIN_PASSWORD_LENGTH
-      ? {}
-      : { password: `Use at least ${MIN_PASSWORD_LENGTH} characters for your password` }),
-    ...(isAdult ? {} : { isAdult: ADULT_ERROR }),
-  }) satisfies FieldErrors;
+const check = ({ name, email, password, isAdult }: Fields) => {
+  const errors: FieldErrors = {};
+
+  if (!name.trim()) errors.name = "Enter the name other players will see";
+
+  if (!email.trim()) errors.email = "Enter your email";
+
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    errors.password = `Use at least ${MIN_PASSWORD_LENGTH} characters for your password`;
+  }
+
+  if (!isAdult) errors.isAdult = ADULT_ERROR;
+
+  return errors;
+};
 
 export default function SignUpScreen() {
   const [name, setName] = useState("");
@@ -40,16 +47,19 @@ export default function SignUpScreen() {
 
   const submit = async () => {
     setTried(true);
+
     if (Object.keys(check(fields)).length > 0) return;
     setSubmitting(true);
     setError(null);
     rememberAdultConfirmation(true);
+
     try {
       const result = await authClient.signUp.email({
         name: name.trim(),
         email: email.trim(),
         password,
       });
+
       if (result.error) {
         rememberAdultConfirmation(false);
         setError(
@@ -120,6 +130,7 @@ export default function SignUpScreen() {
         disabled={submitting}
         onBeforeSignIn={() => {
           setTriedSocial(true);
+
           if (!isAdult) return false;
           rememberAdultConfirmation(true);
         }}

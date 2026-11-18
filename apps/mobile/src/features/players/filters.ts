@@ -4,7 +4,8 @@
  * `GET /players` query with `toPlayersQuery`.
  */
 
-import type { Availability, Ntrp, PlayKind, Profile } from "@love-all/domain";
+import type { Availability, Ntrp, PlayersQuery, PlayKind, Profile } from "@love-all/domain";
+import type { Types } from "effect";
 
 import { milesToKm, nearestMiles, radiusLabel } from "../../lib/distance";
 
@@ -16,6 +17,7 @@ export const PLAY_KINDS = [
   { kind: "doubles", label: "Doubles" },
   { kind: "hitting", label: "Hitting" },
 ] as const satisfies ReadonlyArray<{ kind: PlayKind; label: string }>;
+
 export type { PlayKind };
 
 /**
@@ -36,6 +38,7 @@ export type PlayerFilters = {
 };
 
 const levelIndex = (level: Ntrp) => NTRP_LEVELS.indexOf(level);
+
 const levelAt = (index: number) =>
   NTRP_LEVELS[Math.min(Math.max(index, 0), NTRP_LEVELS.length - 1)]!;
 
@@ -46,6 +49,7 @@ const levelAt = (index: number) =>
 export const defaultFilters = (profile: Profile | null) => {
   const own = profile?.ntrp ?? null;
   const at = own ? levelIndex(own) : -1;
+
   return {
     radiusMi: profile ? nearestMiles(profile.searchRadiusKm, RADIUS_OPTIONS_MI) : DEFAULT_RADIUS_MI,
     levelMin: own ? levelAt(at - 1) : NTRP_LEVELS[0]!,
@@ -60,11 +64,15 @@ export const defaultFilters = (profile: Profile | null) => {
  */
 export const setLevelBound = (filters: PlayerFilters, bound: "min" | "max", level: Ntrp) => {
   const at = levelIndex(level);
+
   if (bound === "min") {
     const max = levelIndex(filters.levelMax) < at ? level : filters.levelMax;
+
     return { ...filters, levelMin: level, levelMax: max };
   }
+
   const min = levelIndex(filters.levelMin) > at ? level : filters.levelMin;
+
   return { ...filters, levelMin: min, levelMax: level };
 };
 
@@ -82,12 +90,19 @@ export const togglePlay = (filters: PlayerFilters, kind: PlayKind) => ({
 export const toPlayersQuery = (filters: PlayerFilters, cursor?: string) => {
   const wholeRange =
     filters.levelMin === NTRP_LEVELS[0] && filters.levelMax === NTRP_LEVELS[NTRP_LEVELS.length - 1];
-  return {
-    radiusKm: milesToKm(filters.radiusMi),
-    ...(wholeRange ? {} : { levelMin: filters.levelMin, levelMax: filters.levelMax }),
-    ...(filters.plays ? { plays: filters.plays } : {}),
-    ...(cursor ? { cursor } : {}),
-  };
+
+  const query: Types.Mutable<PlayersQuery> = { radiusKm: milesToKm(filters.radiusMi) };
+
+  if (!wholeRange) {
+    query.levelMin = filters.levelMin;
+    query.levelMax = filters.levelMax;
+  }
+
+  if (filters.plays) query.plays = filters.plays;
+
+  if (cursor) query.cursor = cursor;
+
+  return query;
 };
 
 /** "3.0 to 4.0", or a single level when both ends match. */
@@ -97,6 +112,7 @@ export const levelRangeLabel = ({ levelMin, levelMax }: PlayerFilters) =>
 /** One line for the collapsed filter bar, such as "Within 10 mi · 3.0 to 4.0 · Singles". */
 export const filtersSummary = (filters: PlayerFilters) => {
   const plays = PLAY_KINDS.find((p) => p.kind === filters.plays)?.label ?? "Any play";
+
   return `${radiusLabel(filters.radiusMi)} · ${levelRangeLabel(filters)} · ${plays}`;
 };
 
@@ -106,11 +122,14 @@ export const playsLabel = (p: {
   readonly playsDoubles: boolean;
   readonly playsHitting: boolean;
 }) => {
-  const kinds = [
-    p.playsSingles && "Singles",
-    p.playsDoubles && "Doubles",
-    p.playsHitting && "Hitting",
-  ].filter((k): k is string => typeof k === "string");
+  const kinds = (
+    [
+      [p.playsSingles, "Singles"],
+      [p.playsDoubles, "Doubles"],
+      [p.playsHitting, "Hitting"],
+    ] as const
+  ).flatMap(([plays, label]) => (plays ? [label] : []));
+
   return kinds.length > 0 ? kinds.join(", ") : "Not set";
 };
 
@@ -121,6 +140,7 @@ export const clockLabel = (time: string) => {
   const [hours = 0, minutes = 0] = time.split(":").map(Number);
   const suffix = hours < 12 ? "AM" : "PM";
   const hour = hours % 12 === 0 ? 12 : hours % 12;
+
   return minutes === 0
     ? `${hour} ${suffix}`
     : `${hour}:${String(minutes).padStart(2, "0")} ${suffix}`;
@@ -132,10 +152,12 @@ export const clockLabel = (time: string) => {
  */
 export const availabilityLines = (blocks: Availability) => {
   const byDay = new Map<number, Array<string>>();
+
   for (const block of blocks) {
     const spans = byDay.get(block.weekday) ?? [];
     spans.push(`${clockLabel(block.startTime)}–${clockLabel(block.endTime)}`);
     byDay.set(block.weekday, spans);
   }
+
   return [...byDay].map(([weekday, spans]) => `${DAY_NAMES[weekday - 1]}: ${spans.join(", ")}`);
 };

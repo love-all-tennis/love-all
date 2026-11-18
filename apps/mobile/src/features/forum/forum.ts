@@ -1,3 +1,4 @@
+import { Match } from "effect";
 import {
   FORUM_BODY_MAX,
   FORUM_TITLE_MAX,
@@ -31,6 +32,7 @@ export const toggleReaction = (
 ) => {
   const current = reactions.find((r) => r.kind === kind);
   const on = !current?.mine;
+
   return {
     on,
     reactions: reactions.map((r) =>
@@ -41,7 +43,11 @@ export const toggleReaction = (
 
 /** "No replies yet", "1 reply", "12 replies". */
 export const replyCountLabel = (count: number) =>
-  count === 0 ? "No replies yet" : count === 1 ? "1 reply" : `${count} replies`;
+  Match.value(count).pipe(
+    Match.when(0, () => "No replies yet"),
+    Match.when(1, () => "1 reply"),
+    Match.orElse((n) => `${n} replies`),
+  );
 
 /**
  * The Forum tab's two groups: my metro's Local category, then the ones every
@@ -58,8 +64,11 @@ export const localHeading = (category: ForumCategory) =>
 
 const lengthError = (text: string, what: string, max: number) => {
   const value = text.trim();
+
   if (value.length === 0) return `Write a ${what} first`;
+
   if (value.length > max) return `Keep the ${what} to ${max} characters (${value.length} now)`;
+
   return null;
 };
 
@@ -79,6 +88,7 @@ export const mergeById = <T extends { readonly id: string }>(
   more: ReadonlyArray<T>,
 ) => {
   const seen = new Set(current.map((x) => x.id));
+
   return [...current, ...more.filter((x) => !seen.has(x.id))];
 };
 
@@ -89,6 +99,7 @@ export const postMenuActions = (authorId: string | null, meId: string | null) =>
   (authorId === null ? [] : authorId === meId ? ["delete"] : ["report"]) satisfies PostMenuAction[];
 
 type ThreadFields = ConstructorParameters<typeof ForumThread>[0];
+
 type PostFields = ConstructorParameters<typeof ForumPost>[0];
 
 /** A copy of a thread with some fields changed (after a reply, delete or reaction). */

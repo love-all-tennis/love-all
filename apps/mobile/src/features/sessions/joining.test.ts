@@ -155,6 +155,7 @@ describe("applyChange", () => {
         { player: { id: "me" }, state: "accepted" },
       ],
     });
+
     expect(applyChange(accepted, { kind: "leave" }, "me")).toMatchObject({
       acceptedCount: 1,
       status: "open",
@@ -188,6 +189,7 @@ describe("applyChange", () => {
         { player: { id: "b" }, state: "requested" },
       ],
     });
+
     const approved = applyChange(hosted, { kind: "approve", userId: "a" }, "host");
     expect(approved).toMatchObject({ acceptedCount: 2, requestCount: 1, status: "open" });
     expect(pendingRequests(approved).map((p) => p.player.id)).toEqual(["b"]);

@@ -22,6 +22,7 @@ export function ChoiceRow({
   onPress: () => void;
 }) {
   const palette = useColors();
+
   return (
     <Pressable
       accessibilityRole="radio"

@@ -70,8 +70,10 @@ function SessionList({ segment }: { segment: Segment }) {
   const meId = auth?.user.id ?? null;
   const sections = listSections(segment, list.sessions, now);
   const { status, hasMore, loadingMore, loadMore } = list;
+
   const needsMore =
     segment === "past" && status === "ready" && sections.length === 0 && hasMore && !loadingMore;
+
   useEffect(() => {
     if (needsMore) loadMore();
   }, [needsMore, loadMore]);
@@ -157,15 +159,20 @@ type ListSection = { readonly title: string | null; readonly data: ReadonlyArray
 const listSections = (segment: Segment, sessions: ReadonlyArray<SessionSummary>, now: Date) => {
   const plain = (data: ReadonlyArray<SessionSummary>) =>
     data.length > 0 ? [{ title: null, data }] : [];
+
   if (segment === "nearby") return plain(sessions);
+
   if (segment === "past") return plain(sessions.filter((s) => isPastSession(s, now)));
   const upcoming = sessions.filter((s) => !isPastSession(s, now));
   const { needsAnswer, rest } = groupMySessions(upcoming, now);
   const sections: Array<ListSection> = [];
+
   if (needsAnswer.length > 0) sections.push({ title: "Needs your answer", data: needsAnswer });
+
   if (rest.length > 0) {
     sections.push({ title: needsAnswer.length > 0 ? "All sessions" : null, data: rest });
   }
+
   return sections;
 };
 

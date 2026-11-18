@@ -1,5 +1,10 @@
-import type { EquipmentKind, EquipmentReviewInput, NewEquipment } from "@love-all/domain";
-import { Effect } from "effect";
+import type {
+  EquipmentKind,
+  EquipmentQuery,
+  EquipmentReviewInput,
+  NewEquipment,
+} from "@love-all/domain";
+import { Effect, type Types } from "effect";
 
 import { callApi } from "@/lib/api";
 
@@ -18,15 +23,16 @@ export const fetchCatalog = (filter: {
   readonly cursor?: string;
 }) => {
   const q = filter.q.trim();
-  return callApi((api) =>
-    api.equipment.list({
-      query: {
-        ...(filter.kind ? { kind: filter.kind } : {}),
-        ...(q ? { q: q.slice(0, 100) } : {}),
-        ...(filter.cursor ? { cursor: filter.cursor } : {}),
-      },
-    }),
-  );
+
+  const query: Types.Mutable<EquipmentQuery> = {};
+
+  if (filter.kind) query.kind = filter.kind;
+
+  if (q) query.q = q.slice(0, 100);
+
+  if (filter.cursor) query.cursor = filter.cursor;
+
+  return callApi((api) => api.equipment.list({ query }));
 };
 
 /** The item with its ratings and my review, or null when it's gone. */

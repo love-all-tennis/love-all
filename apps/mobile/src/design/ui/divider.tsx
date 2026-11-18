@@ -7,6 +7,7 @@ import { Text } from "./text";
 /** A hairline with a word in the middle, such as "or" between two ways to do one thing. */
 export function Divider({ label }: { label: string }) {
   const palette = useColors();
+
   return (
     <View style={styles.divider}>
       <View style={[styles.rule, { backgroundColor: palette.border }]} />

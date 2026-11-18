@@ -85,6 +85,7 @@ export const setReaction = (
 ) =>
   callApi((api) => {
     const params = { id, kind };
+
     if (target === "thread") {
       return (
         on ? api.forum.reactToThread({ params }) : api.forum.unreactToThread({ params })
@@ -93,6 +94,7 @@ export const setReaction = (
         Effect.catchTag("ForumThreadNotFound", () => refuse(GONE)),
       );
     }
+
     return (on ? api.forum.reactToPost({ params }) : api.forum.unreactToPost({ params })).pipe(
       Effect.as({ ok: null }),
       Effect.catchTag("ForumPostNotFound", () => refuse("This reply is no longer there.")),

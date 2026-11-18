@@ -25,6 +25,7 @@ const withPlayers = <A, E>(
     const profiles = yield* Profiles;
     const service = yield* Players;
     const run = crypto.randomUUID().slice(0, 8);
+
     const people = patches.map(
       (_, i) =>
         new SessionUser({
@@ -34,7 +35,9 @@ const withPlayers = <A, E>(
           role: "player",
         }),
     );
+
     yield* db.insert(user).values(people.map(({ id, name, email }) => ({ id, name, email })));
+
     const cleanup = Effect.orDie(
       db.delete(user).where(
         inArray(
@@ -43,10 +46,12 @@ const withPlayers = <A, E>(
         ),
       ),
     );
+
     return yield* Effect.gen(function* () {
       for (const [i, patch] of patches.entries()) {
         if (patch) yield* profiles.update(people[i]!, patch);
       }
+
       return yield* f(people, service, profiles);
     }).pipe(Effect.ensuring(cleanup));
   }).pipe(Effect.provide(TestLayer), Effect.runPromise);
@@ -64,6 +69,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
       ],
       ([me], players) => players.search(me!, {}),
     );
+
     expect(result.items.map((p) => [p.displayName, p.distanceKm])).toEqual([
       ["Near", 1],
       ["Mid", 6],
@@ -83,6 +89,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
       [{ homePoint: HOME, searchRadiusKm: 1 }, { homePoint: north(5) }, { homePoint: north(50) }],
       ([me], players) => players.search(me!, { radiusKm: 20 }),
     );
+
     expect(result.items).toHaveLength(1);
   });
 
@@ -104,8 +111,10 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
           both: players.search(me!, { levelMax: "3.5", plays: "doubles" }),
         }),
     );
+
     const names = (page: { items: ReadonlyArray<{ displayName: string }> }) =>
       page.items.map((p) => p.displayName);
+
     expect(names(result.range)).toEqual(["3.5", "4.0"]);
     expect(names(result.atLeast)).toEqual(["4.0", "4.5"]);
     expect(names(result.doubles)).toEqual(["3.0", "3.5", "4.5", "unrated"]);
@@ -126,14 +135,17 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
         Effect.gen(function* () {
           const pages = [];
           let cursor: string | undefined;
+
           do {
             const page = yield* players.search(me!, cursor ? { limit: 2, cursor } : { limit: 2 });
             pages.push(page.items.map((p) => p.displayName));
             cursor = page.nextCursor ?? undefined;
           } while (cursor);
+
           return pages;
         }),
     );
+
     expect(result).toEqual([["b", "c"], ["d", "a"], ["e"]]);
   });
 
@@ -146,6 +158,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
           players.search(without!, {}).pipe(Effect.flip),
         ]),
     );
+
     expect(errors.map((e) => e._tag)).toEqual(["HomePointRequired", "HomePointRequired"]);
   });
 
@@ -153,6 +166,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.search", () => {
     const error = await withPlayers([{ homePoint: HOME }], ([me], players) =>
       players.search(me!, { cursor: "garbage" }).pipe(Effect.flip),
     );
+
     expect(error._tag).toBe("InvalidCursor");
   });
 });
@@ -167,9 +181,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.get", () => {
             { weekday: 6, startTime: "09:00", endTime: "11:00" },
             { weekday: 2, startTime: "18:00", endTime: "20:00" },
           ]);
+
           return yield* players.get(me!, alex!.id);
         }),
     );
+
     expect(result).toMatchObject({
       displayName: "Alex",
       bio: "Loves to rally",
@@ -188,6 +204,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.get", () => {
       ([me, placed, unplaced], players) =>
         Effect.all([players.get(me!, placed!.id), players.get(placed!, unplaced!.id)]),
     );
+
     expect(result.map((p) => p.distanceKm)).toEqual([null, null]);
   });
 
@@ -198,6 +215,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Players.get", () => {
         players.get(me!, noProfile!.id).pipe(Effect.flip),
       ]),
     );
+
     expect(errors.map((e) => e._tag)).toEqual(["PlayerNotFound", "PlayerNotFound"]);
   });
 });

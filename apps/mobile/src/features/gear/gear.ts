@@ -1,3 +1,4 @@
+import { Match } from "effect";
 import {
   EQUIPMENT_BRAND_MAX,
   EQUIPMENT_KINDS,
@@ -27,7 +28,11 @@ export const itemName = (item: { readonly brand: string; readonly model: string 
 
 /** "No reviews yet", "1 review", "12 reviews". */
 export const reviewCountLabel = (count: number) =>
-  count === 0 ? "No reviews yet" : count === 1 ? "1 review" : `${count} reviews`;
+  Match.value(count).pipe(
+    Match.when(0, () => "No reviews yet"),
+    Match.when(1, () => "1 review"),
+    Match.orElse((n) => `${n} reviews`),
+  );
 
 /** "4.3 out of 5 · 12 reviews", or "No reviews yet". */
 export const ratingLabel = (rating: EquipmentRatingSummary) =>
@@ -42,6 +47,7 @@ export const starsLabel = (stars: number) => (stars === 1 ? "1 star" : `${stars}
 export const starShares = (rating: EquipmentRatingSummary) =>
   [5, 4, 3, 2, 1].map((stars) => {
     const count = rating.stars[stars - 1] ?? 0;
+
     return { stars, count, share: rating.count === 0 ? 0 : count / rating.count };
   });
 
@@ -50,8 +56,11 @@ export const reviewerLevel = (ntrp: string | null) => (ntrp === null ? null : `N
 
 const lengthError = (text: string, what: string, max: number) => {
   const value = text.trim();
+
   if (value.length === 0) return `Enter the ${what}`;
+
   if (value.length > max) return `Keep the ${what} to ${max} characters (${value.length} now)`;
+
   return null;
 };
 
@@ -68,6 +77,7 @@ export const newItemErrors = (input: {
 
 const optionalLengthError = (text: string, what: string, max: number) => {
   const length = text.trim().length;
+
   return length > max ? `Keep the ${what} to ${max} characters (${length} now)` : null;
 };
 
@@ -102,5 +112,6 @@ export const mergeById = <T extends { readonly id: string }>(
   more: ReadonlyArray<T>,
 ) => {
   const seen = new Set(current.map((x) => x.id));
+
   return [...current, ...more.filter((x) => !seen.has(x.id))];
 };

@@ -34,10 +34,13 @@ export type ViewerAction =
 
 export const viewerAction = (s: JoinFacts, now: Date) => {
   if (s.status === "cancelled") return { kind: "none", note: "This session was cancelled." };
+
   if (hasStarted(s, now)) return { kind: "none", note: "This session has already started." };
   const full = spotsLeft(s) === 0;
   const me = s.me;
+
   if (me?.role === "host") return { kind: "host" };
+
   switch (me?.state) {
     case "invited":
       return { kind: "answerInvite", full };
@@ -55,7 +58,9 @@ export const viewerAction = (s: JoinFacts, now: Date) => {
           note: me ? "You left this session. It's invite only." : "This session is invite only.",
         };
       }
+
       if (full) return { kind: "none", note: "Every spot is taken." };
+
       return { kind: "askToJoin" };
   }
 };
@@ -73,8 +78,10 @@ export const needsMyAnswer = (s: JoinFacts, now: Date) =>
 export const groupMySessions = <S extends JoinFacts>(sessions: ReadonlyArray<S>, now: Date) => {
   const needsAnswer: Array<S> = [];
   const rest: Array<S> = [];
+
   for (const s of sessions) (needsMyAnswer(s, now) ? needsAnswer : rest).push(s);
   needsAnswer.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+
   return { needsAnswer, rest };
 };
 
@@ -129,8 +136,10 @@ const setParticipant = <S extends JoinDetail>(
 export const applyChange = <S extends JoinDetail>(s: S, change: JoinChange, myId: string) => {
   const mine = (state: MySessionPlace["state"]) => {
     const next = setParticipant(s, myId, state);
+
     return { ...next, me: next.me && { ...next.me, state } };
   };
+
   switch (change.kind) {
     case "accept":
       return withStatus(mine("accepted"), s.acceptedCount + 1);
@@ -168,6 +177,7 @@ export const pendingRequests = <P extends Participant>(s: {
 /** What the confirm step for cancelling says. */
 export const cancelPrompt = (s: JoinFacts) => {
   const others = s.acceptedCount - 1;
+
   return {
     title: "Cancel this session?",
     body:

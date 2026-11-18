@@ -17,6 +17,7 @@ export default function AvailabilityScreen() {
   const finish = async () => {
     setSaving(true);
     setProblem(null);
+
     try {
       await save();
       router.replace("/");
@@ -56,6 +57,7 @@ export default function AvailabilityScreen() {
             </Text>
             {DAY_PARTS.map(({ part, label }) => {
               const key = slotKey(weekday, part);
+
               return (
                 <SlotToggle
                   key={key}

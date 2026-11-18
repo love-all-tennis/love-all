@@ -80,6 +80,7 @@ export default function ThreadScreen() {
         );
       })
       .catch(() => live && setState({ status: "error" }));
+
     return () => {
       live = false;
     };
@@ -110,15 +111,20 @@ export default function ThreadScreen() {
 
   const send = async () => {
     setTried(true);
+
     if (bodyError(draft, "reply")) return;
     setPosting(true);
     setProblem(null);
+
     try {
       const outcome = await reply(id, draft.trim());
+
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
+
         return;
       }
+
       setDraft("");
       setTried(false);
       setState((s) =>
@@ -139,18 +145,23 @@ export default function ThreadScreen() {
 
   const react = (target: "thread" | "post", targetId: string, kind: ForumReactionKind) => {
     if (state.status !== "ready") return;
+
     const before =
       target === "thread"
         ? state.thread.reactions
         : state.replies.find((p) => p.id === targetId)?.reactions;
+
     if (!before) return;
     const { reactions, on } = toggleReaction(before, kind);
+
     const put = (next: typeof before) =>
       setState((s) => {
         if (s.status !== "ready") return s;
+
         if (target === "thread") {
           return { ...s, thread: patchThread(s.thread, { reactions: next }) };
         }
+
         return {
           ...s,
           replies: s.replies.map((p) =>
@@ -158,6 +169,7 @@ export default function ThreadScreen() {
           ),
         };
       });
+
     put(reactions);
     setProblem(null);
     setReaction(target, targetId, kind, on)
@@ -203,8 +215,10 @@ export default function ThreadScreen() {
           .then((outcome) => {
             if ("refusal" in outcome) {
               setProblem(outcome.refusal);
+
               return;
             }
+
             setState((s) =>
               s.status === "ready"
                 ? {
@@ -255,6 +269,7 @@ export default function ThreadScreen() {
 
   const { thread } = state;
   const threadMine = thread.author.id === meId;
+
   const onAction = (
     action: PostMenuAction,
     target: { type: "thread" | "post"; id: string; author: ForumAuthor },

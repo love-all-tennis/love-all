@@ -58,10 +58,13 @@ export class Profiles extends Context.Service<
             .from(profile)
             .leftJoin(metro, eq(metro.id, profile.metroId))
             .where(eq(profile.userId, user.id));
+
           if (!row) {
             return new Me({ user, profile: null, availability: [] });
           }
+
           const p = row.profile;
+
           return new Me({
             user,
             profile: new Profile({
@@ -96,12 +99,15 @@ export class Profiles extends Context.Service<
         Effect.gen(function* () {
           const { homePoint, ...rest } = patch;
           const changes: Partial<typeof profile.$inferInsert> = { ...rest };
+
           if (homePoint !== undefined) {
             const point = homePoint && roundHomePoint({ x: homePoint.lng, y: homePoint.lat });
             changes.homePoint = point;
             changes.metroId = point ? yield* metroFor(point) : null;
           }
+
           yield* upsert(user, changes);
+
           return yield* get(user);
         }).pipe(Effect.orDie, Effect.withSpan("Profiles.update"));
 
@@ -116,6 +122,7 @@ export class Profiles extends Context.Service<
                 .where(eq(profile.id, profileId))
                 .for("update");
               yield* tx.delete(availability).where(eq(availability.profileId, profileId));
+
               if (blocks.length > 0) {
                 yield* tx
                   .insert(availability)
@@ -123,6 +130,7 @@ export class Profiles extends Context.Service<
               }
             }),
           );
+
           return yield* loadAvailability(profileId);
         }).pipe(Effect.orDie, Effect.withSpan("Profiles.replaceAvailability"));
 

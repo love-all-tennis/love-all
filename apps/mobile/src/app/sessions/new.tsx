@@ -25,6 +25,7 @@ export default function NewSessionScreen() {
     inviteId?: string;
     inviteName?: string;
   }>();
+
   const [draft, setDraft] = useState<SessionDraft | null>(null);
   const [tried, setTried] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -36,6 +37,7 @@ export default function NewSessionScreen() {
     fetchMe()
       .then((me) => live && setDraft((d) => d ?? emptyDraft(me.profile?.ntrp ?? null)))
       .catch(() => live && setDraft((d) => d ?? emptyDraft(null)));
+
     return () => {
       live = false;
     };
@@ -54,14 +56,19 @@ export default function NewSessionScreen() {
   const submit = async () => {
     setTried(true);
     setNotice(null);
+
     if (hasErrors(draftErrors(draft, new Date()))) return;
     setSaving(true);
+
     try {
       const created = await createSession(toNewSession(draft));
+
       if (created.kind === "refused") return setNotice(created.message);
+
       if (inviteId) {
         await invitePlayers(created.session.id, [inviteId]).catch(() => undefined);
       }
+
       router.replace({ pathname: "/sessions/[id]", params: { id: created.session.id } });
     } catch {
       setNotice("Couldn't save the session. Check your connection and try again.");

@@ -55,6 +55,7 @@ export const createClub = (input: NewClub) =>
   );
 
 type ReviewListener = (clubId: string) => void;
+
 const reviewListeners = new Set<ReviewListener>();
 
 /**
@@ -64,6 +65,7 @@ const reviewListeners = new Set<ReviewListener>();
  */
 export const onReviewChanged = (listener: ReviewListener) => {
   reviewListeners.add(listener);
+
   return () => {
     reviewListeners.delete(listener);
   };

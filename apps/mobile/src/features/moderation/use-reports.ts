@@ -43,6 +43,7 @@ export function useReports(status: ReportStatus) {
         setState((s) => {
           if (!s) return s;
           const seen = new Set(s.reports.map((r) => r.id));
+
           return {
             ...s,
             reports: [...s.reports, ...page.items.filter((r) => !seen.has(r.id))],

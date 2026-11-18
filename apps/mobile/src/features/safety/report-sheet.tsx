@@ -44,11 +44,14 @@ export function ReportSheet({
 
   const send = async () => {
     setTried(true);
+
     if (!reason) return;
     setBusy("report");
     setProblem(null);
+
     try {
       const refusal = await sendReport(targetType, targetId, reason, details);
+
       if (refusal) setProblem(refusal);
       else setSent(true);
     } catch {
@@ -61,8 +64,10 @@ export function ReportSheet({
   const block = async () => {
     setBusy("block");
     setProblem(null);
+
     try {
       const refusal = await blockPlayer(author.id);
+
       if (refusal) setProblem(refusal);
       else afterBlock();
     } catch {

@@ -4,12 +4,14 @@ import {
   HITTING_SPOTS_MIN,
   SESSION_NOTES_MAX,
   type LatLng,
+  type NewSession,
   type Ntrp,
   type Session,
   type SessionKind,
   type SessionPatch,
   type SessionVisibility,
 } from "@love-all/domain";
+import type { Types } from "effect";
 
 import { NTRP_LEVELS } from "../profile/draft";
 
@@ -53,6 +55,7 @@ export type SessionDraft = {
 };
 
 export type DraftField = "when" | "courtName" | "notes";
+
 export type DraftErrors = Partial<Record<DraftField, string>>;
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -68,10 +71,12 @@ export const timeKey = (date: Date) => `${pad(date.getHours())}:${pad(date.getMi
 export const startsAtOf = (day: string, time: string) => {
   const [y = 0, m = 1, d = 1] = day.split("-").map(Number);
   const [hh = 0, mm = 0] = time.split(":").map(Number);
+
   return new Date(y, m - 1, d, hh, mm);
 };
 
 const levelIndex = (level: Ntrp) => NTRP_LEVELS.indexOf(level);
+
 const levelAt = (index: number) =>
   NTRP_LEVELS[Math.min(Math.max(index, 0), NTRP_LEVELS.length - 1)]!;
 
@@ -81,6 +86,7 @@ const levelAt = (index: number) =>
  */
 export const emptyDraft = (myLevel: Ntrp | null, kind: SessionKind = "singles") => {
   const at = myLevel ? levelIndex(myLevel) : -1;
+
   return {
     kind,
     day: null,
@@ -125,24 +131,31 @@ export const setKind = (draft: SessionDraft, kind: SessionKind) => ({
 export const setLevelBound = (draft: SessionDraft, bound: "min" | "max", level: Ntrp | null) => {
   if (bound === "min") {
     const crosses = level && draft.levelMax && levelIndex(draft.levelMax) < levelIndex(level);
+
     return { ...draft, levelMin: level, levelMax: crosses ? level : draft.levelMax };
   }
+
   const crosses = level && draft.levelMin && levelIndex(draft.levelMin) > levelIndex(level);
+
   return { ...draft, levelMin: crosses ? level : draft.levelMin, levelMax: level };
 };
 
 /** What's wrong with the form, by field. Empty when it can be sent. */
 export const draftErrors = (draft: SessionDraft, now: Date) => {
   const errors: { -readonly [K in DraftField]?: string } = {};
+
   if (!draft.day || !draft.time) errors.when = "Pick a day and a start time";
   else if (startsAtOf(draft.day, draft.time).getTime() <= now.getTime())
     errors.when = "Pick a start time later than now";
   const court = draft.courtName.trim();
+
   if (!court) errors.courtName = "Enter the court's name, like Palmer Park, Detroit";
   else if (court.length > COURT_NAME_MAX)
     errors.courtName = `Keep the court name to ${COURT_NAME_MAX} characters`;
+
   if (draft.notes.trim().length > SESSION_NOTES_MAX)
     errors.notes = `Keep notes to ${SESSION_NOTES_MAX} characters`;
+
   return errors;
 };
 
@@ -151,18 +164,23 @@ export const hasErrors = (errors: DraftErrors) => Object.keys(errors).length > 0
 const notesOf = (draft: SessionDraft) => draft.notes.trim() || null;
 
 /** The `POST /sessions` body. Call only once `draftErrors` is empty. */
-export const toNewSession = (draft: SessionDraft) => ({
-  kind: draft.kind,
-  startsAt: startsAtOf(draft.day!, draft.time!),
-  durationMinutes: draft.durationMinutes,
-  courtName: draft.courtName.trim(),
-  courtPoint: draft.courtPoint,
-  levelMin: draft.levelMin,
-  levelMax: draft.levelMax,
-  ...(draft.kind === "hitting" ? { spots: draft.spots } : {}),
-  visibility: draft.visibility,
-  notes: notesOf(draft),
-});
+export const toNewSession = (draft: SessionDraft) => {
+  const session: Types.Mutable<NewSession> = {
+    kind: draft.kind,
+    startsAt: startsAtOf(draft.day!, draft.time!),
+    durationMinutes: draft.durationMinutes,
+    courtName: draft.courtName.trim(),
+    courtPoint: draft.courtPoint,
+    levelMin: draft.levelMin,
+    levelMax: draft.levelMax,
+    visibility: draft.visibility,
+    notes: notesOf(draft),
+  };
+
+  if (draft.kind === "hitting") session.spots = draft.spots;
+
+  return session;
+};
 
 const samePoint = (a: LatLng | null, b: LatLng | null) =>
   a === b || (a !== null && b !== null && a.lat === b.lat && a.lng === b.lng);
@@ -174,16 +192,26 @@ const samePoint = (a: LatLng | null, b: LatLng | null) =>
 export const toSessionPatch = (draft: SessionDraft, saved: Session) => {
   const next = toNewSession(draft);
   const patch: { -readonly [K in keyof SessionPatch]: SessionPatch[K] } = {};
+
   if (next.startsAt.getTime() !== saved.startsAt.getTime()) patch.startsAt = next.startsAt;
+
   if (next.durationMinutes !== saved.durationMinutes) patch.durationMinutes = next.durationMinutes;
+
   if (next.courtName !== saved.courtName) patch.courtName = next.courtName;
+
   if (!samePoint(next.courtPoint ?? null, saved.courtPoint))
     patch.courtPoint = next.courtPoint ?? null;
+
   if ((next.levelMin ?? null) !== saved.levelMin) patch.levelMin = next.levelMin ?? null;
+
   if ((next.levelMax ?? null) !== saved.levelMax) patch.levelMax = next.levelMax ?? null;
+
   if (next.spots !== undefined && next.spots !== saved.spots) patch.spots = next.spots;
+
   if (next.visibility !== saved.visibility) patch.visibility = next.visibility;
+
   if ((next.notes ?? null) !== saved.notes) patch.notes = next.notes ?? null;
+
   return patch;
 };
 
@@ -195,6 +223,7 @@ export const dayOptions = (now: Date, include: string | null = null) => {
   const days = Array.from({ length: DAYS_AHEAD }, (_, i) =>
     dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + i)),
   );
+
   return include && !days.includes(include) ? [...days, include].sort() : days;
 };
 
@@ -207,11 +236,13 @@ export const timeOptions = (include: string | null = null) => {
     { length: 32 },
     (_, i) => `${pad(6 + Math.floor(i / 2))}:${i % 2 ? "30" : "00"}`,
   );
+
   return include && !times.includes(include) ? [...times, include].sort() : times;
 };
 
 /** Which part of the day a "HH:MM" start falls in, for grouping the time picker. */
 export const dayPartOf = (time: string) => {
   const hour = Number(time.split(":")[0]);
+
   return hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
 };

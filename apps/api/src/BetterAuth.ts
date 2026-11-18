@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { Config, Context, Effect, Layer, Option, Redacted } from "effect";
 import { SqlClient } from "effect/sql";
+// oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- BetterAuth is the Layer that owns makeAuth.
 import { type Auth, makeAuth, type SocialProviders } from "./auth";
 import { Db } from "./Db";
 import { effectSqlAdapter } from "./db/better-auth-adapter";
@@ -65,6 +66,7 @@ export class BetterAuth extends Context.Service<BetterAuth, Auth>()("love-all/Be
       const db = yield* Db;
       const trustedOrigins = yield* TrustedOrigins;
       const socialProviders = yield* SocialProvidersConfig;
+
       return makeAuth({
         database: effectSqlAdapter(services),
         isSuspended: (userId) =>

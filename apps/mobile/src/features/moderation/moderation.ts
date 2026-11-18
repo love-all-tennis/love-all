@@ -49,17 +49,22 @@ export const reportCountLabel = (open: number) => (open > 1 ? `${open} reports` 
 /** Read-only tags for where things stand: hidden, deleted, suspended, resolved. */
 export const stateTags = (report: ModerationReport) => {
   const tags: Array<StateTag> = [];
+
   if (report.status === "resolved" && report.resolution) {
     tags.push({ label: RESOLUTION_LABELS[report.resolution], tone: "neutral" });
   }
+
   if (report.hidden) tags.push({ label: "Hidden", tone: "clay" });
+
   if (report.removed) {
     tags.push({
       label: report.targetType === "player" ? "Account deleted" : "Deleted by author",
       tone: "neutral",
     });
   }
+
   if (report.subject?.suspended) tags.push({ label: "Suspended", tone: "danger" });
+
   return tags;
 };
 
@@ -70,6 +75,7 @@ export const reportedByLabel = (report: ModerationReport, when: string) =>
 /** Which actions to offer on a report card. */
 export const reportActions = (report: ModerationReport) => {
   const hideable = hideableType(report) !== null && !report.removed;
+
   return {
     hide: hideable && !report.hidden,
     unhide: hideable && report.hidden,

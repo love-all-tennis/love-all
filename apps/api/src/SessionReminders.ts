@@ -56,12 +56,14 @@ export class SessionReminders extends Context.Service<
                 and ${playSessionParticipant.state} = 'accepted'
             )`,
           });
+
         for (const session of due) {
           yield* notifications.notify({
             to: session.players,
             ...messages.reminder(session),
           });
         }
+
         return due.length;
       }).pipe(Effect.orDie, Effect.withSpan("SessionReminders.sendDue"));
 

@@ -76,12 +76,14 @@ function SessionBody({
   const now = useNow();
   const { data: auth } = authClient.useSession();
   const meId = auth?.user.id ?? null;
+
   const changes = useJoinChanges({
     session,
     myId: auth?.user.id,
     replace: onReplaced,
     reload: onChanged,
   });
+
   const tags = sessionTags(session, now);
   const isHost = session.me?.role === "host";
   const editable = isEditable(session, now);
@@ -89,6 +91,7 @@ function SessionBody({
   const spotsLeft = session.spots - session.acceptedCount;
   const distance = distanceLabel(session.distanceKm);
   const host = session.participants.find((p) => p.role === "host");
+
   const participants = [...session.participants]
     .filter((p) => !(requestsShown && p.state === "requested"))
     .sort(

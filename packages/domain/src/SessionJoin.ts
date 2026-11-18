@@ -7,9 +7,11 @@ import { Schema } from "effect";
  *   it accepts the invite instead.
  */
 export const SessionAnswer = Schema.Literals(["accept", "decline", "request"]);
+
 export type SessionAnswer = typeof SessionAnswer.Type;
 
 export const SessionResponse = Schema.Struct({ answer: SessionAnswer });
+
 export type SessionResponse = typeof SessionResponse.Type;
 
 /**

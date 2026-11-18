@@ -18,8 +18,8 @@ export function usePushNotifications() {
 
   useEffect(() => {
     if (!userId) return;
-    registerForPush().catch((error: unknown) => {
-      console.warn("Couldn't register for push notifications", error);
+    registerForPush().catch((cause: unknown) => {
+      console.warn("Couldn't register for push notifications", cause);
     });
   }, [userId]);
 
@@ -27,6 +27,7 @@ export function usePushNotifications() {
   useEffect(() => {
     if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
     const route = notificationRoute(response.notification.request.content.data);
+
     if (route) router.push(route);
     Notifications.clearLastNotificationResponse();
   }, [response]);

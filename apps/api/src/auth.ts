@@ -4,6 +4,7 @@ import { APIError } from "better-auth/api";
 
 /** Who a user is to the app. Admins can use the moderation endpoints. */
 export const roles = ["player", "admin"] as const;
+
 export type Role = (typeof roles)[number];
 
 /**
@@ -44,6 +45,7 @@ const appleOrigin = "https://appleid.apple.com";
  */
 export const makeAuth = (options: AuthOptions) => {
   const { google, apple } = options.socialProviders ?? {};
+
   return betterAuth({
     database: options.database,
     databaseHooks: {

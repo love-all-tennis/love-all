@@ -11,6 +11,7 @@ import { callApi } from "@/lib/api";
 export type Outcome<A> = { readonly ok: A } | { readonly refusal: string };
 
 type ResultListener = (sessionId: string, result: SessionResult) => void;
+
 const resultListeners = new Set<ResultListener>();
 
 /**
@@ -19,6 +20,7 @@ const resultListeners = new Set<ResultListener>();
  */
 export const onResultChanged = (listener: ResultListener) => {
   resultListeners.add(listener);
+
   return () => {
     resultListeners.delete(listener);
   };
@@ -26,6 +28,7 @@ export const onResultChanged = (listener: ResultListener) => {
 
 const announce = (sessionId: string) => (result: SessionResult) => {
   for (const listener of resultListeners) listener(sessionId, result);
+
   return { ok: result };
 };
 

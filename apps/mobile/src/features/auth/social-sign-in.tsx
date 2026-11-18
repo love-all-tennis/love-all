@@ -32,8 +32,10 @@ export function SocialSignIn({
     if (onBeforeSignIn?.() === false) return;
     setBusy(provider);
     setError(null);
+
     try {
       const result = await authClient.signIn.social({ provider, callbackURL: "/" });
+
       if (result.error) {
         setError(result.error.message ?? "That sign-in didn't work. Try again.");
       }

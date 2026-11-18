@@ -25,7 +25,9 @@ export const REPORT_TARGET_TYPES = [
   "club_review",
   "equipment_review",
 ] as const;
+
 export const ReportTargetType = Schema.Literals(REPORT_TARGET_TYPES);
+
 export type ReportTargetType = typeof ReportTargetType.Type;
 
 /** Same values as the `report_reason` enum. */
@@ -37,6 +39,7 @@ export const ReportReason = Schema.Literals([
   "underage",
   "other",
 ]);
+
 export type ReportReason = typeof ReportReason.Type;
 
 export const REPORT_DETAILS_MAX = 1000;
@@ -55,6 +58,7 @@ export const NewReport = Schema.Struct({
     Schema.String.check(Schema.isTrimmed(), Schema.isMaxLength(REPORT_DETAILS_MAX)),
   ),
 });
+
 export type NewReport = typeof NewReport.Type;
 
 export class ReportCreated extends Schema.Class<ReportCreated>("ReportCreated")({

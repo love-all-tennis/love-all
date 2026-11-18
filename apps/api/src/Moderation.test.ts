@@ -19,6 +19,7 @@ const admin = new SessionUser({
   email: "a@example.com",
   role: "admin",
 });
+
 const sam = new SessionUser({ id: "u_sam", name: "Sam", email: "s@example.com", role: "player" });
 
 const as = (viewer: SessionUser) =>
@@ -29,10 +30,12 @@ const as = (viewer: SessionUser) =>
 
 const makeModeration = () => {
   const calls: Array<string> = [];
+
   const gate = (viewer: SessionUser, call: string) =>
     viewer.role === "admin"
       ? Effect.sync(() => void calls.push(call))
       : Effect.fail(new NotModerator({ message: "Only moderators can do that" }));
+
   const layer = Layer.succeed(
     Moderation,
     Moderation.of({
@@ -47,6 +50,7 @@ const makeModeration = () => {
       unsuspend: (viewer, id) => gate(viewer, `unsuspend ${id}`),
     }),
   );
+
   return { calls, layer };
 };
 
@@ -101,6 +105,7 @@ describe("moderation endpoints", () => {
     const error = await run(sam, (client) =>
       Effect.flip(client.moderation.listReports({ query: {} })),
     );
+
     expect(error._tag).toBe("NotModerator");
   });
 });

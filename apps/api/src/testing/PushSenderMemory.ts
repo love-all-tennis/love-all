@@ -8,12 +8,14 @@ import { type PushMessage, PushSender } from "../PushSender";
  */
 export const makePushSenderMemory = (gone: ReadonlySet<string> = new Set()) => {
   const sent: Array<PushMessage> = [];
+
   const layer = Layer.succeed(
     PushSender,
     PushSender.of({
       send: (messages) =>
         Effect.sync(() => {
           sent.push(...messages);
+
           return messages.map((message) =>
             gone.has(message.to)
               ? { status: "error", details: { error: "DeviceNotRegistered" } }
@@ -22,5 +24,6 @@ export const makePushSenderMemory = (gone: ReadonlySet<string> = new Set()) => {
         }),
     }),
   );
+
   return { sent, layer };
 };

@@ -46,6 +46,7 @@ export function Button({
   const look = looks[variant];
   const inactive = disabled || loading;
   const small = buttonSize === "small";
+
   return (
     <Pressable
       accessibilityRole="button"

@@ -58,11 +58,13 @@ export class Safety extends Context.Service<
           if (id === viewer.id) {
             return yield* new CannotTargetSelf({ message: `You can't ${verb} yourself` });
           }
+
           const [row] = yield* db
             .select({ id: user.id })
             .from(user)
             .where(eq(user.id, id))
             .pipe(Effect.orDie);
+
           if (!row) {
             return yield* new TargetNotFound({ id });
           }

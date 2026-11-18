@@ -4,8 +4,9 @@ import type {
   SessionPatch,
   SessionScope,
   SessionsPage,
+  SessionsQuery,
 } from "@love-all/domain";
-import { Effect } from "effect";
+import { Effect, type Types } from "effect";
 
 import { callApi } from "@/lib/api";
 
@@ -17,15 +18,20 @@ export type SessionsResult =
   | { readonly kind: "page"; readonly page: SessionsPage }
   | { readonly kind: "needsHomePoint" };
 
-export const listSessions = (scope: SessionScope, cursor?: string) =>
-  callApi((api) =>
-    api.sessions.list({ query: { scope, ...(cursor ? { cursor } : {}) } }).pipe(
+export const listSessions = (scope: SessionScope, cursor?: string) => {
+  const query: Types.Mutable<SessionsQuery> = { scope };
+
+  if (cursor) query.cursor = cursor;
+
+  return callApi((api) =>
+    api.sessions.list({ query }).pipe(
       Effect.map((page) => ({ kind: "page", page }) satisfies SessionsResult),
       Effect.catchTag("HomePointRequired", () =>
         Effect.succeed<SessionsResult>({ kind: "needsHomePoint" }),
       ),
     ),
   );
+};
 
 /** A session with its players, or null when it doesn't exist or I can't see it. */
 export const fetchSession = (id: string) =>

@@ -11,6 +11,7 @@ export default function ReportClubReviewSheet() {
     authorId: string;
     name: string;
   }>();
+
   return (
     <ReportSheet
       targetType="club_review"

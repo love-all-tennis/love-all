@@ -55,10 +55,13 @@ export default function ConversationScreen() {
     fetchMessages(id)
       .then((page) => {
         if (mine !== generation.current) return;
+
         if (!page) {
           setState({ status: "missing" });
+
           return;
         }
+
         setState((s) =>
           s.status === "ready"
             ? {
@@ -73,6 +76,7 @@ export default function ConversationScreen() {
                 cursor: page.nextCursor,
               },
         );
+
         if (page.conversation.unreadCount > 0) {
           void markRead(id)
             .then(takeOneUnread)
@@ -91,6 +95,7 @@ export default function ConversationScreen() {
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") refresh();
     });
+
     return () => sub.remove();
   }, [refresh]);
 
@@ -119,15 +124,20 @@ export default function ConversationScreen() {
 
   const send = async () => {
     setTried(true);
+
     if (messageError(draft)) return;
     setSending(true);
     setProblem(null);
+
     try {
       const outcome = await sendMessage(id, draft.trim());
+
       if ("refusal" in outcome) {
         setProblem(outcome.refusal);
+
         return;
       }
+
       setDraft("");
       setTried(false);
       setState((s) =>
@@ -143,21 +153,27 @@ export default function ConversationScreen() {
 
   const title =
     state.status === "ready" ? state.conversation.otherPlayer.displayName : (name ?? "");
+
   const other = state.status === "ready" ? state.conversation.otherPlayer : null;
+
   const openProfile = () =>
     other && router.push({ pathname: "/players/[id]", params: { id: other.id } });
 
   const offerReport = (message: DirectMessage) => {
     if (!other) return;
+
     const report = () =>
       router.push({
         pathname: "/messages/report",
         params: { id: message.id, authorId: other.id, name: other.displayName },
       });
+
     if (Platform.OS === "web") {
       report();
+
       return;
     }
+
     Alert.alert("Report this message?", "It goes to the Love All moderators.", [
       { text: "Cancel", style: "cancel" },
       { text: "Report message", style: "destructive", onPress: report },

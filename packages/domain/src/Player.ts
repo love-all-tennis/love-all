@@ -3,14 +3,17 @@ import { Availability, Handedness, MetroSummary, Ntrp, SearchRadiusKm } from "./
 
 /** A player's id is their account id, the same id that blocks and messages point at. */
 export const PlayerId = Schema.String.check(Schema.isMinLength(1));
+
 export type PlayerId = typeof PlayerId.Type;
 
 /** A kind of tennis a player is open to: the `plays*` flags on a profile. */
 export const PlayKind = Schema.Literals(["singles", "doubles", "hitting"]);
+
 export type PlayKind = typeof PlayKind.Type;
 
 export const PLAYERS_PAGE_DEFAULT = 20;
 export const PLAYERS_PAGE_MAX = 50;
+
 export const PlayersPageSize = Schema.Int.check(
   Schema.isBetween({ minimum: 1, maximum: PLAYERS_PAGE_MAX }),
 );
@@ -31,6 +34,7 @@ export const PlayersQuery = {
   cursor: Schema.optionalKey(Schema.String),
   limit: Schema.optionalKey(PlayersPageSize),
 };
+
 export type PlayersQuery = Schema.Struct<typeof PlayersQuery>["Type"];
 
 /**

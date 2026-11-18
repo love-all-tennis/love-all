@@ -5,6 +5,7 @@ import { ReportSheet } from "@/features/safety/report-sheet";
 /** Report a player, in a form sheet, then the offer to block them. */
 export default function ReportPlayerSheet() {
   const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
+
   return (
     <ReportSheet
       targetType="player"

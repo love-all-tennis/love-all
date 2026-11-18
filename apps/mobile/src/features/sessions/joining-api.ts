@@ -13,6 +13,7 @@ const errorCopy = {
 } as const;
 
 type Endpoint = "respond" | "leave" | "cancel" | "approve" | "reject";
+
 type Sent = Effect.Effect<void, Effect.Error<ReturnType<ApiClient["sessions"][Endpoint]>>>;
 
 const send: (api: ApiClient, id: string, change: JoinChange) => Sent = (api, id, change) => {

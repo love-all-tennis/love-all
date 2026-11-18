@@ -30,6 +30,7 @@ const STARS = [1, 2, 3, 4, 5] as const;
 /** Five stars, filled up to `value` rounded to the nearest star. Decorative: pair it with words. */
 export function Stars({ value, size: iconSize = "sm" }: { value: number; size?: "sm" | "md" }) {
   const filled = Math.round(value);
+
   return (
     <View
       style={styles.stars}
@@ -54,6 +55,7 @@ export function ItemCard({ item, onPress }: { item: EquipmentSummary; onPress: (
   const name = itemName(item);
   const rating = ratingLabel(item.rating);
   const mine = item.myRating === null ? "" : ` You gave it ${starsLabel(item.myRating)}.`;
+
   return (
     <Card
       onPress={onPress}
@@ -135,9 +137,11 @@ export function StarPicker({
 /** The average, the count, and a bar per star level. */
 export function RatingBreakdown({ rating }: { rating: EquipmentRatingSummary }) {
   const palette = useColors();
+
   if (rating.average === null) {
     return <Text color="textMuted">No reviews yet. Be the first to rate it.</Text>;
   }
+
   return (
     <View style={styles.breakdown}>
       <View style={styles.ratingRow} accessible accessibilityLabel={ratingLabel(rating)}>
@@ -196,6 +200,7 @@ export function ReviewCard({
   const level = reviewerLevel(review.authorNtrp);
   const name = mine ? "You" : review.author.displayName;
   const meta = [level, timeAgo(review.updatedAt, now)].filter(Boolean).join(" · ");
+
   const author = (
     <View style={styles.authorRow}>
       <Avatar name={review.author.displayName} photoUrl={review.author.photoUrl} size="sm" />
@@ -209,6 +214,7 @@ export function ReviewCard({
       </View>
     </View>
   );
+
   return (
     <Card>
       <View style={styles.review}>

@@ -24,11 +24,14 @@ export default function HomeAreaScreen() {
   const findCity = async () => {
     const label = city.trim();
     setPinProblem(null);
+
     if (!label) return setCityProblem("Type a city first, like Royal Oak, MI");
     setBusy("city");
     setCityProblem(null);
+
     try {
       const [hit] = await Location.geocodeAsync(label);
+
       if (!hit) return setCityProblem(`Couldn't find "${label}". Try adding the state.`);
       update({
         homeArea: {
@@ -48,12 +51,16 @@ export default function HomeAreaScreen() {
     setBusy("pin");
     setPinProblem(null);
     setCityProblem(null);
+
     try {
       const { granted } = await Location.requestForegroundPermissionsAsync();
+
       if (!granted) return setPinProblem("Location is off for Love All. Type your city instead.");
+
       const { coords } = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Low,
       });
+
       update({
         homeArea: {
           kind: "pin",
@@ -76,6 +83,7 @@ export default function HomeAreaScreen() {
       actionLabel="Next"
       onAction={() => {
         setTried(true);
+
         if (!error) router.push("/profile-setup/game");
       }}
     >

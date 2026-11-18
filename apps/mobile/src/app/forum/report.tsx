@@ -13,7 +13,9 @@ export default function ReportPostSheet() {
     authorId: string;
     name: string;
   }>();
+
   const thread = type === "thread";
+
   return (
     <ReportSheet
       targetType={thread ? "forum_thread" : "forum_post"}

@@ -82,6 +82,7 @@ export function SlotToggle({
   onPress: () => void;
 }) {
   const palette = useColors();
+
   return (
     <Pressable
       accessibilityRole="checkbox"

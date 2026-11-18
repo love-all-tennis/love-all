@@ -31,6 +31,7 @@ export default function GearItemScreen() {
       </Screen>
     );
   }
+
   if (state.status === "missing" || state.status === "error") {
     return (
       <Screen edges={["left", "right", "bottom"]}>
@@ -52,6 +53,7 @@ export default function GearItemScreen() {
   }
 
   const { item, reviews } = state;
+
   return (
     <Screen scroll={false} edges={["left", "right", "bottom"]}>
       <Stack.Screen options={{ title: "" }} />

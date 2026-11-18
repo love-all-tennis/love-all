@@ -48,15 +48,19 @@ export const ProfilesMemory = Layer.sync(Profiles, () => {
               ? current.homePoint
               : rounded && { lat: rounded.y, lng: rounded.x },
         });
+
         return get(user);
       }),
     replaceAvailability: (user, blocks) =>
       Effect.sync(() => {
         profiles.set(user.id, ensure(user));
+
         const sorted = [...blocks].sort(
           (a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime),
         );
+
         schedules.set(user.id, sorted);
+
         return sorted;
       }),
   });

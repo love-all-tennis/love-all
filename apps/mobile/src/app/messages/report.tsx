@@ -12,6 +12,7 @@ export default function ReportMessageSheet() {
     authorId: string;
     name: string;
   }>();
+
   return (
     <ReportSheet
       targetType="direct_message"

@@ -191,14 +191,17 @@ export class Sessions extends Context.Service<
       const visibleSession = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           const me = yield* viewerProfile(viewer);
+
           const [row] = yield* summarySelect(viewer, me?.homePoint)
             .where(and(eq(playSession.id, id), ...canSee(viewer, me?.ntrp)))
             .pipe(Effect.orDie);
+
           return Option.fromNullishOr(row);
         });
 
       const participantsOf = (viewer: SessionUser, row: Row) => {
         const isHost = row.host.id === viewer.id;
+
         return db
           .select({
             player: {
@@ -252,24 +255,31 @@ export class Sessions extends Context.Service<
       const get = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           const row = yield* visibleSession(viewer, id);
+
           if (Option.isNone(row)) return yield* new SessionNotFound({ id });
+
           return yield* detail(viewer, row.value);
         }).pipe(Effect.withSpan("Sessions.get"));
 
       const hostedSession = (viewer: SessionUser, id: string) =>
         Effect.gen(function* () {
           const found = yield* visibleSession(viewer, id);
+
           if (Option.isNone(found)) return yield* new SessionNotFound({ id });
           const row = found.value;
+
           if (row.host.id !== viewer.id) {
             return yield* new NotSessionHost({ message: "Only the host can change this session" });
           }
+
           if (row.status === "cancelled") {
             return yield* new SessionClosed({ message: "This session was cancelled" });
           }
+
           if (row.startsAt.getTime() <= (yield* now).getTime()) {
             return yield* new SessionClosed({ message: "This session has already started" });
           }
+
           return row;
         });
 
@@ -281,10 +291,13 @@ export class Sessions extends Context.Service<
           if (input.startsAt.getTime() <= (yield* now).getTime()) {
             return yield* new InvalidSession({ message: "Pick a start time in the future" });
           }
+
           const me = yield* viewerProfile(viewer);
+
           if (!me) {
             return yield* new ProfileRequired({ message: "Set up your profile before hosting" });
           }
+
           const id = yield* db
             .transaction((tx) =>
               Effect.gen(function* () {
@@ -304,36 +317,45 @@ export class Sessions extends Context.Service<
                     notes: input.notes ?? null,
                   })
                   .returning({ id: playSession.id });
+
                 yield* tx.insert(playSessionParticipant).values({
                   sessionId: created!.id,
                   userId: viewer.id,
                   role: "host",
                   state: "accepted",
                 });
+
                 return created!.id;
               }),
             )
             .pipe(Effect.orDie);
+
           return yield* get(viewer, id).pipe(Effect.orDie);
         }).pipe(Effect.withSpan("Sessions.create"));
 
       const update = (viewer: SessionUser, id: string, patch: SessionPatch) =>
         Effect.gen(function* () {
           const row = yield* hostedSession(viewer, id);
+
           if (patch.startsAt && patch.startsAt.getTime() <= (yield* now).getTime()) {
             return yield* new InvalidSession({ message: "Pick a start time in the future" });
           }
+
           const levelMin = patch.levelMin === undefined ? row.levelMin : patch.levelMin;
           const levelMax = patch.levelMax === undefined ? row.levelMax : patch.levelMax;
+
           if (levelMin !== null && levelMax !== null && levelMin > levelMax) {
             return yield* new InvalidSession({ message: "levelMin can't be above levelMax" });
           }
+
           const spots = patch.spots ?? row.spots;
+
           if (!spotsFitKind(row.kind, spots)) {
             return yield* new InvalidSession({
               message: `A ${row.kind} session has ${defaultSpots(row.kind)} spots`,
             });
           }
+
           if (spots < row.acceptedCount) {
             return yield* new InvalidSession({
               message: `${row.acceptedCount} players are already in; spots can't go below that`,
@@ -341,38 +363,51 @@ export class Sessions extends Context.Service<
           }
 
           const { courtPoint, startsAt, ...rest } = patch;
+          const changes: Partial<typeof playSession.$inferInsert> = { ...rest };
+
+          if (startsAt !== undefined) {
+            changes.startsAt = startsAt;
+            changes.reminderSentAt = null;
+          }
+
+          if (courtPoint !== undefined) changes.courtPoint = toPoint(courtPoint);
+
+          if (patch.spots !== undefined) {
+            changes.status = row.acceptedCount >= spots ? "confirmed" : "open";
+          }
+
           yield* db
             .update(playSession)
-            .set({
-              ...rest,
-              ...(startsAt === undefined ? {} : { startsAt, reminderSentAt: null }),
-              ...(courtPoint === undefined ? {} : { courtPoint: toPoint(courtPoint) }),
-              ...(patch.spots === undefined
-                ? {}
-                : { status: row.acceptedCount >= spots ? "confirmed" : "open" }),
-            })
+            .set(changes)
             .where(eq(playSession.id, id))
             .pipe(Effect.orDie);
+
           return yield* get(viewer, id).pipe(Effect.orDie);
         }).pipe(Effect.withSpan("Sessions.update"));
 
       const invite = (viewer: SessionUser, id: string, invites: SessionInvites) =>
         Effect.gen(function* () {
           const row = yield* hostedSession(viewer, id);
+
           if (row.acceptedCount >= row.spots) {
             return yield* new SessionFull({ message: "Every spot is taken" });
           }
+
           const ids = [...new Set(invites.playerIds)];
+
           if (ids.includes(viewer.id)) {
             return yield* new InvalidSession({ message: "You're already in this session" });
           }
+
           const found = yield* db
             .select({ id: profile.userId })
             .from(profile)
             .where(and(inArray(profile.userId, ids), notBlocked(viewer.id, profile.userId)))
             .pipe(Effect.orDie);
+
           const foundIds = new Set(found.map((p) => p.id));
           const missing = ids.find((playerId) => !foundIds.has(playerId));
+
           if (missing !== undefined) return yield* new PlayerNotFound({ id: missing });
 
           const invited = yield* db
@@ -381,22 +416,26 @@ export class Sessions extends Context.Service<
             .onConflictDoNothing()
             .returning({ userId: playSessionParticipant.userId })
             .pipe(Effect.orDie);
+
           yield* notifications.notify({
             to: invited.map((p) => p.userId),
             from: viewer.id,
             ...messages.invited({ ...row, id }, row.host.displayName),
           });
+
           return yield* get(viewer, id).pipe(Effect.orDie);
         }).pipe(Effect.withSpan("Sessions.invite"));
 
       const list = (viewer: SessionUser, query: SessionsQuery) =>
         Effect.gen(function* () {
           const me = yield* viewerProfile(viewer);
+
           if (query.scope === "nearby" && !me?.homePoint) {
             return yield* new HomePointRequired({
               message: "Set your home location to find sessions near you",
             });
           }
+
           const cursor =
             query.cursor === undefined
               ? undefined
@@ -409,6 +448,7 @@ export class Sessions extends Context.Service<
                     onSome: Effect.succeed,
                   }),
                 );
+
           const limit = query.limit ?? SESSIONS_PAGE_DEFAULT;
           const at = (yield* now).toISOString();
 
@@ -416,8 +456,10 @@ export class Sessions extends Context.Service<
             query.scope === "mine"
               ? sql`${playSession.startsAt} + make_interval(mins => ${playSession.durationMinutes}::int) > ${at}::timestamptz`
               : sql`true`;
+
           const bucket = sql<number>`(case when ${upcoming} then 0 else 1 end)`.mapWith(Number);
           const epochMs = sql`(extract(epoch from ${playSession.startsAt}) * 1000)::float8`;
+
           const key =
             sql<number>`(case when ${upcoming} then ${epochMs} else -${epochMs} end)`.mapWith(
               Number,
@@ -451,10 +493,13 @@ export class Sessions extends Context.Service<
             .orderBy(asc(bucket), asc(key), asc(playSession.id))
             .limit(limit + 1)
             .pipe(Effect.orDie);
+
           const nowMs = new Date(at).getTime();
+
           const keyOf = (row: Row) => {
             const startMs = row.startsAt.getTime();
             const past = query.scope === "mine" && startMs + row.durationMinutes * 60_000 <= nowMs;
+
             return past
               ? { bucket: 1 as const, key: -startMs, id: row.id }
               : { bucket: 0 as const, key: startMs, id: row.id };
@@ -462,6 +507,7 @@ export class Sessions extends Context.Service<
 
           const page = rows.slice(0, limit);
           const last = page.at(-1);
+
           return new SessionsPage({
             items: page.map((row) => new SessionSummary(toFields(row))),
             nextCursor: rows.length > limit && last ? encodeCursor(keyOf(last)) : null,

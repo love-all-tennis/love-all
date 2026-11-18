@@ -17,6 +17,7 @@ export function Checkbox({
 }) {
   const palette = useColors();
   const edge = error ? palette.danger : checked ? palette.accent : palette.borderStrong;
+
   return (
     <View style={styles.field}>
       <Pressable

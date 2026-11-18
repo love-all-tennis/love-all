@@ -1,3 +1,4 @@
+import { Match } from "effect";
 import type {
   LatLng,
   MySessionPlace,
@@ -11,6 +12,7 @@ import { ntrpLabel } from "../profile/draft";
 import { dayKey } from "./form";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
 const MONTHS = [
   "Jan",
   "Feb",
@@ -27,7 +29,12 @@ const MONTHS = [
 ] as const;
 
 export const kindLabel = (kind: SessionKind) =>
-  kind === "singles" ? "Singles match" : kind === "doubles" ? "Doubles match" : "Hitting session";
+  Match.value(kind).pipe(
+    Match.when("singles", () => "Singles match"),
+    Match.when("doubles", () => "Doubles match"),
+    Match.when("hitting", () => "Hitting session"),
+    Match.exhaustive,
+  );
 
 /** "Sat, Nov 22". */
 export const dateLabel = (date: Date) =>
@@ -40,6 +47,7 @@ export const clockOf = (date: Date) => timeLabel(`${date.getHours()}:${date.getM
 export const timeLabel = (time: string) => {
   const [hours = 0, minutes = 0] = time.split(":").map(Number);
   const hour = hours % 12 === 0 ? 12 : hours % 12;
+
   return `${hour}:${String(minutes).padStart(2, "0")} ${hours < 12 ? "AM" : "PM"}`;
 };
 
@@ -53,17 +61,22 @@ export const durationLabel = (minutes: number) => `${minutes} min`;
 export const dayChipLabel = (day: string, now: Date) => {
   const [y = 0, m = 1, d = 1] = day.split("-").map(Number);
   const date = new Date(y, m - 1, d);
+
   if (day === dayKey(now)) return "Today";
+
   if (day === dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)))
     return "Tomorrow";
+
   return dateLabel(date);
 };
 
 /** "Any level", "NTRP 3.5", "NTRP 3.0–4.0", "NTRP 3.5 and up", "NTRP 4.0 and below". */
 export const levelRangeLabel = (min: Ntrp | null, max: Ntrp | null) => {
   if (!min && !max) return "Any level";
+
   if (min && max)
     return min === max ? `NTRP ${ntrpLabel(min)}` : `NTRP ${ntrpLabel(min)}–${ntrpLabel(max)}`;
+
   return min ? `NTRP ${ntrpLabel(min)} and up` : `NTRP ${ntrpLabel(max!)} and below`;
 };
 
@@ -99,6 +112,7 @@ export const sessionTags = (
   const me = session.me;
   const upcoming = session.status !== "cancelled" && session.startsAt.getTime() > now.getTime();
   const requests = upcoming ? (session.requestCount ?? 0) : 0;
+
   if (me?.role === "host" && requests > 0)
     tags.push({ label: requests === 1 ? "1 request" : `${requests} requests`, tone: "clay" });
   else if (me?.role === "host") tags.push({ label: "Hosting", tone: "neutral" });
@@ -112,9 +126,11 @@ export const sessionTags = (
   else if (session.status === "confirmed") tags.push({ label: "Confirmed", tone: "accent" });
   else {
     const left = session.spots - session.acceptedCount;
+
     if (left > 0)
       tags.push({ label: left === 1 ? "1 spot open" : `${left} spots open`, tone: "highlight" });
   }
+
   return tags.slice(0, 2);
 };
 
@@ -130,6 +146,7 @@ export const isEditable = (
  */
 export const mapsUrl = (point: LatLng, label: string, platform: string) => {
   const ll = `${point.lat},${point.lng}`;
+
   return platform === "ios"
     ? `https://maps.apple.com/?ll=${ll}&q=${encodeURIComponent(label)}`
     : `https://www.google.com/maps/search/?api=1&query=${ll}`;

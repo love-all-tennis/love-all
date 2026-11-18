@@ -1,3 +1,4 @@
+import { Match } from "effect";
 import {
   checkMatchScore,
   isMatchTiebreak,
@@ -77,12 +78,19 @@ export const hasFullSides = (ctx: ScoreContext) =>
 
 const sides = (ctx: ScoreContext, partnerId: string | null) => {
   if (!hasFullSides(ctx)) {
-    return ctx.kind === "doubles"
-      ? "A doubles score needs four players in the session"
-      : "A singles score needs two players in the session";
+    return {
+      problem:
+        ctx.kind === "doubles"
+          ? "A doubles score needs four players in the session"
+          : "A singles score needs two players in the session",
+    };
   }
+
   if (ctx.kind === "singles") return { sideA: [ctx.meId], sideB: [ctx.others[0]!.id] };
-  if (!partnerId || !ctx.others.some((p) => p.id === partnerId)) return "Pick your partner";
+
+  if (!partnerId || !ctx.others.some((p) => p.id === partnerId))
+    return { problem: "Pick your partner" };
+
   return {
     sideA: [ctx.meId, partnerId],
     sideB: ctx.others.filter((p) => p.id !== partnerId).map((p) => p.id),
@@ -92,11 +100,14 @@ const sides = (ctx: ScoreContext, partnerId: string | null) => {
 const setError = (draft: ScoreDraft, index: number) => {
   const { mine, theirs } = draft.sets[index]!;
   const label = setLabel(draft, index);
+
   if (mine === "" || theirs === "") return `Enter both scores for ${label.toLowerCase()}`;
   const set: SetScore = [Number(mine), Number(theirs)];
+
   if (index === 2 && draft.thirdIsTiebreak) {
     return isMatchTiebreak(set) ? undefined : "A match tiebreak goes to 10, won by 2, like 10–7";
   }
+
   return isRegularSet(set) ? undefined : `${label} should end 6–0 to 6–4, 7–5 or 7–6`;
 };
 
@@ -108,27 +119,34 @@ const setError = (draft: ScoreDraft, index: number) => {
 export const checkScore = (draft: ScoreDraft, ctx: ScoreContext) => {
   const setErrors = draft.sets.map((_, i) => setError(draft, i));
   const who = sides(ctx, draft.partnerId);
-  const partner = typeof who === "string" ? who : undefined;
+  const partner = "problem" in who ? who.problem : undefined;
   let match: string | undefined;
   const sets = draft.sets.map((s) => [Number(s.mine), Number(s.theirs)] satisfies SetScore);
+
   if (setErrors.every((e) => e === undefined)) {
     const verdict = checkMatchScore(sets);
+
     if (verdict !== true) match = matchMessage(sets);
   }
-  if (setErrors.some((e) => e !== undefined) || partner || match || typeof who === "string") {
+
+  if (setErrors.some((e) => e !== undefined) || partner || match || "problem" in who) {
     return { ok: false, errors: { sets: setErrors, partner, match } } satisfies ScoreCheck;
   }
-  return { ok: true, result: { ...who, sets } } satisfies ScoreCheck;
+
+  return { ok: true, result: { sideA: who.sideA, sideB: who.sideB, sets } } satisfies ScoreCheck;
 };
 
 const matchMessage = (sets: ReadonlyArray<SetScore>) => {
   let a = 0;
   let b = 0;
+
   for (const [i, [x, y]] of sets.entries()) {
     if (a === 2 || b === 2) return `The match was over after set ${i}. Remove the extra set.`;
+
     if (x > y) a++;
     else b++;
   }
+
   return a === b ? "Add the deciding set: the match is one set all" : "Check the scores";
 };
 
@@ -183,14 +201,17 @@ export const resultView = (
   const recorderSide = sideOf(result, result.recordedBy);
   const mySide = meId ? sideOf(result, meId) : null;
   const onOtherSide = mySide !== null && recorderSide !== null && mySide !== recorderSide;
-  const detail =
-    result.status === "pending"
-      ? onOtherSide
+
+  const detail = Match.value(result.status).pipe(
+    Match.when("pending", () =>
+      onOtherSide
         ? `Recorded by ${recorder}. Confirm it if it's right.`
-        : `Recorded by ${recorder}. Waiting for the other side to confirm.`
-      : result.status === "confirmed"
-        ? `Confirmed by ${responder ?? "the other side"}`
-        : `Disputed by ${responder ?? "the other side"}. Record the right score.`;
+        : `Recorded by ${recorder}. Waiting for the other side to confirm.`,
+    ),
+    Match.when("confirmed", () => `Confirmed by ${responder ?? "the other side"}`),
+    Match.orElse(() => `Disputed by ${responder ?? "the other side"}. Record the right score.`),
+  );
+
   return {
     headline,
     winners: `${winnerNames} won`,
@@ -232,12 +253,16 @@ export const isPastSession = (session: { readonly startsAt: Date }, now: Date) =
 export const pastScoreLine = (result: SessionResult | null, meId: string | null) => {
   if (!result || !meId) return null;
   const mine = sideOf(result, meId);
+
   if (!mine) return null;
+
   if (result.status === "confirmed") {
     return `${result.winner === mine ? "Won" : "Lost"} ${formatSets(result.sets, mine)}`;
   }
+
   if (result.status === "pending" && sideOf(result, result.recordedBy) !== mine) {
     return "Score to confirm";
   }
+
   return null;
 };

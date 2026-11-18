@@ -1,3 +1,4 @@
+import { Match } from "effect";
 import type { FollowedPlayers, Me } from "@love-all/domain";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -59,9 +60,11 @@ function NearbyPlayers() {
       .then((loaded) => {
         if (!live) return;
         setMe(loaded);
+
         if (!filters) setPlayerFilters(defaultFilters(loaded.profile));
       })
       .catch(() => live && !filters && setPlayerFilters(defaultFilters(null)));
+
     return () => {
       live = false;
     };
@@ -106,16 +109,16 @@ function NearbyPlayers() {
       keyExtractor={(player) => player.id}
       renderItem={({ item }) => <PlayerRow player={item} onPress={() => openPlayer(item.id)} />}
       ListHeaderComponent={header}
-      ListEmptyComponent={
-        search.status === "loading" ? (
-          <Loading label="Loading players" />
-        ) : search.status === "error" ? (
+      ListEmptyComponent={Match.value(search.status).pipe(
+        Match.when("loading", () => <Loading label="Loading players" />),
+        Match.when("error", () => (
           <EmptyState
             title="Couldn't load players"
             body="Check your connection and try again."
             action={{ label: "Try again", onPress: search.refresh }}
           />
-        ) : (
+        )),
+        Match.orElse(() => (
           <EmptyState
             title={`No players ${radiusLabel(filters.radiusMi).toLowerCase()} yet`}
             body={
@@ -125,8 +128,8 @@ function NearbyPlayers() {
             }
             action={{ label: "Widen the search", onPress: openFilters }}
           />
-        )
-      }
+        )),
+      )}
       ListFooterComponent={
         search.loadingMore ? <Loading label="Loading more players" /> : undefined
       }
@@ -155,6 +158,7 @@ function FollowedList() {
     fetchFollows()
       .then((loaded) => live && setFollows(loaded))
       .catch(() => live && setFailed(true));
+
     return () => {
       live = false;
     };

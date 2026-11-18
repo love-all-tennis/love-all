@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Schema, Match } from "effect";
 import { PlayerId, PlayKind } from "./Player";
 import { LatLng, Ntrp } from "./Profile";
 
@@ -9,21 +9,26 @@ import { LatLng, Ntrp } from "./Profile";
  */
 
 export const SessionId = Schema.String.check(Schema.isUUID());
+
 export type SessionId = typeof SessionId.Type;
 
 /** Singles, doubles or a hitting session: the same kinds a profile says it plays. */
 export const SessionKind = PlayKind;
+
 export type SessionKind = typeof SessionKind.Type;
 
 /** `invite_only`: only invited players can join. `open`: nearby players in range can find it. */
 export const SessionVisibility = Schema.Literals(["invite_only", "open"]);
+
 export type SessionVisibility = typeof SessionVisibility.Type;
 
 /** `confirmed` once every spot is taken, and back to `open` if someone leaves. */
 export const SessionStatus = Schema.Literals(["open", "confirmed", "cancelled"]);
+
 export type SessionStatus = typeof SessionStatus.Type;
 
 export const ParticipantRole = Schema.Literals(["host", "player"]);
+
 export type ParticipantRole = typeof ParticipantRole.Type;
 
 /**
@@ -38,6 +43,7 @@ export const ParticipantState = Schema.Literals([
   "declined",
   "left",
 ]);
+
 export type ParticipantState = typeof ParticipantState.Type;
 
 /** Spots per kind: singles 2, doubles 4, hitting 2 to 4 (the host picks; 2 by default). */
@@ -48,7 +54,12 @@ export const HITTING_SPOTS_MAX = 4;
 
 /** Spots a session of this kind has when the host doesn't pick. */
 export const defaultSpots = (kind: SessionKind) =>
-  kind === "doubles" ? DOUBLES_SPOTS : kind === "singles" ? SINGLES_SPOTS : HITTING_SPOTS_MIN;
+  Match.value(kind).pipe(
+    Match.when("doubles", () => DOUBLES_SPOTS),
+    Match.when("singles", () => SINGLES_SPOTS),
+    Match.when("hitting", () => HITTING_SPOTS_MIN),
+    Match.exhaustive,
+  );
 
 /** Whether `spots` is allowed for `kind`. */
 export const spotsFitKind = (kind: SessionKind, spots: number) =>
@@ -59,9 +70,11 @@ export const spotsFitKind = (kind: SessionKind, spots: number) =>
 export const Spots = Schema.Int.check(
   Schema.isBetween({ minimum: HITTING_SPOTS_MIN, maximum: DOUBLES_SPOTS }),
 );
+
 export const DurationMinutes = Schema.Int.check(Schema.isBetween({ minimum: 15, maximum: 480 }));
 export const CourtName = Schema.String.check(Schema.isTrimmed(), Schema.isBetweenLength(1, 100));
 export const SESSION_NOTES_MAX = 500;
+
 export const SessionNotes = Schema.String.check(
   Schema.isTrimmed(),
   Schema.isMaxLength(SESSION_NOTES_MAX),
@@ -103,6 +116,7 @@ export const NewSession = Schema.Struct({
       `A ${s.kind} session has ${defaultSpots(s.kind)} spots`,
   ),
 );
+
 export type NewSession = typeof NewSession.Type;
 
 /**
@@ -121,6 +135,7 @@ export const SessionPatch = Schema.Struct({
   visibility: Schema.optionalKey(SessionVisibility),
   notes: Schema.optionalKey(Schema.NullOr(SessionNotes)),
 }).check(Schema.makeFilter(levelsInOrder));
+
 export type SessionPatch = typeof SessionPatch.Type;
 
 /** A player as a session shows them. */
@@ -143,6 +158,7 @@ export const MySessionPlace = Schema.Struct({
   role: ParticipantRole,
   state: ParticipantState,
 });
+
 export type MySessionPlace = typeof MySessionPlace.Type;
 
 const sessionFields = {
@@ -181,10 +197,12 @@ export class Session extends Schema.Class<Session>("Session")({
 }) {}
 
 export const SessionScope = Schema.Literals(["mine", "nearby"]);
+
 export type SessionScope = typeof SessionScope.Type;
 
 export const SESSIONS_PAGE_DEFAULT = 20;
 export const SESSIONS_PAGE_MAX = 50;
+
 export const SessionsPageSize = Schema.Int.check(
   Schema.isBetween({ minimum: 1, maximum: SESSIONS_PAGE_MAX }),
 );
@@ -203,6 +221,7 @@ export const SessionsQuery = {
   cursor: Schema.optionalKey(Schema.String),
   limit: Schema.optionalKey(SessionsPageSize),
 };
+
 export type SessionsQuery = Schema.Struct<typeof SessionsQuery>["Type"];
 
 /** One page of `GET /sessions`. `nextCursor` is null on the last page. */
@@ -220,6 +239,7 @@ export const SessionInvites = Schema.Struct({
     Schema.isMaxLength(MAX_INVITES_PER_REQUEST),
   ),
 });
+
 export type SessionInvites = typeof SessionInvites.Type;
 
 /** No session with that id, or the viewer can't see it. */

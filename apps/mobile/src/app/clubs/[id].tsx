@@ -53,6 +53,7 @@ export default function ClubScreen() {
         );
       })
       .catch(() => live && setState((s) => (s.status === "ready" ? s : { status: "error" })));
+
     return () => {
       live = false;
     };
@@ -109,6 +110,7 @@ export default function ClubScreen() {
   const mine = club.myReview;
   const others = state.reviews.filter((review) => !review.mine);
   const distance = distanceLabel(club.distanceKm);
+
   const openReview = () =>
     router.push({ pathname: "/clubs/review", params: { id: club.id, name: club.name } });
 

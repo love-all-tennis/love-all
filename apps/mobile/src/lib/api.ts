@@ -17,6 +17,7 @@ const makeClient = HttpApiClient.make(Api, {
         sessionCookie.pipe(
           Effect.map((cookie) => {
             const withUrl = HttpClientRequest.prependUrl(request, apiUrl);
+
             return cookie ? HttpClientRequest.setHeader(withUrl, "cookie", cookie) : withUrl;
           }),
         ),
