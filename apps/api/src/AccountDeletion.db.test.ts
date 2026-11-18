@@ -1,4 +1,4 @@
-import { eq, inArray, or } from "drizzle-orm";
+import { eq, inArray, or, sql } from "drizzle-orm";
 import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { BetterAuth } from "./BetterAuth";
@@ -223,13 +223,17 @@ describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
             .insert(forumReaction)
             .values({ threadId: alexThread!.id, userId: sam.id, kind: "like" });
 
-          const [low, high] = [sam.id, alex.id].sort();
+          const {
+            rows: [pair],
+          } = yield* db.execute<{ low: string; high: string }>(
+            sql`select least(${sam.id}::text, ${alex.id}::text) as low, greatest(${sam.id}::text, ${alex.id}::text) as high`,
+          );
 
           const [convo] = yield* db
             .insert(conversation)
             .values({
-              userLowId: low!,
-              userHighId: high!,
+              userLowId: pair!.low,
+              userHighId: pair!.high,
               startedById: sam.id,
               lastMessageAt: new Date(),
             })
