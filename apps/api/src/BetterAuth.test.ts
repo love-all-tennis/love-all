@@ -1,6 +1,6 @@
 import { ConfigProvider, Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
-import { SocialProvidersConfig, TrustedOrigins } from "./BetterAuth";
+import { IpAddressConfig, SocialProvidersConfig, TrustedOrigins } from "./BetterAuth";
 
 const parse = <A>(
   config: { parse: (provider: ConfigProvider.ConfigProvider) => Effect.Effect<A, unknown> },
@@ -38,5 +38,18 @@ describe("auth config", () => {
         appBundleIdentifier: "app.loveall",
       },
     });
+  });
+
+  it("leaves the client IP lookup on Better Auth's defaults when unset", () => {
+    expect(parse(IpAddressConfig, {})).toEqual({ headers: [], trustedProxies: [] });
+  });
+
+  it("reads the proxy's IP headers and addresses", () => {
+    expect(
+      parse(IpAddressConfig, {
+        IP_ADDRESS_HEADERS: "x-real-ip, x-forwarded-for",
+        TRUSTED_PROXIES: "172.18.0.0/16",
+      }),
+    ).toEqual({ headers: ["x-real-ip", "x-forwarded-for"], trustedProxies: ["172.18.0.0/16"] });
   });
 });

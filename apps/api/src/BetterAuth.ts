@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { Config, Context, Effect, Layer, Option, Redacted } from "effect";
 import { SqlClient } from "effect/sql";
 // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- BetterAuth is the Layer that owns makeAuth.
-import { type Auth, makeAuth, type SocialProviders } from "./auth";
+import { type Auth, type IpAddress, makeAuth, type SocialProviders } from "./auth";
 import { Db } from "./Db";
 import { effectSqlAdapter } from "./db/better-auth-adapter";
 import { accountSuspension } from "./db/schema";
@@ -18,6 +18,11 @@ const list = (name: string) =>
   );
 
 export const TrustedOrigins = list("TRUSTED_ORIGINS").pipe(Config.withDefault(["loveall://"]));
+
+export const IpAddressConfig: Config.Config<IpAddress> = Config.all({
+  headers: list("IP_ADDRESS_HEADERS").pipe(Config.withDefault([])),
+  trustedProxies: list("TRUSTED_PROXIES").pipe(Config.withDefault([])),
+});
 
 const GoogleConfig = Config.all({
   clientIds: list("GOOGLE_CLIENT_ID"),
@@ -66,6 +71,7 @@ export class BetterAuth extends Context.Service<BetterAuth, Auth>()("love-all/Be
       const db = yield* Db;
       const trustedOrigins = yield* TrustedOrigins;
       const socialProviders = yield* SocialProvidersConfig;
+      const ipAddress = yield* IpAddressConfig;
 
       return makeAuth({
         database: effectSqlAdapter(services),
@@ -79,6 +85,7 @@ export class BetterAuth extends Context.Service<BetterAuth, Auth>()("love-all/Be
           ),
         trustedOrigins,
         socialProviders,
+        ipAddress,
       });
     }),
   );
