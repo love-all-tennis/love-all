@@ -11,6 +11,7 @@
     "db:migrate": "vp run --filter @love-all/api db:migrate"
   },
   "devDependencies": {
+    "@interfere/landmines": "0.1.0",
     "typescript": "~6.0.3",
     "vite-plus": "1.6.0"
   },
