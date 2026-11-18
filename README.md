@@ -40,7 +40,7 @@ pnpm dev:api                              # API on http://localhost:3000 (docs a
 pnpm dev:mobile                           # Expo dev server
 ```
 
-The API reads `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_ORIGINS` and `PORT` from the environment. Google and Sign in with Apple turn on when their `GOOGLE_*` and `APPLE_*` variables are set (see `.env.example`); without them only email and password is offered. For local dev, `pnpm dev:api` and `pnpm db:migrate` load them from the root `.env` (via Node's `--env-file-if-exists`), and anything already exported in your shell wins. Tests don't read `.env`: the database tests run only when you export `DATABASE_URL` yourself. Docker Compose and production set the variables directly. On a phone, set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` to your machine's LAN address.
+The API reads `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_ORIGINS` and `PORT` from the environment. Google and Sign in with Apple turn on when their `GOOGLE_*` and `APPLE_*` variables are set (see `.env.example`); without them only email and password is offered. Behind a reverse proxy, set `IP_ADDRESS_HEADERS` or `TRUSTED_PROXIES` so Better Auth's rate limiting sees each client's IP instead of one shared bucket. For local dev, `pnpm dev:api` and `pnpm db:migrate` load them from the root `.env` (via Node's `--env-file-if-exists`), and anything already exported in your shell wins. Tests don't read `.env`: the database tests run only when you export `DATABASE_URL` yourself. Docker Compose and production set the variables directly. On a phone, set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` to your machine's LAN address.
 
 ## Everyday commands
 

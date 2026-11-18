@@ -33,6 +33,15 @@ export interface AuthOptions {
   readonly isSuspended: (userId: string) => Promise<boolean>;
   readonly trustedOrigins: ReadonlyArray<string>;
   readonly socialProviders?: SocialProviders;
+  /** How rate limiting finds the client IP behind the VPS's reverse proxy. */
+  readonly ipAddress?: IpAddress;
+}
+
+export interface IpAddress {
+  /** Headers the proxy sets with the client IP, in order. Better Auth defaults to `x-forwarded-for`. */
+  readonly headers?: ReadonlyArray<string>;
+  /** Proxy IPs or CIDR ranges that append to `x-forwarded-for`, skipped when finding the client. */
+  readonly trustedProxies?: ReadonlyArray<string>;
 }
 
 const appleOrigin = "https://appleid.apple.com";
@@ -45,9 +54,17 @@ const appleOrigin = "https://appleid.apple.com";
  */
 export const makeAuth = (options: AuthOptions) => {
   const { google, apple } = options.socialProviders ?? {};
+  const { headers, trustedProxies } = options.ipAddress ?? {};
 
   return betterAuth({
+    appName: "Love All",
     database: options.database,
+    advanced: {
+      ipAddress: {
+        ...(headers && headers.length > 0 && { ipAddressHeaders: [...headers] }),
+        ...(trustedProxies && trustedProxies.length > 0 && { trustedProxies: [...trustedProxies] }),
+      },
+    },
     databaseHooks: {
       session: {
         create: {
