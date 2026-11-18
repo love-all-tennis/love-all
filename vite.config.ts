@@ -1,7 +1,9 @@
+import nkzw from "@nkzw/oxlint-config";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   lint: {
+    extends: [nkzw],
     plugins: ["typescript"],
     options: {
       typeAware: true,

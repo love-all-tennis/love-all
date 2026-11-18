@@ -367,13 +367,15 @@ export class Forum extends Context.Service<
         listCategories: (viewer) =>
           Effect.gen(function* () {
             const metroId = yield* viewerMetro(viewer);
-            const categories = yield* db
-              .select()
-              .from(forumCategory)
-              .where(visibleCategory(metroId))
-              // Local first, then the global ones in their set order.
-              .orderBy(sql`${forumCategory.metroId} is null`, asc(forumCategory.sortOrder))
-              .pipe(Effect.orDie);
+            const categories = yield* (
+              db
+                .select()
+                .from(forumCategory)
+                .where(visibleCategory(metroId))
+                // Local first, then the global ones in their set order.
+                .orderBy(sql`${forumCategory.metroId} is null`, asc(forumCategory.sortOrder))
+                .pipe(Effect.orDie)
+            );
             const latest = yield* db
               .selectDistinctOn([forumThread.categoryId], {
                 categoryId: forumThread.categoryId,
