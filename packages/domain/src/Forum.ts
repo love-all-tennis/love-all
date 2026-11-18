@@ -97,7 +97,8 @@ export class ForumThreadSummary extends Schema.Class<ForumThreadSummary>("ForumT
   id: ForumThreadId,
   categoryId: ForumCategoryId,
   title: Schema.String,
-  author: ForumAuthor,
+  /** Null when the author deleted their account: the app shows "Deleted account". */
+  author: Schema.NullOr(ForumAuthor),
   /** Replies that aren't deleted. */
   replyCount: Schema.Int,
   /** When the thread was started or last replied to. Lists are ordered by it. */
@@ -111,7 +112,8 @@ export class ForumThread extends Schema.Class<ForumThread>("ForumThread")({
   category: Schema.Struct({ id: ForumCategoryId, slug: Schema.String, name: Schema.String }),
   title: Schema.String,
   body: Schema.String,
-  author: ForumAuthor,
+  /** Null when the author deleted their account: the app shows "Deleted account". */
+  author: Schema.NullOr(ForumAuthor),
   replyCount: Schema.Int,
   lastPostAt: Schema.DateFromString,
   createdAt: Schema.DateFromString,
@@ -120,7 +122,8 @@ export class ForumThread extends Schema.Class<ForumThread>("ForumThread")({
 
 /**
  * A reply. A deleted reply keeps its place in the thread with `deleted`
- * set and no body or author, so the app shows "Post deleted".
+ * set and no body or author, so the app shows "Post deleted". A live reply
+ * with no author is from a player who deleted their account ("Deleted account").
  */
 export class ForumPost extends Schema.Class<ForumPost>("ForumPost")({
   id: ForumPostId,

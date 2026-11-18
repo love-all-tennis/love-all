@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { Alert, Platform, StyleSheet, View } from "react-native";
 
 import { Avatar, Button, Card, ErrorBanner, space, Text } from "@/design";
+import { DELETED_ACCOUNT } from "@/lib/deleted-account";
 import { levelLabel } from "../players/components";
 import { Section } from "./components";
 import {
@@ -114,7 +115,7 @@ export function SessionJoinActions({
 }) {
   const action = viewerAction(session, now);
   const busy = pending !== null;
-  const host = session.host.displayName;
+  const host = session.host?.displayName ?? DELETED_ACCOUNT;
 
   const body = (() => {
     switch (action.kind) {

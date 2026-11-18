@@ -1,8 +1,11 @@
-import { eq, inArray, or, sql } from "drizzle-orm";
-import { Effect } from "effect";
+import { eq, inArray, or } from "drizzle-orm";
+import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
+import { SessionUser } from "@love-all/domain";
 import { BetterAuth } from "./BetterAuth";
 import { Db } from "./Db";
+import { Forum } from "./Forum";
+import { Sessions } from "./Sessions";
 import {
   account,
   accountSuspension,
@@ -41,7 +44,10 @@ const makeTest = () => {
   const apple = makeAppleTokensMemory();
 
   return {
-    layer: betterAuthTestLayer(sent.layer, apple.layer),
+    layer: Layer.mergeAll(Forum.layer, Sessions.layer).pipe(
+      Layer.provide(sent.layer),
+      Layer.provideMerge(betterAuthTestLayer(sent.layer, apple.layer)),
+    ),
     notices: sent.notices,
     revoked: apple.revoked,
   };
@@ -122,7 +128,9 @@ describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
         const sam = yield* signUp(auth, "Sam");
         const alex = yield* signUp(auth, "Alex");
         const jo = yield* signUp(auth, "Jo");
-        const others = [alex.id, jo.id];
+        // WARNING: a 0000_ id sorts before Better Auth ids in both code-point and en_US order.
+        const penPalId = `0000_${crypto.randomUUID()}`;
+        const others = [alex.id, jo.id, penPalId];
         const now = Date.now();
 
         return yield* Effect.gen(function* () {
@@ -223,17 +231,15 @@ describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
             .insert(forumReaction)
             .values({ threadId: alexThread!.id, userId: sam.id, kind: "like" });
 
-          const {
-            rows: [pair],
-          } = yield* db.execute<{ low: string; high: string }>(
-            sql`select least(${sam.id}::text, ${alex.id}::text) as low, greatest(${sam.id}::text, ${alex.id}::text) as high`,
-          );
+          yield* db
+            .insert(user)
+            .values({ id: penPalId, name: "Pen pal", email: `${penPalId}@example.com` });
 
           const [convo] = yield* db
             .insert(conversation)
             .values({
-              userLowId: pair!.low,
-              userHighId: pair!.high,
+              userLowId: penPalId,
+              userHighId: sam.id,
               startedById: sam.id,
               lastMessageAt: new Date(),
             })
@@ -241,11 +247,11 @@ describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
 
           yield* db.insert(conversationMember).values([
             { conversationId: convo!.id, userId: sam.id },
-            { conversationId: convo!.id, userId: alex.id },
+            { conversationId: convo!.id, userId: penPalId },
           ]);
           yield* db.insert(directMessage).values([
             { conversationId: convo!.id, senderId: sam.id, body: "Saturday?" },
-            { conversationId: convo!.id, senderId: alex.id, body: "Sure" },
+            { conversationId: convo!.id, senderId: penPalId, body: "Sure" },
           ]);
 
           const [samClub] = yield* db
@@ -301,6 +307,18 @@ describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
             }),
           );
 
+          const asPlayer = (id: string, name: string) =>
+            new SessionUser({ id, name, email: `${id}@example.com`, role: "player" });
+
+          const forum = yield* Forum;
+          const sessions = yield* Sessions;
+
+          const seen = {
+            thread: yield* forum.getThread(asPlayer(alex.id, "Alex"), samThread!.id, {}),
+            replies: yield* forum.getThread(asPlayer(alex.id, "Alex"), alexThread!.id, {}),
+            session: yield* sessions.get(asPlayer(jo.id, "Jo"), hostedPast!.id),
+          };
+
           const left = {
             user: yield* db.select().from(user).where(eq(user.id, sam.id)),
             sessions: yield* db.select().from(session).where(eq(session.userId, sam.id)),
@@ -320,10 +338,7 @@ describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
               .select()
               .from(accountSuspension)
               .where(eq(accountSuspension.userId, sam.id)),
-            hosted: yield* db
-              .select()
-              .from(playSession)
-              .where(inArray(playSession.id, [hosting!.id, hostedPast!.id])),
+            hosted: yield* db.select().from(playSession).where(eq(playSession.hostId, sam.id)),
             places: yield* db
               .select()
               .from(playSessionParticipant)
@@ -362,14 +377,30 @@ describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
               .select({ status: playSession.status })
               .from(playSession)
               .where(eq(playSession.id, joined!.id)),
-            alexThread: yield* db
-              .select({ replyCount: forumThread.replyCount })
+            hosted: yield* db
+              .select({
+                id: playSession.id,
+                hostId: playSession.hostId,
+                status: playSession.status,
+              })
+              .from(playSession)
+              .where(inArray(playSession.id, [hosting!.id, hostedPast!.id])),
+            result: yield* db
+              .select({ recordedBy: playSessionResult.recordedBy, sideA: playSessionResult.sideA })
+              .from(playSessionResult)
+              .where(eq(playSessionResult.sessionId, scored!.id)),
+            threads: yield* db
+              .select({
+                id: forumThread.id,
+                authorId: forumThread.authorId,
+                replyCount: forumThread.replyCount,
+              })
               .from(forumThread)
-              .where(eq(forumThread.id, alexThread!.id)),
-            alexReplies: yield* db
-              .select({ body: forumPost.body })
+              .where(inArray(forumThread.id, [samThread!.id, alexThread!.id])),
+            replies: yield* db
+              .select({ body: forumPost.body, authorId: forumPost.authorId })
               .from(forumPost)
-              .where(eq(forumPost.threadId, alexThread!.id)),
+              .where(inArray(forumPost.threadId, [samThread!.id, alexThread!.id])),
             club: yield* db
               .select({ createdBy: club.createdBy })
               .from(club)
@@ -392,11 +423,27 @@ describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
               .where(inArray(report.targetId, [sam.id, jo.id])),
           };
 
+          yield* db
+            .delete(playSession)
+            .where(inArray(playSession.id, [hosting!.id, hostedPast!.id]));
+          yield* db.delete(forumThread).where(eq(forumThread.id, samThread!.id));
           yield* db.delete(club).where(eq(club.id, samClub!.id));
           yield* db.delete(equipment).where(eq(equipment.id, samGear!.id));
           yield* db.delete(report).where(inArray(report.targetId, [sam.id, jo.id]));
 
-          return { deleted, left, kept, sam, alex, hosting: hosting!.id, joined: joined!.id };
+          return {
+            deleted,
+            seen,
+            left,
+            kept,
+            sam,
+            alex,
+            jo,
+            hosting: hosting!.id,
+            hostedPast: hostedPast!.id,
+            samThread: samThread!.id,
+            alexThread: alexThread!.id,
+          };
         }).pipe(
           Effect.ensuring(
             Effect.orDie(db.delete(user).where(inArray(user.id, [sam.id, ...others]))),
@@ -411,9 +458,40 @@ describe.skipIf(!process.env.DATABASE_URL)("deleting an account", () => {
       expect({ table, rows }).toEqual({ table, rows: [] });
     }
 
+    expect(result.seen.thread.thread.author).toBeNull();
+    expect(result.seen.thread.thread.title).toBe("Hi");
+    expect(result.seen.replies.replies.map((r) => [r.body, r.author?.displayName ?? null])).toEqual(
+      expect.arrayContaining([
+        ["Gut", null],
+        ["Hybrid", "Jo"],
+      ]),
+    );
+    expect(result.seen.session.host).toBeNull();
+    expect(result.seen.session.participants.map((p) => p.player.displayName)).toEqual(["Jo"]);
+
     expect(result.kept.joined).toEqual([{ status: "open" }]);
-    expect(result.kept.alexThread).toEqual([{ replyCount: 2 }]);
-    expect(result.kept.alexReplies.map((r) => r.body).sort()).toEqual(["Hybrid", "Thanks"]);
+    expect(result.kept.hosted).toEqual(
+      expect.arrayContaining([
+        { id: result.hosting, hostId: null, status: "cancelled" },
+        { id: result.hostedPast, hostId: null, status: "confirmed" },
+      ]),
+    );
+    expect(result.kept.result).toEqual([{ recordedBy: null, sideA: [result.sam.id] }]);
+    expect(result.kept.threads).toEqual(
+      expect.arrayContaining([
+        { id: result.samThread, authorId: null, replyCount: 0 },
+        { id: result.alexThread, authorId: result.alex.id, replyCount: 3 },
+      ]),
+    );
+    expect(result.kept.replies).toHaveLength(5);
+    expect(result.kept.replies).toEqual(
+      expect.arrayContaining([
+        { body: "Welcome", authorId: result.alex.id },
+        { body: "Gut", authorId: null },
+        { body: "Poly", authorId: null },
+        { body: "Hybrid", authorId: result.jo.id },
+      ]),
+    );
     expect(result.kept.club).toEqual([{ createdBy: null }]);
     expect(result.kept.clubReviews).toEqual([{ authorId: result.alex.id }]);
     expect(result.kept.gear).toEqual([{ createdBy: null }]);

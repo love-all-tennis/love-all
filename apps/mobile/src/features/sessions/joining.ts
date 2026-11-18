@@ -110,7 +110,7 @@ type Participant = { readonly player: { readonly id: string }; readonly state: s
 
 /** A session with its players, as much of it as an optimistic update touches. */
 export type JoinDetail = JoinFacts & {
-  readonly host: { readonly id: string };
+  readonly host: { readonly id: string } | null;
   readonly participants: ReadonlyArray<Participant>;
 };
 

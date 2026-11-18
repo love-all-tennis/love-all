@@ -1,16 +1,9 @@
 import { Role, SessionUser } from "@love-all/domain";
-import { and, count, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, ne } from "drizzle-orm";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { AppleTokens } from "./AppleTokens";
 import { Db } from "./Db";
-import {
-  account,
-  forumPost,
-  forumThread,
-  playSession,
-  playSessionParticipant,
-  user,
-} from "./db/schema";
+import { account, playSession, playSessionParticipant, user } from "./db/schema";
 import { SessionJoins } from "./SessionJoins";
 
 const isRole = Schema.is(Role);
@@ -33,20 +26,20 @@ const appleTokenOf = (row: {
 /**
  * What happens to a player's things when they delete their account.
  *
- * Postgres does most of it when Better Auth deletes the `user` row: every
- * table that points at a player either cascades (their profile, availability,
- * follows, blocks, push tokens, sessions they host, their places in other
- * sessions, comments, scores they recorded, forum threads and reactions,
- * conversations and messages, club and gear reviews) or goes null (clubs and
- * gear they added, reports they filed or that are about them, so moderation
- * history stays and shows "Deleted account").
+ * Postgres does most of it when Better Auth deletes the `user` row. Every
+ * table that points at a player either cascades or goes null:
+ * - Deleted: their profile, availability, follows, blocks, push tokens,
+ *   their places in sessions, session comments, forum reactions,
+ *   conversations and messages, and club and gear reviews.
+ * - Kept for other players, with the player set to null so it shows as
+ *   "Deleted account": forum threads and replies, sessions they hosted,
+ *   scores they recorded, clubs and gear they added, and reports they filed
+ *   or that are about them.
  *
  * `prepare` runs first, for what a cascade can't do on its own:
  * - Upcoming sessions they host are cancelled, so the other players hear
  *   about it, and they give up their spot in other upcoming sessions, so the
  *   host hears and the spot reopens.
- * - Their replies in other players' threads go, and those threads' reply
- *   counts drop to match.
  * - Their Sign in with Apple tokens are revoked, as Apple requires. A failed
  *   revoke is logged and doesn't stop the deletion.
  *
@@ -91,38 +84,6 @@ export class AccountDeletion extends Context.Service<
           );
         });
 
-      const deleteReplies = (player: SessionUser) =>
-        db
-          .transaction((tx) =>
-            Effect.gen(function* () {
-              const live = yield* tx
-                .select({ threadId: forumPost.threadId, total: count() })
-                .from(forumPost)
-                .innerJoin(forumThread, eq(forumThread.id, forumPost.threadId))
-                .where(
-                  and(
-                    eq(forumPost.authorId, player.id),
-                    ne(forumThread.authorId, player.id),
-                    isNull(forumPost.deletedAt),
-                  ),
-                )
-                .groupBy(forumPost.threadId);
-
-              yield* Effect.forEach(
-                live,
-                ({ threadId, total }) =>
-                  tx
-                    .update(forumThread)
-                    .set({ replyCount: sql`greatest(${forumThread.replyCount} - ${total}, 0)` })
-                    .where(eq(forumThread.id, threadId)),
-                { discard: true },
-              );
-
-              yield* tx.delete(forumPost).where(eq(forumPost.authorId, player.id));
-            }),
-          )
-          .pipe(Effect.orDie);
-
       const revokeApple = (player: SessionUser) =>
         Effect.gen(function* () {
           const accounts = yield* db
@@ -159,7 +120,6 @@ export class AccountDeletion extends Context.Service<
             });
 
             yield* leaveUpcomingSessions(player);
-            yield* deleteReplies(player);
             yield* revokeApple(player);
           }).pipe(Effect.withSpan("AccountDeletion.prepare")),
       });

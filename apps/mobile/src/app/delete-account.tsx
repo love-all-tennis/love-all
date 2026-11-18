@@ -15,14 +15,14 @@ import { forgetPushToken } from "@/lib/push";
 const gone = [
   "Your profile, level, availability and photo",
   "Follows and blocks",
-  "Sessions you host. Upcoming ones are cancelled and the players are told",
-  "Your spot in other players' sessions, and your comments and scores",
-  "Your forum threads, replies and reactions",
+  "Your spot in upcoming sessions. Upcoming sessions you host are cancelled and the players are told",
+  "Your session comments and forum reactions",
   "Your conversations and messages",
   "Your club and gear reviews",
 ];
 
 const kept = [
+  "Your forum threads and replies, and sessions you played, stay for the other players, shown as from a deleted account.",
   "Clubs and gear you added stay listed, without your name.",
   "Reports stay with the moderators, shown as from a deleted account.",
 ];

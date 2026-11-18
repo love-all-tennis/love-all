@@ -1,0 +1,237 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "23ffaf9f-84d9-436a-9bf6-05effcf99a02",
+  "prevIds": [
+    "2fbb8a16-b353-49c8-b0a9-bfb9b0c0a701"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "play_session",
+        "host_id"
+      ],
+      "writes": [
+        "s|colprop|public.play_session.host_id.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.play_session",
+        "n|sch|public",
+        "n|col|public.play_session.host_id"
+      ],
+      "sqlHash": "6fee64c49f65d393"
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "play_session_result",
+        "recorded_by"
+      ],
+      "writes": [
+        "s|colprop|public.play_session_result.recorded_by.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_result",
+        "n|sch|public",
+        "n|col|public.play_session_result.recorded_by"
+      ],
+      "sqlHash": "0008396252a63e41"
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "forum_post",
+        "author_id"
+      ],
+      "writes": [
+        "s|colprop|public.forum_post.author_id.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.forum_post",
+        "n|sch|public",
+        "n|col|public.forum_post.author_id"
+      ],
+      "sqlHash": "ec418fc2075a4cef"
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "forum_thread",
+        "author_id"
+      ],
+      "writes": [
+        "s|colprop|public.forum_thread.author_id.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.forum_thread",
+        "n|sch|public",
+        "n|col|public.forum_thread.author_id"
+      ],
+      "sqlHash": "61a531f58e758387"
+    },
+    {
+      "statementType": "recreate_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session"
+      ],
+      "writes": [
+        "s|fk|public.play_session.play_session_host_id_user_id_fkey",
+        "n|fk|public.play_session.play_session_host_id_user_id_fkey",
+        "e|fk|public.play_session.play_session_host_id_user_id_fkey",
+        "n|con|public.play_session.play_session_host_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.play_session",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.play_session.host_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ],
+      "sqlHash": "0c436a7eaff0b3ba"
+    },
+    {
+      "statementType": "recreate_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "play_session_result"
+      ],
+      "writes": [
+        "s|fk|public.play_session_result.play_session_result_recorded_by_user_id_fkey",
+        "n|fk|public.play_session_result.play_session_result_recorded_by_user_id_fkey",
+        "e|fk|public.play_session_result.play_session_result_recorded_by_user_id_fkey",
+        "n|con|public.play_session_result.play_session_result_recorded_by_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.play_session_result",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.play_session_result.recorded_by",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ],
+      "sqlHash": "df9571b7d046e864"
+    },
+    {
+      "statementType": "recreate_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "forum_post"
+      ],
+      "writes": [
+        "s|fk|public.forum_post.forum_post_author_id_user_id_fkey",
+        "n|fk|public.forum_post.forum_post_author_id_user_id_fkey",
+        "e|fk|public.forum_post.forum_post_author_id_user_id_fkey",
+        "n|con|public.forum_post.forum_post_author_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.forum_post",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.forum_post.author_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ],
+      "sqlHash": "5f9345005bd0707b"
+    },
+    {
+      "statementType": "recreate_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "forum_thread"
+      ],
+      "writes": [
+        "s|fk|public.forum_thread.forum_thread_author_id_user_id_fkey",
+        "n|fk|public.forum_thread.forum_thread_author_id_user_id_fkey",
+        "e|fk|public.forum_thread.forum_thread_author_id_user_id_fkey",
+        "n|con|public.forum_thread.forum_thread_author_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.forum_thread",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.forum_thread.author_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ],
+      "sqlHash": "78fcdb3860f88ef7"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"play_session\",\"host_id\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"play_session_result\",\"recorded_by\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"forum_post\",\"author_id\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"forum_thread\",\"author_id\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "fks\u0000[\"public\",\"play_session\",\"play_session_host_id_user_id_fkey\"]",
+      "set": {
+        "onDelete": "SET NULL"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "fks\u0000[\"public\",\"play_session_result\",\"play_session_result_recorded_by_user_id_fkey\"]",
+      "set": {
+        "onDelete": "SET NULL"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "fks\u0000[\"public\",\"forum_post\",\"forum_post_author_id_user_id_fkey\"]",
+      "set": {
+        "onDelete": "SET NULL"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "fks\u0000[\"public\",\"forum_thread\",\"forum_thread_author_id_user_id_fkey\"]",
+      "set": {
+        "onDelete": "SET NULL"
+      }
+    }
+  ]
+}

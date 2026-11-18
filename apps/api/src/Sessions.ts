@@ -176,7 +176,7 @@ export class Sessions extends Context.Service<
             distanceM: distanceFrom(home),
           })
           .from(playSession)
-          .innerJoin(hostProfile, eq(hostProfile.userId, playSession.hostId))
+          .leftJoin(hostProfile, eq(hostProfile.userId, playSession.hostId))
           .leftJoin(mine, and(eq(mine.sessionId, playSession.id), eq(mine.userId, viewer.id)));
 
       type Row = Effect.Success<ReturnType<typeof summarySelect>>[number];
@@ -184,7 +184,7 @@ export class Sessions extends Context.Service<
       const toFields = ({ distanceM, courtPoint, host, createdAt: _createdAt, ...row }: Row) => ({
         ...row,
         courtPoint: courtPoint && { lat: courtPoint.y, lng: courtPoint.x },
-        host: new SessionPlayer(host),
+        host: host && new SessionPlayer(host),
         distanceKm: distanceM === null ? null : displayKm(distanceM),
       });
 
@@ -200,7 +200,7 @@ export class Sessions extends Context.Service<
         });
 
       const participantsOf = (viewer: SessionUser, row: Row) => {
-        const isHost = row.host.id === viewer.id;
+        const isHost = row.host?.id === viewer.id;
 
         return db
           .select({
@@ -267,8 +267,9 @@ export class Sessions extends Context.Service<
 
           if (Option.isNone(found)) return yield* new SessionNotFound({ id });
           const row = found.value;
+          const host = row.host;
 
-          if (row.host.id !== viewer.id) {
+          if (host?.id !== viewer.id) {
             return yield* new NotSessionHost({ message: "Only the host can change this session" });
           }
 
@@ -280,7 +281,7 @@ export class Sessions extends Context.Service<
             return yield* new SessionClosed({ message: "This session has already started" });
           }
 
-          return row;
+          return { ...row, host };
         });
 
       const toPoint = (point: { lat: number; lng: number } | null | undefined) =>

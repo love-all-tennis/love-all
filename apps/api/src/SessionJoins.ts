@@ -12,7 +12,7 @@ import {
   type SessionUser,
 } from "@love-all/domain";
 import { and, count, eq, inArray, ne, or, sql } from "drizzle-orm";
-import { Context, Effect, Layer, Predicate } from "effect";
+import { Context, Effect, Layer, Option, Predicate } from "effect";
 import { Db } from "./Db";
 import { notBlocked } from "./db/blocks";
 import { playSession, playSessionParticipant, profile } from "./db/schema";
@@ -64,9 +64,13 @@ const lockSession = (tx: Tx, sessionId: string) =>
     .from(playSession)
     .where(eq(playSession.id, sessionId))
     .for("update")
-    .pipe(Effect.map(([row]) => row));
+    .pipe(
+      Effect.map(([row]) =>
+        row?.hostId ? Option.some({ ...row, hostId: row.hostId }) : Option.none(),
+      ),
+    );
 
-type LockedSession = NonNullable<Effect.Success<ReturnType<typeof lockSession>>>;
+type LockedSession = Option.Option.Value<Effect.Success<ReturnType<typeof lockSession>>>;
 
 const requireOpenForChanges = (session: LockedSession) =>
   session.status === "cancelled"
@@ -279,9 +283,10 @@ export class SessionJoins extends Context.Service<
         db
           .transaction((tx) =>
             Effect.gen(function* () {
-              const session = yield* lockSession(tx, sessionId);
+              const locked = yield* lockSession(tx, sessionId);
 
-              if (!session) return yield* new SessionNotFound({ id: sessionId });
+              if (Option.isNone(locked)) return yield* new SessionNotFound({ id: sessionId });
+              const session = locked.value;
 
               if (session.hostId !== viewer.id) {
                 const [visible] = yield* tx

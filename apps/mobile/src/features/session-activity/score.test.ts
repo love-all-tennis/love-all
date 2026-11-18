@@ -348,6 +348,13 @@ describe("showing a result", () => {
     expect(view.canRespond).toBe(false);
   });
 
+  it("lets either side confirm a score whose recorder deleted their account", () => {
+    const view = resultView(result({ recordedBy: null }), players, SAM);
+    expect(view.detail).toBe("Recorded by a deleted account. Confirm it if it's right.");
+    expect(view.canRespond).toBe(true);
+    expect(pastScoreLine(result({ recordedBy: null }), ME)).toBe("Score to confirm");
+  });
+
   it("names a player it can't see", () => {
     const view = resultView(result({ status: "confirmed", respondedBy: ME }), [], null);
     expect(view.headline).toBe("A player won 6–4, 3–6, 10–7");
