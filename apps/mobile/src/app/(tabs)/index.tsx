@@ -71,6 +71,11 @@ export default function HomeScreen() {
           />
         ) : null}
         <Button variant="quiet" label="Sign out" onPress={() => void signOut()} />
+        <Button
+          variant="quiet"
+          label="Delete account"
+          onPress={() => router.push("/delete-account")}
+        />
       </View>
     </Screen>
   );

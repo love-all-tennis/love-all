@@ -80,3 +80,17 @@ export async function unregisterForPush() {
     console.warn("Couldn't remove the push token", error);
   }
 }
+
+/**
+ * Forgets this phone's push token without calling the API, for when the
+ * account it was registered to is gone.
+ */
+export async function forgetPushToken() {
+  if (!supported) return;
+
+  try {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  } catch (error) {
+    console.warn("Couldn't forget the push token", error);
+  }
+}
