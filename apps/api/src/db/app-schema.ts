@@ -275,9 +275,8 @@ export const playSession = pgTable(
   "play_session",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    hostId: text("host_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    /** Null once the host deletes their account; the session stays for its players. */
+    hostId: text("host_id").references(() => user.id, { onDelete: "set null" }),
     kind: playSessionKind("kind").notNull(),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     durationMinutes: smallint("duration_minutes").notNull(),
@@ -395,9 +394,8 @@ export const playSessionResult = pgTable(
     sets: jsonb("sets").$type<Array<[number, number]>>().notNull(),
     winner: playSessionResultSide("winner").notNull(),
     status: playSessionResultStatus("status").notNull().default("pending"),
-    recordedBy: text("recorded_by")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    /** Null once the player who recorded it deletes their account. */
+    recordedBy: text("recorded_by").references(() => user.id, { onDelete: "set null" }),
     recordedAt: timestamp("recorded_at", { withTimezone: true }).defaultNow().notNull(),
     respondedBy: text("responded_by").references(() => user.id, { onDelete: "set null" }),
     respondedAt: timestamp("responded_at", { withTimezone: true }),
@@ -451,9 +449,8 @@ export const forumThread = pgTable(
     categoryId: uuid("category_id")
       .notNull()
       .references(() => forumCategory.id, { onDelete: "cascade" }),
-    authorId: text("author_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    /** Null once the author deletes their account; the thread stays as "Deleted account". */
+    authorId: text("author_id").references(() => user.id, { onDelete: "set null" }),
     title: text("title").notNull(),
     body: text("body").notNull(),
     lastPostAt: timestamp("last_post_at", { withTimezone: true, precision: 3 })
@@ -483,9 +480,8 @@ export const forumPost = pgTable(
     threadId: uuid("thread_id")
       .notNull()
       .references(() => forumThread.id, { onDelete: "cascade" }),
-    authorId: text("author_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    /** Null once the author deletes their account; the reply stays as "Deleted account". */
+    authorId: text("author_id").references(() => user.id, { onDelete: "set null" }),
     body: text("body").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),

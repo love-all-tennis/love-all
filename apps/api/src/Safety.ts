@@ -18,7 +18,7 @@ import { block, follow, profile, report, user } from "./db/schema";
 import { removeFromEachOthersSessions } from "./SessionJoins";
 
 interface ReportSubject {
-  readonly subjectId: string;
+  readonly subjectId: string | null;
   readonly content: string | null;
 }
 
@@ -73,7 +73,7 @@ export class Safety extends Context.Service<
       const otherAuthor: (
         viewer: SessionUser,
         id: string,
-        found: Option.Option<{ readonly authorId: string; readonly content: string }>,
+        found: Option.Option<{ readonly authorId: string | null; readonly content: string }>,
       ) => Effect.Effect<ReportSubject, TargetNotFound | CannotTargetSelf> = (viewer, id, found) =>
         Option.match(found, {
           onNone: () => Effect.fail(new TargetNotFound({ id })),

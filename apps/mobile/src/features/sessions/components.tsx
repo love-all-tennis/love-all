@@ -15,6 +15,7 @@ import {
   Text,
   useColors,
 } from "@/design";
+import { DELETED_ACCOUNT } from "@/lib/deleted-account";
 import { distanceLabel } from "@/lib/distance";
 import { levelLabel } from "../players/components";
 import {
@@ -56,7 +57,7 @@ export function SessionCard({
     session.spots,
   )}`;
 
-  const host = `Hosted by ${session.host.displayName}`;
+  const host = `Hosted by ${session.host?.displayName ?? DELETED_ACCOUNT}`;
 
   return (
     <Card
@@ -97,7 +98,11 @@ export function SessionCard({
       </View>
       {showHost ? (
         <View style={styles.host}>
-          <Avatar name={session.host.displayName} photoUrl={session.host.photoUrl} size="sm" />
+          <Avatar
+            name={session.host?.displayName ?? DELETED_ACCOUNT}
+            photoUrl={session.host?.photoUrl ?? null}
+            size="sm"
+          />
           <Text variant="caption" numberOfLines={1} style={styles.fill}>
             {host}
           </Text>

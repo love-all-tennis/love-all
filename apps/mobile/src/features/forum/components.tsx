@@ -10,6 +10,7 @@ import { Alert, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { Avatar, Button, Card, Chip, Icon, motion, size, space, Text } from "@/design";
 import { timeAgo } from "@/features/session-activity/comments";
+import { DELETED_ACCOUNT } from "@/lib/deleted-account";
 import { type PostMenuAction, reactionChipLabel, replyCountLabel } from "./forum";
 
 /** Asks before something that can't be undone, on native and web. */
@@ -69,7 +70,7 @@ export function ThreadCard({
   now: Date;
   onPress: () => void;
 }) {
-  const meta = `${thread.author.displayName} · ${replyCountLabel(thread.replyCount)} · ${timeAgo(
+  const meta = `${thread.author?.displayName ?? DELETED_ACCOUNT} · ${replyCountLabel(thread.replyCount)} · ${timeAgo(
     thread.lastPostAt,
     now,
   )}`;
@@ -77,7 +78,11 @@ export function ThreadCard({
   return (
     <Card onPress={onPress} accessibilityLabel={`${thread.title}. ${meta}`}>
       <View style={styles.row}>
-        <Avatar name={thread.author.displayName} photoUrl={thread.author.photoUrl} size="sm" />
+        <Avatar
+          name={thread.author?.displayName ?? DELETED_ACCOUNT}
+          photoUrl={thread.author?.photoUrl ?? null}
+          size="sm"
+        />
         <View style={styles.rowText}>
           <Text variant="subheading" numberOfLines={2}>
             {thread.title}
@@ -118,7 +123,8 @@ const MENU_LABELS: Record<PostMenuAction, string> = { delete: "Delete", report: 
 /**
  * The opening post or a reply: author (tapping through to their profile),
  * when, the text, reactions, and a menu with Delete on mine and Report on
- * others'. A deleted reply shows as "Post deleted".
+ * others'. A deleted reply shows as "Post deleted". With no author (they
+ * deleted their account) it shows "Deleted account", with no link or menu.
  */
 export function PostCard({
   author,
@@ -148,7 +154,7 @@ export function PostCard({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  if (!author || body === null) {
+  if (body === null) {
     return (
       <Card tone="sunken">
         <Text color="textMuted">Post deleted</Text>
@@ -156,7 +162,7 @@ export function PostCard({
     );
   }
 
-  const name = mine ? "You" : author.displayName;
+  const name = author ? (mine ? "You" : author.displayName) : DELETED_ACCOUNT;
 
   return (
     <Card>
@@ -210,11 +216,27 @@ function AuthorLink({
   when,
   onPress,
 }: {
-  author: ForumAuthor;
+  author: ForumAuthor | null;
   label: string;
   when: string;
   onPress: () => void;
 }) {
+  if (!author) {
+    return (
+      <View style={[styles.row, styles.author]}>
+        <Avatar name={label} photoUrl={null} size="sm" />
+        <View style={styles.rowText}>
+          <Text variant="bodyStrong" color="textMuted" numberOfLines={1}>
+            {label}
+          </Text>
+          <Text variant="caption" color="textMuted" numberOfLines={1}>
+            {when}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <Pressable
       accessibilityRole="link"

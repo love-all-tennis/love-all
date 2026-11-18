@@ -3,19 +3,12 @@ import { Config, Context, Effect, Layer, Option, Redacted } from "effect";
 import { SqlClient } from "effect/sql";
 // oxlint-disable-next-line anti-slop-effect/no-service-constructor-imports -- BetterAuth is the Layer that owns makeAuth.
 import { type Auth, type IpAddress, makeAuth, type SocialProviders } from "./auth";
+import { AccountDeletion } from "./AccountDeletion";
 import { Db } from "./Db";
 import { effectSqlAdapter } from "./db/better-auth-adapter";
 import { accountSuspension } from "./db/schema";
-
-const list = (name: string) =>
-  Config.String(name).pipe(
-    Config.map((value) =>
-      value
-        .split(",")
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0),
-    ),
-  );
+import { AppleConfig } from "./AppleTokens";
+import { list } from "./config";
 
 export const TrustedOrigins = list("TRUSTED_ORIGINS").pipe(Config.withDefault(["loveall://"]));
 
@@ -35,19 +28,6 @@ const GoogleConfig = Config.all({
   Config.option,
 );
 
-const AppleConfig = Config.all({
-  clientIds: list("APPLE_CLIENT_ID"),
-  clientSecret: Config.Redacted("APPLE_CLIENT_SECRET"),
-  appBundleIdentifier: Config.String("APPLE_APP_BUNDLE_IDENTIFIER").pipe(Config.option),
-}).pipe(
-  Config.map(({ clientIds, clientSecret, appBundleIdentifier }) => ({
-    clientIds,
-    clientSecret: Redacted.value(clientSecret),
-    ...(Option.isSome(appBundleIdentifier) && { appBundleIdentifier: appBundleIdentifier.value }),
-  })),
-  Config.option,
-);
-
 export const SocialProvidersConfig: Config.Config<SocialProviders> = Config.all({
   google: GoogleConfig,
   apple: AppleConfig,
@@ -61,6 +41,7 @@ export const SocialProvidersConfig: Config.Config<SocialProviders> = Config.all(
 /**
  * The Better Auth instance, built from config. Its queries go through the
  * app's Effect SQL client (`effectSqlAdapter`), on the same pool as `Db`.
+ * Deleting an account runs `AccountDeletion.prepare` first.
  */
 export class BetterAuth extends Context.Service<BetterAuth, Auth>()("love-all/BetterAuth") {
   static readonly layer = Layer.effect(
@@ -69,6 +50,7 @@ export class BetterAuth extends Context.Service<BetterAuth, Auth>()("love-all/Be
       const services = yield* Effect.context<SqlClient.SqlClient | Db>();
       const run = Effect.runPromiseWith(services);
       const db = yield* Db;
+      const deletion = yield* AccountDeletion;
       const trustedOrigins = yield* TrustedOrigins;
       const socialProviders = yield* SocialProvidersConfig;
       const ipAddress = yield* IpAddressConfig;
@@ -83,6 +65,7 @@ export class BetterAuth extends Context.Service<BetterAuth, Auth>()("love-all/Be
               .where(eq(accountSuspension.userId, userId))
               .pipe(Effect.map((rows) => rows.length > 0)),
           ),
+        beforeDeleteUser: (userId) => run(deletion.prepare(userId)),
         trustedOrigins,
         socialProviders,
         ipAddress,

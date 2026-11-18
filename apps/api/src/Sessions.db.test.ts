@@ -116,7 +116,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Sessions.create", () => {
     });
     expect(session.participants).toHaveLength(1);
     expect(session.participants[0]).toMatchObject({ role: "host", state: "accepted" });
-    expect(session.host.displayName).toBe("P0");
+    expect(session.host?.displayName).toBe("P0");
   });
 
   it("derives spots from the kind, and lets hitting pick 2 to 4", async () => {

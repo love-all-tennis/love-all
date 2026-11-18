@@ -2,6 +2,7 @@ import type { ModerationReport } from "@love-all/domain";
 import { StyleSheet, View } from "react-native";
 
 import { Button, Card, space, Tag, Text } from "@/design";
+import { DELETED_ACCOUNT } from "@/lib/deleted-account";
 
 import {
   REASON_LABELS,
@@ -40,7 +41,7 @@ export function ReportCard({
   onAction: (action: ReportAction) => void;
 }) {
   const actions = reportActions(report);
-  const subjectName = report.subject?.displayName ?? "Deleted account";
+  const subjectName = report.subject?.displayName ?? DELETED_ACCOUNT;
   const count = reportCountLabel(report.openReportsOnTarget);
   const what = TARGET_LABELS[report.targetType];
 

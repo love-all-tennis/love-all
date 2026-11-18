@@ -268,7 +268,8 @@ export default function ThreadScreen() {
   }
 
   const { thread } = state;
-  const threadMine = thread.author.id === meId;
+  const threadAuthor = thread.author;
+  const threadMine = threadAuthor?.id === meId;
 
   const onAction = (
     action: PostMenuAction,
@@ -294,12 +295,13 @@ export default function ThreadScreen() {
               title={thread.title}
               body={thread.body}
               reactions={thread.reactions}
-              actions={postMenuActions(thread.author.id, meId)}
+              actions={postMenuActions(threadAuthor?.id ?? null, meId)}
               busy={busy === thread.id}
-              onOpenAuthor={() => openPlayer(thread.author.id)}
+              onOpenAuthor={() => threadAuthor && openPlayer(threadAuthor.id)}
               onToggleReaction={(kind) => react("thread", thread.id, kind)}
               onAction={(action) =>
-                onAction(action, { type: "thread", id: thread.id, author: thread.author }, () =>
+                threadAuthor &&
+                onAction(action, { type: "thread", id: thread.id, author: threadAuthor }, () =>
                   removeThread(thread),
                 )
               }

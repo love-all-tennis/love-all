@@ -176,12 +176,15 @@ const sessionFields = {
   visibility: SessionVisibility,
   status: SessionStatus,
   notes: Schema.NullOr(Schema.String),
-  host: SessionPlayer,
+  host: Schema.NullOr(SessionPlayer),
   me: Schema.NullOr(MySessionPlace),
   distanceKm: Schema.NullOr(Schema.Int),
 };
 
-/** A session in a list (`GET /sessions`). */
+/**
+ * A session in a list (`GET /sessions`). `host` is null when the host
+ * deleted their account; the app shows "Deleted account".
+ */
 export class SessionSummary extends Schema.Class<SessionSummary>("SessionSummary")(sessionFields) {}
 
 /**

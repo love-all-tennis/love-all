@@ -196,11 +196,15 @@ export const resultView = (
   const winnerNames = sideNames(winners, players, meId);
   const score = formatSets(result.sets, result.winner);
   const headline = `${winnerNames} won ${score}`;
-  const recorder = sideNames([result.recordedBy], players, meId);
+
+  const recorder = result.recordedBy
+    ? sideNames([result.recordedBy], players, meId)
+    : "a deleted account";
+
   const responder = result.respondedBy ? sideNames([result.respondedBy], players, meId) : null;
-  const recorderSide = sideOf(result, result.recordedBy);
+  const recorderSide = result.recordedBy ? sideOf(result, result.recordedBy) : null;
   const mySide = meId ? sideOf(result, meId) : null;
-  const onOtherSide = mySide !== null && recorderSide !== null && mySide !== recorderSide;
+  const onOtherSide = mySide !== null && mySide !== recorderSide;
 
   const detail = Match.value(result.status).pipe(
     Match.when("pending", () =>
@@ -260,7 +264,10 @@ export const pastScoreLine = (result: SessionResult | null, meId: string | null)
     return `${result.winner === mine ? "Won" : "Lost"} ${formatSets(result.sets, mine)}`;
   }
 
-  if (result.status === "pending" && sideOf(result, result.recordedBy) !== mine) {
+  if (
+    result.status === "pending" &&
+    (result.recordedBy === null || sideOf(result, result.recordedBy) !== mine)
+  ) {
     return "Score to confirm";
   }
 

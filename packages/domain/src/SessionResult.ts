@@ -114,7 +114,8 @@ export class SessionResult extends Schema.Class<SessionResult>("SessionResult")(
   sets: Schema.Array(SetScore),
   winner: ResultSide,
   status: SessionResultStatus,
-  recordedBy: PlayerId,
+  /** Null when the player who recorded it deleted their account. */
+  recordedBy: Schema.NullOr(PlayerId),
   /** Who confirmed or disputed it; null while pending. */
   respondedBy: Schema.NullOr(PlayerId),
   recordedAt: Schema.DateFromString,

@@ -48,6 +48,12 @@ export const decodeCommentCursor = (token: string) => {
 
 type ResultRow = typeof playSessionResult.$inferSelect;
 
+const respondingSide = (result: ResultRow) => {
+  if (result.recordedBy === null) return [...result.sideA, ...result.sideB];
+
+  return result.sideA.includes(result.recordedBy) ? result.sideB : result.sideA;
+};
+
 const toResult = (row: ResultRow) =>
   new SessionResult({
     sideA: row.sideA,
@@ -347,9 +353,7 @@ export class SessionActivity extends Context.Service<
 
             if (!current) return yield* new ResultNotFound({ id: sessionId });
 
-            const otherSide = current.sideA.includes(current.recordedBy)
-              ? current.sideB
-              : current.sideA;
+            const otherSide = respondingSide(current);
 
             if (!otherSide.includes(viewer.id)) {
               return yield* new NotOnOtherSide({

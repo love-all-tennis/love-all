@@ -43,14 +43,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Forum content as a report sees it. */
 export interface ForumReportable {
-  readonly authorId: string;
+  /** Null when the author deleted their account. */
+  readonly authorId: string | null;
   /** The thread's title and opening text, or the reply's text. */
   readonly content: string;
 }
 
 const noReactions = () => FORUM_REACTION_KINDS.map((kind) => ({ kind, count: 0, mine: false }));
 
-const authorName = sql<string>`coalesce(${profile.displayName}, ${user.name})`;
+const authorName = sql<string | null>`coalesce(${profile.displayName}, ${user.name})`;
 
 /**
  * The forum: categories, threads and replies.
@@ -176,16 +177,23 @@ export class Forum extends Context.Service<
           .select(threadColumns)
           .from(forumThread)
           .innerJoin(forumCategory, eq(forumCategory.id, forumThread.categoryId))
-          .innerJoin(user, eq(user.id, forumThread.authorId))
+          .leftJoin(user, eq(user.id, forumThread.authorId))
           .leftJoin(profile, eq(profile.userId, forumThread.authorId));
 
       type ThreadRow = Effect.Success<ReturnType<typeof selectThreads>>[number];
 
       const authorOf = (row: {
-        readonly authorId: string;
-        readonly authorName: string;
+        readonly authorId: string | null;
+        readonly authorName: string | null;
         readonly authorPhotoUrl: string | null;
-      }) => ({ id: row.authorId, displayName: row.authorName, photoUrl: row.authorPhotoUrl });
+      }) =>
+        row.authorId === null
+          ? null
+          : {
+              id: row.authorId,
+              displayName: row.authorName ?? "",
+              photoUrl: row.authorPhotoUrl,
+            };
 
       const reactionsFor = (
         viewer: SessionUser,
@@ -270,7 +278,7 @@ export class Forum extends Context.Service<
             authorPhotoUrl: profile.photoUrl,
           })
           .from(forumPost)
-          .innerJoin(user, eq(user.id, forumPost.authorId))
+          .leftJoin(user, eq(user.id, forumPost.authorId))
           .leftJoin(profile, eq(profile.userId, forumPost.authorId));
 
       type PostRow = Effect.Success<ReturnType<typeof selectPosts>>[number];
@@ -560,11 +568,11 @@ export class Forum extends Context.Service<
               .where(eq(forumPost.id, inserted.id))
               .pipe(Effect.orDie);
 
-            if (thread.authorId !== viewer.id) {
+            if (thread.authorId !== null && thread.authorId !== viewer.id) {
               yield* notifications.notify({
                 to: [thread.authorId],
                 from: viewer.id,
-                ...messages.forumReply(thread, row!.authorName, input.body),
+                ...messages.forumReply(thread, row!.authorName ?? viewer.name, input.body),
               });
             }
 
