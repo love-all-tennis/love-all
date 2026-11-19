@@ -13,7 +13,10 @@
         "dark": "./assets/images/ios-dark.png",
         "tinted": "./assets/images/ios-tinted.png"
       },
-      "bundleIdentifier": "computer.srcery.loveall"
+      "bundleIdentifier": "computer.srcery.loveall",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
